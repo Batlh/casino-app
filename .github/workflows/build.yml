@@ -58,6 +58,10 @@ jobs:
           gh release view latest >/dev/null 2>&1 || \
             gh release create latest --prerelease --title "Aktueller Stand" --notes "Wird bei jedem Build ersetzt."
           gh release upload latest gluckspfennig.apk --clobber
+          if [ -d test_golden/goldens ]; then
+            (cd test_golden/goldens && zip -q -r "$GITHUB_WORKSPACE/bilder.zip" .)
+            gh release upload latest bilder.zip --clobber
+          fi
 
   desktop:
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.desktop)
