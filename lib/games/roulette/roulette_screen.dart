@@ -379,19 +379,23 @@ class _BetTable extends StatelessWidget {
 
   Widget _buildHorizontal() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
           flex: 3,
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _number(0),
               Expanded(
                 flex: 12,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     for (final c in [2, 1, 0])
                       Expanded(
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             for (var col = 0; col < 12; col++)
                               _number(col * 3 + c + 1),
@@ -404,6 +408,7 @@ class _BetTable extends StatelessWidget {
               SizedBox(
                 width: 44,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     for (final c in [2, 1, 0])
                       _cell(BetSpot(BetType.column, c), '2:1'),
@@ -413,43 +418,49 @@ class _BetTable extends StatelessWidget {
             ],
           ),
         ),
-        Expanded(child: Row(children: _dozens())),
-        Expanded(child: Row(children: _outside())),
+        Expanded(child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: _dozens(),
+        )),
+        Expanded(child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: _outside(),
+        )),
       ],
     );
   }
 
   Widget _buildVertical() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
           flex: 2,
           child: Column(
-            children: [
-              for (var pair = 0; pair < 3; pair++)
-                Expanded(
-                  child: Row(
-                    children: [
-                      _outside()[pair * 2],
-                      _outside()[pair * 2 + 1],
-                    ],
-                  ),
-                ),
-            ],
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: _outside(),
           ),
         ),
         Expanded(
           flex: 1,
-          child: Column(children: _dozens()),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: _dozens(),
+          ),
         ),
         Expanded(
           flex: 5,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(child: Row(children: [_number(0)])),
+              Expanded(child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [_number(0)],
+              )),
               for (var row = 0; row < 12; row++)
                 Expanded(
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       for (var c = 0; c < 3; c++) _number(row * 3 + c + 1),
                     ],
@@ -457,6 +468,7 @@ class _BetTable extends StatelessWidget {
                 ),
               Expanded(
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     for (var c = 0; c < 3; c++)
                       _cell(BetSpot(BetType.column, c), '2:1'),

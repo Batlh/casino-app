@@ -17,6 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 Future<void> loadFonts() async {
   for (final entry in {
     'Shrikhand': ['assets/fonts/Shrikhand-Regular.ttf'],
+    'MaterialIcons': ['fonts/MaterialIcons-Regular.otf'],
     'Barlow': [
       'assets/fonts/BarlowSemiCondensed-Medium.ttf',
       'assets/fonts/BarlowSemiCondensed-Bold.ttf',
@@ -59,6 +60,7 @@ void main() {
     Size size,
     Brightness b, {
     Widget? screen,
+    Future<void> Function()? act,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -78,6 +80,9 @@ void main() {
           .push(MaterialPageRoute<void>(builder: (_) => screen));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
+    }
+    if (act != null) {
+      await act();
     }
     await expectLater(
       find.byType(MaterialApp),
@@ -101,6 +106,55 @@ void main() {
       await shot(tester, '${g.key}_quer', landscape, Brightness.light, screen: g.value);
       await shot(tester, '${g.key}_desktop', desktop, Brightness.dark, screen: g.value);
     }
+
+    await shot(
+      tester,
+      'blackjack_spiel',
+      phone,
+      Brightness.dark,
+      screen: const BlackjackScreen(),
+      act: () async {
+        await tester.tap(find.textContaining('Austeilen'));
+        await tester.pump(const Duration(milliseconds: 600));
+      },
+    );
+    await shot(
+      tester,
+      'roulette_einsatz',
+      phone,
+      Brightness.dark,
+      screen: const RouletteScreen(),
+      act: () async {
+        await tester.tap(find.text('17'));
+        await tester.pump();
+        await tester.tap(find.text('Rot'));
+        await tester.pump(const Duration(milliseconds: 100));
+      },
+    );
+    await shot(
+      tester,
+      'videopoker_spiel',
+      phone,
+      Brightness.dark,
+      screen: const VideoPokerScreen(),
+      act: () async {
+        await tester.tap(find.textContaining('Karten geben'));
+        await tester.pump(const Duration(milliseconds: 500));
+      },
+    );
+    await shot(
+      tester,
+      'slot_dreht',
+      phone,
+      Brightness.dark,
+      screen: const SlotScreen(),
+      act: () async {
+        await tester.tap(find.text('Drehen'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 700));
+      },
+    );
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('Symbole', (tester) async {

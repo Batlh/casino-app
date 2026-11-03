@@ -35,7 +35,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final games = <_Game>[
       _Game(
         'Kosmos 78',
-        'Fünf Walzen, zehn Linien, Freispiele aus dem Schwarzen Loch',
+        'Fünf Walzen, zehn Linien und Freispiele',
         const Color(0xFF2B1B5A),
         _KosmosArt.new,
         () => _open(const SlotScreen()),
