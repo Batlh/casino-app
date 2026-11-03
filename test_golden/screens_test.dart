@@ -114,7 +114,9 @@ void main() {
       Brightness.dark,
       screen: const BlackjackScreen(),
       act: () async {
-        await tester.tap(find.textContaining('Austeilen'));
+        await tester.tap(find.text('Austeilen: 50'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
         await tester.pump(const Duration(milliseconds: 600));
       },
     );
@@ -128,7 +130,8 @@ void main() {
         await tester.tap(find.text('17'));
         await tester.pump();
         await tester.tap(find.text('Rot'));
-        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
       },
     );
     await shot(
@@ -138,7 +141,8 @@ void main() {
       Brightness.dark,
       screen: const VideoPokerScreen(),
       act: () async {
-        await tester.tap(find.textContaining('Karten geben'));
+        await tester.tap(find.text('Karten geben: 50'));
+        await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
       },
     );
