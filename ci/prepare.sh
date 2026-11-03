@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Erzeugt die Plattform-Ordner, setzt den App-Namen und das Icon.
+set -euo pipefail
+NAME="Glückspfennig"
+flutter create --project-name gluckspfennig --org de.privat --platforms=android,windows,linux,macos .
+flutter pub get
+dart run flutter_launcher_icons || echo "Icons wurden nicht erzeugt, Build läuft weiter"
+if [ -f android/app/src/main/AndroidManifest.xml ]; then
+  sed -i.bak "s/android:label=\"[^\"]*\"/android:label=\"$NAME\"/" android/app/src/main/AndroidManifest.xml
+fi
+if [ -f windows/runner/main.cpp ]; then
+  sed -i.bak "s/L\"gluckspfennig\"/L\"Glueckspfennig\"/" windows/runner/main.cpp
+fi
+if [ -f linux/runner/my_application.cc ]; then
+  sed -i.bak "s/\"gluckspfennig\"/\"$NAME\"/g" linux/runner/my_application.cc
+fi
+if [ -f macos/Runner/Configs/AppInfo.xcconfig ]; then
+  sed -i.bak "s/^PRODUCT_NAME = .*/PRODUCT_NAME = $NAME/" macos/Runner/Configs/AppInfo.xcconfig
+fi
+find . -name '*.bak' -not -path './.dart_tool/*' -delete
