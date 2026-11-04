@@ -592,7 +592,7 @@ class _Felt extends StatelessWidget {
     // Sitz 0 unten in der Mitte, die anderen im Uhrzeigersinn
     final angle = math.pi / 2 + i * 2 * math.pi / seats;
     // Dein Platz zeigt die Karten ganz und braucht mehr Höhe
-    final height = i == 0 ? seatW * 0.76 + 62 : seatH;
+    final height = i == 0 ? seatW * 0.66 + 62 : seatH;
     return Positioned(
       left: rx + rx * math.cos(angle),
       top: ry + ry * math.sin(angle) + seatH - height,
@@ -673,7 +673,7 @@ class _Seat extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = player;
     final faded = p.folded || !p.inHand;
-    final cardW = width * (p.isHuman ? 0.54 : 0.4);
+    final cardW = width * (p.isHuman ? 0.47 : 0.4);
     final shown = p.isHuman ? 1.0 : 0.62;
     final status = p.shownValue != null
         ? handName(p.shownValue!)
