@@ -463,16 +463,15 @@ class _TableChoice extends StatelessWidget {
           onTap: enabled ? onTap : null,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    table.name,
-                    style: TextStyle(
-                      color: selected ? p.onAccent : p.ink,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 17,
-                    ),
+                Text(
+                  table.name,
+                  style: TextStyle(
+                    color: selected ? p.onAccent : p.ink,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 17,
                   ),
                 ),
                 Text(
@@ -506,7 +505,7 @@ class _Felt extends StatelessWidget {
         final h = box.maxHeight;
         final seats = e.players.length;
         final seatWidth = math.min(112.0, math.max(84.0, w / 4.4));
-        final seatHeight = seatWidth * 0.98;
+        final seatHeight = seatWidth * 0.36 + 62;
         final rx = (w - seatWidth) / 2;
         final ry = (h - seatHeight) / 2;
         final cardW = math.min((w * 0.52 - 16) / 5, h * 0.095).clamp(30.0, 76.0);
@@ -595,7 +594,11 @@ class _Felt extends StatelessWidget {
       top: ry + ry * math.sin(angle),
       width: seatW,
       height: seatH,
-      child: child,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.bottomCenter,
+        child: SizedBox(width: seatW, child: child),
+      ),
     );
   }
 }

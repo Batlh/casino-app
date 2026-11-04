@@ -447,7 +447,7 @@ class _BoardPainter extends CustomPainter {
       ..quadraticBezierTo(r.center.dx, r.top + 0.3, r.left, r.top - 0.3)
       ..close();
     c.drawPath(petals, Paint()..color = const Color(0xFFFF5EA8));
-    _text(c, '40', r.center, 0.3, Colors.white, font: bodyFont);
+    _text(c, '${PachinkoBoard.tulipPay}', r.center, 0.3, Colors.white, font: bodyFont);
   }
 
   @override

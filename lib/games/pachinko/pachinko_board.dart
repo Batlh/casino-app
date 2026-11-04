@@ -45,15 +45,20 @@ class PachinkoBoard {
   static const double pegRadius = 0.065;
   static const double laneX = 9.2;
   static const int ballCost = 10;
-  static const int tulipPay = 40;
+  static const int tulipPay = 25;
   static const int startPay = 30;
-  static const int gatePay = 100;
+  static const int gatePay = 150;
   static const double feverSeconds = 14;
   static const double reelSeconds = 1.8;
   static const int maxQueuedSpins = 4;
 
-  /// Nötig für die Fieber-Chance: drei gleiche Ziffern.
   static const int reelSymbols = 7;
+
+  /// Chance je Ziffernlauf auf drei gleiche Ziffern.
+  static const double feverChance = 0.04;
+
+  /// Chance auf zwei gleiche Ziffern ohne Fieber, für die Spannung.
+  static const double nearMissChance = 0.25;
 
   final Random _rng;
   final World _world = World(Vector2(0, 11));
@@ -223,12 +228,17 @@ class PachinkoBoard {
     queuedSpins--;
     reelsSpinning = true;
     _reelTimer = reelSeconds;
-    reels = [
-      for (var i = 0; i < 3; i++) 1 + _rng.nextInt(reelSymbols),
-    ];
-    // Zweimal stehen zwei gleiche, damit die Spannung bleibt
-    if (_rng.nextDouble() < 0.18) reels[1] = reels[0];
-    if (reels[0] == reels[1] && _rng.nextDouble() < 0.18) reels[2] = reels[0];
+    final first = 1 + _rng.nextInt(reelSymbols);
+    if (_rng.nextDouble() < feverChance) {
+      reels = [first, first, first];
+      return;
+    }
+    int other(int not) => 1 + (not + _rng.nextInt(reelSymbols - 1)) % reelSymbols;
+    final second =
+        _rng.nextDouble() < nearMissChance ? first : other(first);
+    var third = 1 + _rng.nextInt(reelSymbols);
+    if (first == second && third == first) third = other(first);
+    reels = [first, second, third];
   }
 
   void step(double dt) {

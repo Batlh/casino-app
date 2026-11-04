@@ -34,7 +34,7 @@ void main() {
       final rtp = paid / spent;
       // ignore: avoid_print
       print('Pachinko Stärke $power: Quote ${(rtp * 100).toStringAsFixed(1)} % $counts');
-      expect(rtp, greaterThan(0.2));
+      expect(rtp, inInclusiveRange(0.6, 1.2));
       expect(refund, lessThan(balls));
     }
   });
