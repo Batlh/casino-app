@@ -25,11 +25,17 @@ void paintWheel(
   double angle, {
   bool labels = true,
 }) {
-  // Große Kreise als Pfad: drawCircle hinterließ mit Impeller eckige Reste
-  void disc(double r, Paint paint) => canvas.drawPath(
-        Path()..addOval(Rect.fromCircle(center: center, radius: r)),
-        paint,
-      );
+  // Große Kreise als Vieleck: Kreise und Ovale hinterließen mit Impeller
+  // eckige Reste außerhalb des Kessels.
+  void disc(double r, Paint paint) {
+    const steps = 240;
+    final path = Path()..moveTo(center.dx + r, center.dy);
+    for (var i = 1; i < steps; i++) {
+      final a = i * 2 * math.pi / steps;
+      path.lineTo(center.dx + r * math.cos(a), center.dy + r * math.sin(a));
+    }
+    canvas.drawPath(path..close(), paint);
+  }
 
   final rim = Rect.fromCircle(center: center, radius: radius);
   disc(

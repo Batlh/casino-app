@@ -82,6 +82,13 @@ ThemeData buildTheme(Brightness brightness) {
     colorScheme: scheme,
     scaffoldBackgroundColor: p.bg,
     fontFamily: bodyFont,
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: SegmentedButton.styleFrom(
+        selectedBackgroundColor: p.accent,
+        selectedForegroundColor: p.onAccent,
+        foregroundColor: p.ink,
+      ),
+    ),
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: p.panel,
       surfaceTintColor: Colors.transparent,
