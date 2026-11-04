@@ -8,7 +8,7 @@ Jeder Push auf `main` testet den Code und baut die APK. Sie liegt danach unter R
 
 Lokal: `bash ci/prepare.sh`, danach `flutter run`.
 
-`ci/debug.keystore` signiert alle APKs gleich, damit Updates sich über die alte Version installieren lassen.
+`ci/debug.keystore` signiert alle APKs gleich, damit Updates sich über die alte Version installieren lassen. `ci/set_signing.py` trägt den Schlüssel ein, der Build prüft die Signatur.
 
 ## Schriften
 

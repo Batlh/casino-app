@@ -42,10 +42,13 @@ jobs:
           if-no-files-found: ignore
       - name: APK bauen
         run: |
-          mkdir -p ~/.android
-          cp ci/debug.keystore ~/.android/debug.keystore
           flutter build apk --release
           mv build/app/outputs/flutter-apk/app-release.apk gluckspfennig.apk
+      - name: Signatur prüfen
+        run: |
+          SIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          "$SIGNER" verify --print-certs gluckspfennig.apk | tee signatur.txt
+          grep -qi "b9c621e6c129aeb69e9ff166c190a26fb6f124b2e8a991a237e517a7087cc501" signatur.txt
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk
