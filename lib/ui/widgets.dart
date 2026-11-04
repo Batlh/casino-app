@@ -183,11 +183,14 @@ class _GameFrameState extends State<GameFrame> {
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                     Expanded(
-                      child: Text(
-                        widget.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleLarge,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          widget.title,
+                          maxLines: 1,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
                       ),
                     ),
                     ListenableBuilder(

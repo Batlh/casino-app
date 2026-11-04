@@ -133,7 +133,7 @@ const kosmos78 = SlotGame(
 
 const tiefsee = SlotGame(
   name: 'Tiefsee',
-  blurb: 'Vier Reihen, 20 Linien und leuchtende Quallen',
+  blurb: 'Vier Reihen und leuchtende Quallen',
   rules: SlotRules(
     rows: 4,
     lines: _lines20,

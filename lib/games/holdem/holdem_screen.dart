@@ -425,7 +425,9 @@ class _HoldemScreenState extends State<HoldemScreen> {
             label: canRaise
                 ? (value >= maxTo
                     ? 'All-in'
-                    : 'Erhöhen auf ${formatCoins(value)}')
+                    : e.currentBet == 0
+                        ? 'Setzen: ${formatCoins(value)}'
+                        : 'Erhöhen auf ${formatCoins(value)}')
                 : 'Erhöhen',
             onPressed: canRaise
                 ? () => _act(HoldemAction(HoldemActionKind.raise, value))
@@ -589,11 +591,13 @@ class _Felt extends StatelessWidget {
   ) {
     // Sitz 0 unten in der Mitte, die anderen im Uhrzeigersinn
     final angle = math.pi / 2 + i * 2 * math.pi / seats;
+    // Dein Platz zeigt die Karten ganz und braucht mehr Höhe
+    final height = i == 0 ? seatW * 0.76 + 62 : seatH;
     return Positioned(
       left: rx + rx * math.cos(angle),
-      top: ry + ry * math.sin(angle),
+      top: ry + ry * math.sin(angle) + seatH - height,
       width: seatW,
-      height: seatH,
+      height: height,
       child: FittedBox(
         fit: BoxFit.scaleDown,
         alignment: Alignment.bottomCenter,
@@ -607,19 +611,39 @@ class _TablePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = (Offset.zero & size).deflate(math.min(size.shortestSide * 0.1, 44));
-    final oval = RRect.fromRectAndRadius(
-      rect,
-      Radius.circular(rect.shortestSide / 2),
-    );
-    canvas.drawRRect(oval.inflate(8), Paint()..color = const Color(0xFF5A3218));
-    canvas.drawRRect(
-      oval,
+    canvas.drawPath(_stadium(rect.inflate(8)), Paint()..color = const Color(0xFF5A3218));
+    canvas.drawPath(
+      _stadium(rect),
       Paint()
         ..shader = const RadialGradient(
           radius: 0.9,
           colors: [Color(0xFF1B7A63), Color(0xFF0C4A3D)],
         ).createShader(rect),
     );
+  }
+
+  /// Als Vieleck, weil abgerundete Rechtecke dieser Größe mit Impeller fehlten.
+  Path _stadium(Rect r) {
+    final radius = r.shortestSide / 2;
+    final centers = [
+      Offset(r.right - radius, r.top + radius),
+      Offset(r.right - radius, r.bottom - radius),
+      Offset(r.left + radius, r.bottom - radius),
+      Offset(r.left + radius, r.top + radius),
+    ];
+    final path = Path();
+    for (var corner = 0; corner < 4; corner++) {
+      for (var i = 0; i <= 40; i++) {
+        final a = -math.pi / 2 + (corner + i / 40) * math.pi / 2;
+        final o = centers[corner] + Offset(math.cos(a), math.sin(a)) * radius;
+        if (corner == 0 && i == 0) {
+          path.moveTo(o.dx, o.dy);
+        } else {
+          path.lineTo(o.dx, o.dy);
+        }
+      }
+    }
+    return path..close();
   }
 
   @override
@@ -649,7 +673,8 @@ class _Seat extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = player;
     final faded = p.folded || !p.inHand;
-    final cardW = width * 0.4;
+    final cardW = width * (p.isHuman ? 0.54 : 0.4);
+    final shown = p.isHuman ? 1.0 : 0.62;
     final status = p.shownValue != null
         ? handName(p.shownValue!)
         : p.lastAction.isNotEmpty
@@ -662,7 +687,7 @@ class _Seat extends StatelessWidget {
         children: [
           if (p.inHand && p.hole.isNotEmpty)
             SizedBox(
-              height: cardW / cardAspect * 0.62,
+              height: cardW / cardAspect * shown,
               child: ClipRect(
                 child: OverflowBox(
                   alignment: Alignment.topCenter,
