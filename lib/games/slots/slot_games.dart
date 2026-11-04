@@ -214,7 +214,7 @@ const schrebergarten = SlotGame(
     gradient: LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: [Color(0xFF8FD3E8), Color(0xFFBFE3A8), Color(0xFF5E9A3E)],
+      colors: [Color(0xFF8FD3E8), Color(0xFF7FB65A), Color(0xFF2F5E22)],
     ),
   ),
   frame: [Color(0xFF8A5A2B), Color(0xFFD9A441), Color(0xFF5E3B1A)],
