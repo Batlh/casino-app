@@ -82,6 +82,10 @@ ThemeData buildTheme(Brightness brightness) {
     colorScheme: scheme,
     scaffoldBackgroundColor: p.bg,
     fontFamily: bodyFont,
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: p.panel,
+      surfaceTintColor: Colors.transparent,
+    ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: p.ink,
       contentTextStyle: TextStyle(

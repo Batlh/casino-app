@@ -14,6 +14,7 @@ import '../games/slots/kosmos_art.dart';
 import '../games/slots/slot_engine.dart';
 import '../games/slots/slot_screen.dart';
 import '../games/videopoker/video_poker_screen.dart';
+import 'settings_sheet.dart';
 import 'widgets.dart';
 
 class LobbyScreen extends StatefulWidget {
@@ -42,7 +43,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ),
       _Game(
         'Black Jack',
-        'Sechs Decks, Bank steht auf 17, Black Jack zahlt 3:2',
+        'Sechs Decks, Black Jack zahlt 3:2',
         const Color(0xFF0F5B4A),
         _BlackJackArt.new,
         () => _open(const BlackjackScreen()),
@@ -77,9 +78,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Align(
-                          alignment: Alignment.centerRight,
-                          child: BalanceBadge(),
+                        Row(
+                          children: [
+                            IconButton(
+                              tooltip: 'Einstellungen',
+                              icon: Icon(Icons.settings, color: p.ink),
+                              onPressed: () => showSettingsSheet(context),
+                            ),
+                            const Spacer(),
+                            const BalanceBadge(),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         const Marquee(),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gluckspfennig/core/settings.dart';
 import 'package:gluckspfennig/core/sfx.dart';
 import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/blackjack/blackjack_screen.dart';
@@ -25,7 +26,11 @@ Future<void> pumpApp(WidgetTester tester, Size size, {Widget? screen}) async {
   final prefs = await SharedPreferences.getInstance();
   await tester.pumpWidget(const SizedBox());
   await tester.pumpWidget(
-    GluckspfennigApp(wallet: Wallet(prefs), sfx: Sfx(prefs, silent: true)),
+    GluckspfennigApp(
+        wallet: Wallet(prefs),
+        sfx: Sfx(prefs, silent: true),
+        settings: Settings(prefs),
+      ),
   );
   await tester.pump();
   if (screen != null) {

@@ -25,9 +25,14 @@ void paintWheel(
   double angle, {
   bool labels = true,
 }) {
+  // Große Kreise als Pfad: drawCircle hinterließ mit Impeller eckige Reste
+  void disc(double r, Paint paint) => canvas.drawPath(
+        Path()..addOval(Rect.fromCircle(center: center, radius: r)),
+        paint,
+      );
+
   final rim = Rect.fromCircle(center: center, radius: radius);
-  canvas.drawCircle(
-    center,
+  disc(
     radius,
     Paint()
       ..shader = const SweepGradient(
@@ -40,11 +45,7 @@ void paintWheel(
         ],
       ).createShader(rim),
   );
-  canvas.drawCircle(
-    center,
-    radius * 0.9,
-    Paint()..color = const Color(0xFF2A160E),
-  );
+  disc(radius * 0.9, Paint()..color = const Color(0xFF2A160E));
 
   final outer = radius * 0.88;
   final inner = radius * 0.62;
@@ -55,11 +56,8 @@ void paintWheel(
   for (var i = 0; i < wheelOrder.length; i++) {
     final n = wheelOrder[i];
     final mid = angle + pocketCenter(i);
-    canvas.drawArc(
-      ringRect,
-      mid - sector / 2,
-      sector,
-      false,
+    canvas.drawPath(
+      Path()..addArc(ringRect, mid - sector / 2, sector),
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = stroke
@@ -98,8 +96,7 @@ void paintWheel(
   }
 
   // Innerer Teller mit Messingkreuz
-  canvas.drawCircle(
-    center,
+  disc(
     inner,
     Paint()
       ..shader = const RadialGradient(

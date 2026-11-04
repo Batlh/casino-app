@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gluckspfennig/core/scope.dart';
+import 'package:gluckspfennig/core/settings.dart';
 import 'package:gluckspfennig/core/wallet.dart';
+import 'package:gluckspfennig/games/cards/playing_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -42,6 +44,19 @@ void main() {
     expect(w.refillIfBroke(), isTrue);
     expect(w.balance, 5 + Wallet.refillAmount);
     expect(w.refills.value, 1);
+  });
+
+  test('Bildkarten: J und Q als Standard, B und D wählbar und gespeichert', () {
+    const bube = PlayingCard(11, Suit.spades);
+    const dame = PlayingCard(12, Suit.hearts);
+    final s = Settings(prefs);
+    expect(s.cardNames, CardNames.international);
+    expect(bube.rankLabel(s.cardNames), 'J');
+    expect(dame.rankLabel(s.cardNames), 'Q');
+    s.cardNames = CardNames.deutsch;
+    expect(bube.rankLabel(s.cardNames), 'B');
+    expect(dame.rankLabel(s.cardNames), 'D');
+    expect(Settings(prefs).cardNames, CardNames.deutsch);
   });
 
   test('Tausenderpunkte', () {

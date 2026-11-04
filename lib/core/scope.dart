@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'settings.dart';
 import 'sfx.dart';
 import 'wallet.dart';
 
@@ -9,11 +10,13 @@ class AppScope extends InheritedWidget {
     super.key,
     required this.wallet,
     required this.sfx,
+    required this.settings,
     required super.child,
   });
 
   final Wallet wallet;
   final Sfx sfx;
+  final Settings settings;
 
   static AppScope of(BuildContext context) =>
       context.getInheritedWidgetOfExactType<AppScope>()!;

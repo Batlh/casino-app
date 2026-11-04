@@ -2,6 +2,9 @@ import 'dart:math';
 
 enum Suit { spades, hearts, diamonds, clubs }
 
+/// Beschriftung der Bildkarten: J und Q wie im Casino oder B und D.
+enum CardNames { international, deutsch }
+
 /// Spielkarte. rank: 2 bis 10, Bube 11, Dame 12, König 13, Ass 14.
 class PlayingCard {
   const PlayingCard(this.rank, this.suit);
@@ -11,11 +14,11 @@ class PlayingCard {
 
   bool get isRed => suit == Suit.hearts || suit == Suit.diamonds;
 
-  String get rankLabel => switch (rank) {
+  String rankLabel(CardNames names) => switch (rank) {
         14 => 'A',
         13 => 'K',
-        12 => 'D',
-        11 => 'B',
+        12 => names == CardNames.deutsch ? 'D' : 'Q',
+        11 => names == CardNames.deutsch ? 'B' : 'J',
         _ => '$rank',
       };
 
@@ -44,7 +47,7 @@ class PlayingCard {
   int get hashCode => Object.hash(rank, suit);
 
   @override
-  String toString() => '$rankLabel${suit.name[0]}';
+  String toString() => '${rankLabel(CardNames.international)}${suit.name[0]}';
 }
 
 List<PlayingCard> freshDeck({int decks = 1}) => [

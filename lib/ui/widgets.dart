@@ -7,6 +7,7 @@ import '../core/sfx.dart';
 import '../core/theme.dart';
 import '../core/wallet.dart';
 import '../games/cards/playing_card.dart';
+import 'settings_sheet.dart';
 
 /// Geprägter Pfennig, die Münze der App.
 class CoinIcon extends StatelessWidget {
@@ -200,6 +201,11 @@ class _GameFrameState extends State<GameFrame> {
                         onPressed: sfx.toggle,
                       ),
                     ),
+                    IconButton(
+                      tooltip: 'Einstellungen',
+                      icon: Icon(Icons.settings, color: p.ink),
+                      onPressed: () => showSettingsSheet(context),
+                    ),
                     const BalanceBadge(),
                   ],
                 ),
@@ -254,7 +260,10 @@ class _ChipPainter extends CustomPainter {
       ..color = onBase.withValues(alpha: 0.85);
     final rect = Rect.fromCircle(center: c, radius: r * 0.9);
     for (var i = 0; i < 6; i++) {
-      canvas.drawArc(rect, i * math.pi / 3, math.pi / 7, false, dash);
+      canvas.drawPath(
+        Path()..addArc(rect, i * math.pi / 3, math.pi / 7),
+        dash,
+      );
     }
     canvas.drawCircle(
       c,
@@ -560,6 +569,14 @@ class _CardFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = AppScope.of(context).settings;
+    return ListenableBuilder(
+      listenable: settings,
+      builder: (context, _) => _build(card.rankLabel(settings.cardNames)),
+    );
+  }
+
+  Widget _build(String label) {
     final color = card.isRed ? const Color(0xFFC8321F) : const Color(0xFF241410);
     final corner = Padding(
       padding: EdgeInsets.all(width * 0.06),
@@ -567,7 +584,7 @@ class _CardFace extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            card.rankLabel,
+            label,
             style: TextStyle(
               fontFamily: bodyFont,
               fontWeight: FontWeight.w700,
@@ -586,7 +603,7 @@ class _CardFace extends StatelessWidget {
         Center(
           child: isFace
               ? Text(
-                  card.rankLabel,
+                  label,
                   style: TextStyle(
                     fontFamily: displayFont,
                     fontSize: width * 0.62,
