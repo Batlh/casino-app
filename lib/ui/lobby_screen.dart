@@ -8,11 +8,14 @@ import '../core/theme.dart';
 import '../core/wallet.dart';
 import '../games/blackjack/blackjack_screen.dart';
 import '../games/cards/playing_card.dart';
+import '../games/holdem/holdem_screen.dart';
+import '../games/pachinko/pachinko_screen.dart';
 import '../games/roulette/roulette_painters.dart';
 import '../games/roulette/roulette_screen.dart';
 import '../games/slots/kosmos_art.dart';
-import '../games/slots/slot_engine.dart';
+import '../games/slots/slot_games.dart';
 import '../games/slots/slot_screen.dart';
+import '../games/slots/tiefsee_art.dart';
 import '../games/videopoker/video_poker_screen.dart';
 import 'settings_sheet.dart';
 import 'widgets.dart';
@@ -35,11 +38,39 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final app = AppScope.of(context);
     final games = <_Game>[
       _Game(
-        'Kosmos 78',
-        'Fünf Walzen, zehn Linien und Freispiele',
-        const Color(0xFF2B1B5A),
+        kosmos78.name,
+        kosmos78.blurb,
+        kosmos78.lobbyColor,
         _KosmosArt.new,
-        () => _open(const SlotScreen()),
+        () => _open(const SlotScreen(game: kosmos78)),
+      ),
+      _Game(
+        tiefsee.name,
+        tiefsee.blurb,
+        tiefsee.lobbyColor,
+        _TiefseeArt.new,
+        () => _open(const SlotScreen(game: tiefsee)),
+      ),
+      _Game(
+        schrebergarten.name,
+        schrebergarten.blurb,
+        schrebergarten.lobbyColor,
+        _GartenArt.new,
+        () => _open(const SlotScreen(game: schrebergarten)),
+      ),
+      _Game(
+        "Texas Hold'em",
+        'No-Limit gegen bis zu fünf Gegner',
+        const Color(0xFF7A1F12),
+        _HoldemArt.new,
+        () => _open(const HoldemScreen()),
+      ),
+      _Game(
+        'Neon Pachinko',
+        'Kugeln, Tulpen und das Fieber-Tor',
+        const Color(0xFF2B0B45),
+        _PachinkoArt.new,
+        () => _open(const PachinkoScreen()),
       ),
       _Game(
         'Black Jack',
@@ -281,7 +312,7 @@ class _MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
     final p = Palette.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final height = (constraints.maxWidth * 0.26).clamp(104.0, 170.0);
+        final height = (constraints.maxWidth * 0.26).clamp(104.0, 150.0);
         return SizedBox(
           height: height,
           child: CustomPaint(
@@ -370,13 +401,146 @@ class _KosmosArt extends CustomPainter {
     paintKosmosSymbol(
       canvas,
       Rect.fromCenter(center: c.translate(-s * 0.32, s * 0.08), width: s, height: s),
-      symPlanet,
+      3,
     );
     paintKosmosSymbol(
       canvas,
       Rect.fromCenter(center: c.translate(s * 0.44, -s * 0.12), width: s * 0.8, height: s * 0.8),
-      symRakete,
+      5,
     );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _TiefseeArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    paintTiefseeBackdrop(canvas, Offset.zero & size, 0.2);
+    final s = math.min(size.width, size.height) * 0.7;
+    final c = size.center(Offset.zero);
+    paintTiefseeSymbol(
+      canvas,
+      Rect.fromCenter(center: c.translate(s * 0.34, s * 0.12), width: s, height: s),
+      5,
+    );
+    paintTiefseeSymbol(
+      canvas,
+      Rect.fromCenter(center: c.translate(-s * 0.38, -s * 0.1), width: s * 0.8, height: s * 0.8),
+      6,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _GartenArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    schrebergarten.paintBackdrop(canvas, Offset.zero & size, 0);
+    canvas.drawRect(
+      Rect.fromLTRB(0, size.height * 0.72, size.width, size.height),
+      Paint()..color = const Color(0xFF5E9A3E),
+    );
+    final s = math.min(size.width, size.height) * 0.72;
+    final c = size.center(Offset.zero);
+    schrebergarten.paintSymbol(
+      canvas,
+      Rect.fromCenter(center: c.translate(s * 0.42, s * 0.08), width: s * 0.72, height: s * 0.72),
+      2,
+    );
+    schrebergarten.paintSymbol(
+      canvas,
+      Rect.fromCenter(center: c.translate(-s * 0.26, s * 0.08), width: s * 1.1, height: s * 1.1),
+      6,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _HoldemArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final felt = Rect.fromCenter(
+      center: c.translate(0, 8),
+      width: size.width * 0.86,
+      height: size.height * 0.62,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(felt, Radius.circular(felt.height / 2)),
+      Paint()..color = const Color(0xFF1B7A63),
+    );
+    const suits = [Suit.diamonds, Suit.spades, Suit.hearts];
+    final w = size.width * 0.17;
+    final h = w / cardAspect;
+    for (var i = 0; i < 3; i++) {
+      final r = Rect.fromLTWH(
+        c.dx + (i - 1.5) * (w + 5),
+        felt.center.dy - h / 2,
+        w,
+        h,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(r, const Radius.circular(5)),
+        Paint()..color = const Color(0xFFFFF8E7),
+      );
+      paintSuit(
+        canvas,
+        Rect.fromCenter(center: r.center, width: w * 0.62, height: w * 0.62),
+        suits[i],
+        i == 1 ? const Color(0xFF241410) : const Color(0xFFC8321F),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _PachinkoArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF1B1140), Color(0xFF4A1466), Color(0xFFB02A7E)],
+        ).createShader(Offset.zero & size),
+    );
+    final peg = Paint()..color = const Color(0xFFE9C271);
+    final step = size.width / 8;
+    for (var row = 0; row < 8; row++) {
+      for (var col = 0; col < 9; col++) {
+        canvas.drawCircle(
+          Offset(col * step + (row.isOdd ? step / 2 : 0), 30 + row * step * 0.8),
+          2.4,
+          peg,
+        );
+      }
+    }
+    final rng = math.Random(9);
+    for (var i = 0; i < 7; i++) {
+      final o = Offset(
+        size.width * (0.2 + 0.6 * rng.nextDouble()),
+        size.height * (0.25 + 0.6 * rng.nextDouble()),
+      );
+      canvas.drawCircle(
+        o,
+        9,
+        Paint()
+          ..shader = const RadialGradient(
+            center: Alignment(-0.4, -0.4),
+            colors: [Colors.white, Color(0xFF8D93B8)],
+          ).createShader(Rect.fromCircle(center: o, radius: 9)),
+      );
+    }
   }
 
   @override

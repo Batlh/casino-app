@@ -8,8 +8,10 @@ import 'package:gluckspfennig/core/settings.dart';
 import 'package:gluckspfennig/core/sfx.dart';
 import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/blackjack/blackjack_screen.dart';
+import 'package:gluckspfennig/games/holdem/holdem_screen.dart';
+import 'package:gluckspfennig/games/pachinko/pachinko_screen.dart';
 import 'package:gluckspfennig/games/roulette/roulette_screen.dart';
-import 'package:gluckspfennig/games/slots/kosmos_art.dart';
+import 'package:gluckspfennig/games/slots/slot_games.dart';
 import 'package:gluckspfennig/games/slots/slot_screen.dart';
 import 'package:gluckspfennig/games/videopoker/video_poker_screen.dart';
 import 'package:gluckspfennig/main.dart';
@@ -35,14 +37,18 @@ Future<void> loadFonts() async {
 class _Sheet extends CustomPainter {
   @override
   void paint(ui.Canvas canvas, Size size) {
-    paintKosmosSky(canvas, Offset.zero & size, 0.2);
-    final cell = size.width / 4;
-    for (var i = 0; i < 8; i++) {
-      paintKosmosSymbol(
-        canvas,
-        Rect.fromLTWH((i % 4) * cell, (i ~/ 4) * cell, cell, cell),
-        i,
-      );
+    final games = allSlots;
+    final cell = size.width / 8;
+    for (var g = 0; g < games.length; g++) {
+      final row = Rect.fromLTWH(0, g * cell, size.width, cell);
+      games[g].paintBackdrop(canvas, row, 0.2);
+      for (var i = 0; i < 8; i++) {
+        games[g].paintSymbol(
+          canvas,
+          Rect.fromLTWH(i * cell, g * cell, cell, cell),
+          i,
+        );
+      }
     }
   }
 
@@ -104,7 +110,11 @@ void main() {
       'blackjack': BlackjackScreen(),
       'roulette': RouletteScreen(),
       'videopoker': VideoPokerScreen(),
-      'slot': SlotScreen(),
+      'slot': SlotScreen(game: kosmos78),
+      'tiefsee': SlotScreen(game: tiefsee),
+      'garten': SlotScreen(game: schrebergarten),
+      'holdem': HoldemScreen(),
+      'pachinko': PachinkoScreen(),
     };
     for (final g in games.entries) {
       await shot(tester, '${g.key}_handy', phone, Brightness.dark, screen: g.value);
@@ -156,24 +166,37 @@ void main() {
       'slot_dreht',
       phone,
       Brightness.dark,
-      screen: const SlotScreen(),
+      screen: const SlotScreen(game: kosmos78),
       act: () async {
         await tester.tap(find.text('Drehen'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 700));
       },
     );
+    await shot(
+      tester,
+      'holdem_tisch',
+      phone,
+      Brightness.dark,
+      screen: const HoldemScreen(),
+      act: () async {
+        await tester.tap(find.textContaining('Hinsetzen'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+      },
+    );
     await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 2));
   });
 
   testWidgets('Symbole', (tester) async {
-    tester.view.physicalSize = const Size(1000, 500);
+    tester.view.physicalSize = const Size(1600, 600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       Center(
         child: RepaintBoundary(
-          child: CustomPaint(size: const Size(1000, 500), painter: _Sheet()),
+          child: CustomPaint(size: const Size(1600, 600), painter: _Sheet()),
         ),
       ),
     );

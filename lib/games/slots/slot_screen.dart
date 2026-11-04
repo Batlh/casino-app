@@ -6,32 +6,20 @@ import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/widgets.dart';
-import 'kosmos_art.dart';
-import 'slot_data.dart';
 import 'slot_engine.dart';
-
-const List<int> slotStakes = [10, 20, 50, 100, 200, 500];
-
-const Map<int, String> symbolNames = {
-  symMond: 'Mond',
-  symStern: 'Stern',
-  symKomet: 'Komet',
-  symPlanet: 'Planet',
-  symUfo: 'Ufo',
-  symRakete: 'Rakete',
-  symSonne: 'Sonne',
-  symLoch: 'Schwarzes Loch',
-};
+import 'slot_games.dart';
 
 class SlotScreen extends StatefulWidget {
-  const SlotScreen({super.key});
+  const SlotScreen({super.key, required this.game});
+
+  final SlotGame game;
 
   @override
   State<SlotScreen> createState() => _SlotScreenState();
 }
 
 class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
-  final _engine = SlotEngine();
+  late final SlotEngine _engine = SlotEngine(_rules);
   final _rng = math.Random();
   late final AnimationController _spin = AnimationController(
     vsync: this,
@@ -42,7 +30,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
     duration: const Duration(milliseconds: 1600),
   )..repeat();
 
-  int _stake = 50;
+  late int _stake = widget.game.stakes[2];
   int _freeSpins = 0;
   int _freeTotal = 0;
   bool _spinning = false;
@@ -50,12 +38,16 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
   String _message = 'Einsatz wählen und drehen';
   bool _big = false;
   SpinResult? _result;
-  int _reelsStopped = reelCount;
+  late int _reelsStopped = _rules.reels;
 
   /// Sichtbare Symbole vor dem Dreh und die Bänder, die durchlaufen.
   late List<List<int>> _tapes = [
-    for (var r = 0; r < reelCount; r++) kosmosStrips[r].take(rowCount).toList(),
+    for (var r = 0; r < _rules.reels; r++)
+      _rules.strips[r].take(_rules.rows).toList(),
   ];
+
+  SlotRules get _rules => widget.game.rules;
+  List<int> get _stakes => widget.game.stakes;
 
   AppScope get _app => AppScope.of(context);
 
@@ -75,8 +67,8 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
 
   void _onTick() {
     var stopped = 0;
-    for (var r = 0; r < reelCount; r++) {
-      if (reelProgress(_spin.value, r) >= 1) stopped++;
+    for (var r = 0; r < _rules.reels; r++) {
+      if (reelProgress(_spin.value, r, _rules.reels) >= 1) stopped++;
     }
     if (stopped != _reelsStopped) {
       if (stopped > _reelsStopped) _app.sfx.play(Sound.reelStop);
@@ -85,13 +77,13 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
   }
 
   List<int> _buildTape(List<int> finalSymbols, int reel) {
-    final strip = kosmosStrips[reel];
+    final strip = _rules.strips[reel];
     final filler = 14 + reel * 4;
     final start = _rng.nextInt(strip.length);
     return [
       ...finalSymbols,
       for (var i = 0; i < filler; i++) strip[(start + i) % strip.length],
-      ..._tapes[reel].take(rowCount),
+      ..._tapes[reel].take(_rules.rows),
     ];
   }
 
@@ -103,19 +95,16 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
       return;
     }
     final wallet = _app.wallet;
-    final result = _engine.spin(
-      _stake,
-      multiplier: free ? freeSpinMultiplier : 1,
-    );
+    final result = _engine.spin(_stake, free: free);
     setState(() {
       if (free) _freeSpins--;
       _spinning = true;
       _result = null;
       _big = false;
-      _message = free ? 'Freispiel, alle Gewinne doppelt' : '';
+      _message = free ? widget.game.freeSpinLine : '';
       _reelsStopped = 0;
       _tapes = [
-        for (var r = 0; r < reelCount; r++) _buildTape(result.grid[r], r),
+        for (var r = 0; r < _rules.reels; r++) _buildTape(result.grid[r], r),
       ];
     });
     _app.sfx.play(Sound.tick);
@@ -162,7 +151,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
 
   String _describe(SpinResult r) {
     if (r.freeSpinsWon > 0) {
-      return '$freeSpinsAward Freispiele! +${formatCoins(r.total)}';
+      return '${r.freeSpinsWon} Freispiele! +${formatCoins(r.total)}';
     }
     if (r.total == 0) return _freeSpins > 0 ? 'Noch $_freeSpins Freispiele' : '';
     return 'Gewonnen: +${formatCoins(r.total)}';
@@ -173,23 +162,15 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      builder: (context) => _PayTableSheet(stake: _stake),
+      builder: (context) => _PayTableSheet(game: widget.game, stake: _stake),
     );
   }
-
-  static const _sky = BoxDecoration(
-    gradient: LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [Color(0xFF120A33), Color(0xFF3A1467), Color(0xFFA32A6E)],
-    ),
-  );
 
   @override
   Widget build(BuildContext context) {
     return GameFrame(
-      title: 'Kosmos 78',
-      background: _sky,
+      title: widget.game.name,
+      background: widget.game.background,
       child: LayoutBuilder(
         builder: (context, box) {
           final wide = box.maxWidth > box.maxHeight * 1.3;
@@ -197,13 +178,14 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
           final maxW = box.maxWidth - (wide ? math.min(300.0, box.maxWidth * 0.32) : 0) - 24;
           final maxH = box.maxHeight - controlsHeight - 24;
           // Fünf Walzen zu drei Reihen plus Rahmen
-          final cell = math.min(maxW / reelCount, maxH / rowCount);
+          final cell = math.min(maxW / _rules.reels, maxH / _rules.rows);
           final reels = _ReelWindow(
             cell: cell,
             spin: _spin,
             pulse: _pulse,
             tapes: _tapes,
             result: _result,
+            game: widget.game,
           );
           if (wide) {
             return Row(
@@ -257,10 +239,10 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
           children: [
             IconButton.filledTonal(
               tooltip: 'Einsatz senken',
-              onPressed: locked || _stake == slotStakes.first
+              onPressed: locked || _stake == _stakes.first
                   ? null
                   : () => setState(() {
-                        _stake = slotStakes[slotStakes.indexOf(_stake) - 1];
+                        _stake = _stakes[_stakes.indexOf(_stake) - 1];
                       }),
               icon: const Icon(Icons.remove),
             ),
@@ -279,13 +261,13 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
             IconButton.filledTonal(
               tooltip: 'Einsatz erhöhen',
               onPressed: locked ||
-                      _stake == slotStakes.last ||
+                      _stake == _stakes.last ||
                       !_app.wallet.canAfford(
-                        slotStakes[slotStakes.indexOf(_stake) + 1],
+                        _stakes[_stakes.indexOf(_stake) + 1],
                       )
                   ? null
                   : () => setState(() {
-                        _stake = slotStakes[slotStakes.indexOf(_stake) + 1];
+                        _stake = _stakes[_stakes.indexOf(_stake) + 1];
                       }),
               icon: const Icon(Icons.add),
             ),
@@ -320,8 +302,8 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
 }
 
 /// Fortschritt einer Walze bei Gesamtzeit t. Walzen halten nacheinander.
-double reelProgress(double t, int reel) {
-  final end = 0.55 + 0.45 * reel / (reelCount - 1);
+double reelProgress(double t, int reel, int reels) {
+  final end = 0.55 + 0.45 * reel / (reels - 1);
   return (t / end).clamp(0.0, 1.0);
 }
 
@@ -332,8 +314,10 @@ class _ReelWindow extends StatelessWidget {
     required this.pulse,
     required this.tapes,
     required this.result,
+    required this.game,
   });
 
+  final SlotGame game;
   final double cell;
   final Animation<double> spin;
   final Animation<double> pulse;
@@ -342,14 +326,14 @@ class _ReelWindow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = cell * reelCount;
-    final height = cell * rowCount;
+    final width = cell * game.rules.reels;
+    final height = cell * game.rules.rows;
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFD98A), Color(0xFFC4391F), Color(0xFF5A1B6E)],
+        gradient: LinearGradient(
+          colors: game.frame,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -365,6 +349,7 @@ class _ReelWindow extends StatelessWidget {
               pulse: pulse,
               tapes: tapes,
               result: result,
+              game: game,
             ),
           ),
         ),
@@ -379,7 +364,10 @@ class _ReelPainter extends CustomPainter {
     required this.pulse,
     required this.tapes,
     required this.result,
+    required this.game,
   }) : super(repaint: Listenable.merge([spin, pulse]));
+
+  final SlotGame game;
 
   final Animation<double> spin;
   final Animation<double> pulse;
@@ -389,24 +377,26 @@ class _ReelPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    paintKosmosSky(canvas, rect, pulse.value);
-    canvas.drawRect(rect, Paint()..color = const Color(0x55120A33));
-    final cell = size.width / reelCount;
+    final rules = game.rules;
+    final reels = rules.reels;
+    final rows = rules.rows;
+    game.paintBackdrop(canvas, rect, pulse.value);
+    final cell = size.width / reels;
 
-    for (var r = 0; r < reelCount; r++) {
+    for (var r = 0; r < reels; r++) {
       canvas.save();
       canvas.clipRect(Rect.fromLTWH(r * cell, 0, cell, size.height));
       final tape = tapes[r];
-      final travel = (tape.length - rowCount).toDouble();
-      final p = reelProgress(spin.value, r);
+      final travel = (tape.length - rows).toDouble();
+      final p = reelProgress(spin.value, r, reels);
       // Band läuft vom alten Bild am Ende zum neuen Bild am Anfang
       final eased = p >= 1 ? 1.0 : Curves.easeOutCubic.transform(p);
       final offset = travel * (1 - eased);
       final first = offset.floor();
-      for (var i = math.max(0, first - 1); i < tape.length && i <= first + rowCount; i++) {
+      for (var i = math.max(0, first - 1); i < tape.length && i <= first + rows; i++) {
         final y = (i - offset) * cell;
         final box = Rect.fromLTWH(r * cell, y, cell, cell).deflate(cell * 0.07);
-        paintKosmosSymbol(canvas, box, tape[i]);
+        game.paintSymbol(canvas, box, tape[i]);
       }
       canvas.restore();
       if (r > 0) {
@@ -424,16 +414,16 @@ class _ReelPainter extends CustomPainter {
     if (res != null && res.lineWins.isNotEmpty) {
       final index = (pulse.value * res.lineWins.length).floor() % res.lineWins.length;
       final win = res.lineWins[index];
-      _paintLine(canvas, win, cell);
+      _paintLine(canvas, win, cell, rules);
     }
     if (res != null && res.scatterCount >= 3) {
       final ringPaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3
         ..color = const Color(0xFFFFE9A8);
-      for (var r = 0; r < reelCount; r++) {
-        for (var row = 0; row < rowCount; row++) {
-          if (res.grid[r][row] == symLoch) {
+      for (var r = 0; r < reels; r++) {
+        for (var row = 0; row < rows; row++) {
+          if (res.grid[r][row] == symScatter) {
             canvas.drawRRect(
               RRect.fromRectAndRadius(
                 Rect.fromLTWH(r * cell, row * cell, cell, cell).deflate(3),
@@ -447,10 +437,10 @@ class _ReelPainter extends CustomPainter {
     }
   }
 
-  void _paintLine(Canvas canvas, LineWin win, double cell) {
-    final rows = paylines[win.line];
+  void _paintLine(Canvas canvas, LineWin win, double cell, SlotRules rules) {
+    final rows = rules.lines[win.line];
     final path = Path();
-    for (var r = 0; r < reelCount; r++) {
+    for (var r = 0; r < rules.reels; r++) {
       final c = Offset((r + 0.5) * cell, (rows[r] + 0.5) * cell);
       r == 0 ? path.moveTo(c.dx, c.dy) : path.lineTo(c.dx, c.dy);
     }
@@ -494,25 +484,28 @@ class _ReelPainter extends CustomPainter {
 }
 
 class _SymbolPainter extends CustomPainter {
-  _SymbolPainter(this.symbol);
+  _SymbolPainter(this.game, this.symbol);
+  final SlotGame game;
   final int symbol;
 
   @override
   void paint(Canvas canvas, Size size) =>
-      paintKosmosSymbol(canvas, Offset.zero & size, symbol);
+      game.paintSymbol(canvas, Offset.zero & size, symbol);
 
   @override
   bool shouldRepaint(_SymbolPainter old) => old.symbol != symbol;
 }
 
 class _PayTableSheet extends StatelessWidget {
-  const _PayTableSheet({required this.stake});
+  const _PayTableSheet({required this.game, required this.stake});
+  final SlotGame game;
   final int stake;
 
   @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
-    final lineBet = stake ~/ lineCount;
+    final rules = game.rules;
+    final lineBet = stake ~/ rules.lineCount;
     final style = TextStyle(color: p.ink, fontSize: 16);
     return SafeArea(
       child: ConstrainedBox(
@@ -527,18 +520,18 @@ class _PayTableSheet extends StatelessWidget {
             Text('Gewinnplan', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 4),
             Text(
-              'Einsatz ${formatCoins(stake)} auf zehn Linien. Gewertet wird von links nach rechts.',
+              'Einsatz ${formatCoins(stake)} auf ${rules.lineCount} Linien. Gewertet wird von links nach rechts.',
               style: TextStyle(color: p.inkSoft, fontSize: 15),
             ),
             const SizedBox(height: 10),
-            for (final sym in [symSonne, symRakete, symUfo, symPlanet, symKomet, symStern, symMond])
+            for (final sym in [symWild, 5, 4, 3, 2, 1, 0])
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
                   children: [
                     SizedBox.square(
                       dimension: 46,
-                      child: CustomPaint(painter: _SymbolPainter(sym)),
+                      child: CustomPaint(painter: _SymbolPainter(game, sym)),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -546,13 +539,13 @@ class _PayTableSheet extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            symbolNames[sym]!,
+                            game.symbolNames[sym],
                             style: style.copyWith(fontWeight: FontWeight.w700),
                           ),
                           Text(
                             [
-                              for (var i = 0; i < 3; i++)
-                                '${i + 3} gleiche: ${formatCoins(linePays[sym]![i] * lineBet)}',
+                              for (var i = 0; i < rules.linePays[sym]!.length; i++)
+                                '${i + 3} gleiche: ${formatCoins(rules.linePays[sym]![i] * lineBet)}',
                             ].join(', '),
                             style: style.copyWith(fontSize: 14, color: p.inkSoft),
                           ),
@@ -563,27 +556,22 @@ class _PayTableSheet extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 10),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox.square(
-                  dimension: 46,
-                  child: CustomPaint(painter: _SymbolPainter(symLoch)),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Drei oder mehr Schwarze Löcher zahlen das ${scatterPays[0]}-, ${scatterPays[1]}- oder ${scatterPays[2]}-Fache des Einsatzes und starten $freeSpinsAward Freispiele. In Freispielen zählt jeder Gewinn doppelt.',
-                    style: style,
+            if (rules.hasScatter)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox.square(
+                    dimension: 46,
+                    child: CustomPaint(painter: _SymbolPainter(game, symScatter)),
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(game.featureText, style: style)),
+                ],
+              )
+            else
+              Text(game.featureText, style: style),
             const SizedBox(height: 8),
-            Text(
-              'Die Sonne ersetzt jedes Symbol außer dem Schwarzen Loch.',
-              style: style,
-            ),
+            Text(game.wildText, style: style),
           ],
         ),
       ),

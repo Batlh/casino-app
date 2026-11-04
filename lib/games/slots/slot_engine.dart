@@ -1,49 +1,94 @@
 import 'dart:math';
 
-import 'slot_data.dart';
+/// Symbolnummern gelten für alle Slots. Null bis fünf steigen im Wert,
+/// sechs ist der Joker, sieben der Scatter.
+const int symWild = 6;
+const int symScatter = 7;
 
-const int reelCount = 5;
-const int rowCount = 3;
-const int lineCount = 10;
+/// Regeln eines Slots. Grafik und Texte stehen in slot_games.dart.
+class SlotRules {
+  const SlotRules({
+    required this.rows,
+    required this.lines,
+    required this.strips,
+    required this.linePays,
+    this.scatterPays = const [],
+    this.freeSpins = 0,
+    this.freeMultiplier = 1,
+    this.expandWildInFree = false,
+    this.wildDoubles = false,
+  });
 
-/// Symbolnummern entsprechen tool/tune_slot.py.
-const int symMond = 0;
-const int symStern = 1;
-const int symKomet = 2;
-const int symPlanet = 3;
-const int symUfo = 4;
-const int symRakete = 5;
-const int symSonne = 6; // Joker
-const int symLoch = 7; // Scatter
+  final int rows;
+  final List<List<int>> lines;
 
-const List<List<int>> paylines = [
-  [1, 1, 1, 1, 1],
-  [0, 0, 0, 0, 0],
-  [2, 2, 2, 2, 2],
-  [0, 1, 2, 1, 0],
-  [2, 1, 0, 1, 2],
-  [0, 0, 1, 2, 2],
-  [2, 2, 1, 0, 0],
-  [1, 0, 0, 0, 1],
-  [1, 2, 2, 2, 1],
-  [1, 0, 1, 2, 1],
-];
+  /// Eine Liste je Walze.
+  final List<List<int>> strips;
 
-/// Vielfaches des Linieneinsatzes für 3, 4 und 5 gleiche Symbole.
-const Map<int, List<int>> linePays = {
-  symMond: [3, 8, 25],
-  symStern: [4, 10, 30],
-  symKomet: [5, 15, 50],
-  symPlanet: [8, 25, 100],
-  symUfo: [12, 50, 200],
-  symRakete: [20, 100, 500],
-  symSonne: [50, 250, 1000],
-};
+  /// Vielfaches des Linieneinsatzes, Index null steht für drei Gleiche.
+  final Map<int, List<int>> linePays;
 
-/// Vielfaches des Gesamteinsatzes für 3, 4 und 5 Schwarze Löcher.
-const List<int> scatterPays = [2, 5, 20];
-const int freeSpinsAward = 8;
-const int freeSpinMultiplier = 2;
+  /// Vielfaches des Gesamteinsatzes, Index null steht für drei Scatter.
+  final List<int> scatterPays;
+  final int freeSpins;
+  final int freeMultiplier;
+
+  /// In Freispielen füllt ein Joker auf den inneren Walzen die ganze Walze.
+  final bool expandWildInFree;
+
+  /// Jeder Joker in einer Gewinnlinie verdoppelt deren Gewinn.
+  final bool wildDoubles;
+
+  int get reels => strips.length;
+  int get lineCount => lines.length;
+  bool get hasScatter => scatterPays.isNotEmpty;
+
+  int _pay(int symbol, int count) {
+    final pays = linePays[symbol]!;
+    final i = count - 3;
+    return i >= 0 && i < pays.length ? pays[i] : 0;
+  }
+
+  /// Bewertet eine Linie. Liefert Symbol, Anzahl und Vielfaches oder null.
+  ({int symbol, int count, int multiplier})? evaluateLine(List<int> sym) {
+    if (sym.first == symScatter) return null;
+    var first = symWild;
+    for (final s in sym) {
+      if (s != symWild) {
+        first = s;
+        break;
+      }
+    }
+    if (first == symScatter) first = symWild;
+
+    var count = 0;
+    var wilds = 0;
+    for (final s in sym) {
+      if (s == first || s == symWild) {
+        count++;
+        if (s == symWild) wilds++;
+      } else {
+        break;
+      }
+    }
+    var wildRun = 0;
+    for (final s in sym) {
+      if (s == symWild) {
+        wildRun++;
+      } else {
+        break;
+      }
+    }
+
+    var normal = _pay(first, count);
+    if (wildDoubles && first != symWild) normal <<= wilds;
+    final wild = _pay(symWild, wildRun);
+    if (normal == 0 && wild == 0) return null;
+    return wild > normal
+        ? (symbol: symWild, count: wildRun, multiplier: wild)
+        : (symbol: first, count: count, multiplier: normal);
+  }
+}
 
 class LineWin {
   const LineWin(this.line, this.symbol, this.count, this.payout);
@@ -72,93 +117,69 @@ class SpinResult {
   final int total;
 }
 
-/// Bewertet eine Linie. Liefert Symbol und Anzahl oder null.
-({int symbol, int count, int multiplier})? evaluateLine(List<int> sym) {
-  if (sym.first == symLoch) return null;
-  var first = symSonne;
-  for (final s in sym) {
-    if (s != symSonne) {
-      first = s;
-      break;
-    }
-  }
-  if (first == symLoch) first = symSonne;
-
-  var count = 0;
-  for (final s in sym) {
-    if (s == first || s == symSonne) {
-      count++;
-    } else {
-      break;
-    }
-  }
-  var wildRun = 0;
-  for (final s in sym) {
-    if (s == symSonne) {
-      wildRun++;
-    } else {
-      break;
-    }
-  }
-
-  int pay(int symbol, int n) => n >= 3 ? linePays[symbol]![n - 3] : 0;
-  final normal = pay(first, count);
-  final wild = pay(symSonne, wildRun);
-  if (normal == 0 && wild == 0) return null;
-  return wild > normal
-      ? (symbol: symSonne, count: wildRun, multiplier: wild)
-      : (symbol: first, count: count, multiplier: normal);
-}
-
 class SlotEngine {
-  SlotEngine({Random? rng}) : _rng = rng ?? Random.secure();
+  SlotEngine(this.rules, {Random? rng}) : _rng = rng ?? Random.secure();
 
+  final SlotRules rules;
   final Random _rng;
 
-  /// stake: Gesamteinsatz, durch 10 teilbar. multiplier: 2 in Freispielen.
-  SpinResult spin(int stake, {int multiplier = 1}) {
+  /// stake: Gesamteinsatz, durch die Linienzahl teilbar.
+  SpinResult spin(int stake, {bool free = false}) {
     final grid = <List<int>>[];
-    for (final strip in kosmosStrips) {
+    for (final strip in rules.strips) {
       final stop = _rng.nextInt(strip.length);
       grid.add([
-        for (var row = 0; row < rowCount; row++)
+        for (var row = 0; row < rules.rows; row++)
           strip[(stop + row) % strip.length],
       ]);
     }
-    return evaluateGrid(grid, stake, multiplier: multiplier);
+    return evaluateGrid(grid, stake, free: free);
   }
 
-  static SpinResult evaluateGrid(
+  SpinResult evaluateGrid(
     List<List<int>> grid,
     int stake, {
-    int multiplier = 1,
+    bool free = false,
   }) {
-    final lineBet = stake ~/ lineCount;
+    final scatters = grid.expand((c) => c).where((s) => s == symScatter).length;
+    final shown = [for (final c in grid) c.toList()];
+    if (free && rules.expandWildInFree) {
+      for (var r = 1; r < rules.reels - 1; r++) {
+        if (shown[r].contains(symWild)) {
+          shown[r] = List.filled(rules.rows, symWild);
+        }
+      }
+    }
+
+    final multiplier = free ? rules.freeMultiplier : 1;
+    final lineBet = stake ~/ rules.lineCount;
     final wins = <LineWin>[];
     var total = 0;
-    for (var l = 0; l < paylines.length; l++) {
+    for (var l = 0; l < rules.lines.length; l++) {
       final symbols = [
-        for (var r = 0; r < reelCount; r++) grid[r][paylines[l][r]],
+        for (var r = 0; r < rules.reels; r++) shown[r][rules.lines[l][r]],
       ];
-      final hit = evaluateLine(symbols);
+      final hit = rules.evaluateLine(symbols);
       if (hit != null) {
         final payout = hit.multiplier * lineBet * multiplier;
         wins.add(LineWin(l, hit.symbol, hit.count, payout));
         total += payout;
       }
     }
-    final scatters = grid.expand((c) => c).where((s) => s == symLoch).length;
     var scatterWin = 0;
-    if (scatters >= 3) {
-      scatterWin = scatterPays[min(scatters, 5) - 3] * stake * multiplier;
+    var freeWon = 0;
+    if (rules.hasScatter && scatters >= 3) {
+      final i = min(scatters - 3, rules.scatterPays.length - 1);
+      scatterWin = rules.scatterPays[i] * stake * multiplier;
       total += scatterWin;
+      freeWon = rules.freeSpins;
     }
     return SpinResult(
-      grid: grid,
+      grid: shown,
       lineWins: wins,
       scatterCount: scatters,
       scatterWin: scatterWin,
-      freeSpinsWon: scatters >= 3 ? freeSpinsAward : 0,
+      freeSpinsWon: freeWon,
       total: total,
     );
   }

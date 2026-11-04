@@ -4,7 +4,10 @@ import 'package:gluckspfennig/core/settings.dart';
 import 'package:gluckspfennig/core/sfx.dart';
 import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/blackjack/blackjack_screen.dart';
+import 'package:gluckspfennig/games/holdem/holdem_screen.dart';
+import 'package:gluckspfennig/games/pachinko/pachinko_screen.dart';
 import 'package:gluckspfennig/games/roulette/roulette_screen.dart';
+import 'package:gluckspfennig/games/slots/slot_games.dart';
 import 'package:gluckspfennig/games/slots/slot_screen.dart';
 import 'package:gluckspfennig/games/videopoker/video_poker_screen.dart';
 import 'package:gluckspfennig/main.dart';
@@ -52,11 +55,27 @@ void main() {
         BlackjackScreen(),
         RouletteScreen(),
         VideoPokerScreen(),
-        SlotScreen(),
+        SlotScreen(game: kosmos78),
+        SlotScreen(game: tiefsee),
+        SlotScreen(game: schrebergarten),
+        HoldemScreen(),
+        PachinkoScreen(),
       ]) {
         await pumpApp(tester, size, screen: screen);
         expect(tester.takeException(), isNull, reason: '$screen bei $name');
       }
+    });
+  });
+
+  sizes.forEach((name, size) {
+    testWidgets("Texas Hold'em Tisch ohne Layoutfehler: $name", (tester) async {
+      await pumpApp(tester, size, screen: const HoldemScreen());
+      await tester.tap(find.textContaining('Hinsetzen'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 2));
     });
   });
 

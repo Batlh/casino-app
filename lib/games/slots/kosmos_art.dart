@@ -2,8 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'slot_engine.dart';
-
 /// Airbrush-Motive im Stil von Science-Fiction-Taschenbüchern der Siebziger.
 /// Alle Symbole entstehen im Code und bleiben in jeder Auflösung scharf.
 
@@ -42,6 +40,12 @@ void paintKosmosSky(Canvas canvas, Rect rect, double twinkle) {
   }
 }
 
+/// Hintergrund hinter den Walzen.
+void paintKosmosBackdrop(Canvas canvas, Rect rect, double time) {
+  paintKosmosSky(canvas, rect, time);
+  canvas.drawRect(rect, Paint()..color = const Color(0x55120A33));
+}
+
 /// Zeichnet ein Symbol in das Quadrat r.
 void paintKosmosSymbol(Canvas canvas, Rect rect, int symbol) {
   final r = Rect.fromCenter(
@@ -55,21 +59,21 @@ void paintKosmosSymbol(Canvas canvas, Rect rect, int symbol) {
   canvas.scale(s / 100);
   const box = Rect.fromLTWH(0, 0, 100, 100);
   switch (symbol) {
-    case symMond:
+    case 0:
       _mond(canvas, box);
-    case symStern:
+    case 1:
       _stern(canvas, box);
-    case symKomet:
+    case 2:
       _komet(canvas, box);
-    case symPlanet:
+    case 3:
       _planet(canvas, box);
-    case symUfo:
+    case 4:
       _ufo(canvas, box);
-    case symRakete:
+    case 5:
       _rakete(canvas, box);
-    case symSonne:
+    case 6:
       _sonne(canvas, box);
-    case symLoch:
+    case 7:
       _loch(canvas, box);
   }
   canvas.restore();
