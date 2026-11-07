@@ -94,9 +94,11 @@ void main() {
     final count = tester.widgetList(cards).length;
     expect(count, greaterThanOrEqualTo(13));
     for (var i = 0; i < 3; i++) {
-      await tester.tap(cards.at(count - 1 - i), warnIfMissed: false);
+      // Links oben antippen, dort liegt keine Nachbarkarte darüber
+      await tester.tapAt(tester.getTopLeft(cards.at(count - 1 - i)) + const Offset(6, 30));
       await tester.pump();
     }
+    expect(find.text('Drei Karten nach links weitergeben (3 von 3)'), findsOneWidget);
     await tester.tap(find.text('Weitergeben'));
     await tester.pump();
     await tester.pump(const Duration(seconds: 6));
