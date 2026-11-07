@@ -273,7 +273,7 @@ class _HeartsScreenState extends State<HeartsScreen> {
               alignment: const Alignment(0, 0.6),
               child: SizedBox.square(
                 dimension: size,
-                child: over ? _summary() : _trick(size),
+                child: over ? FittedBox(fit: BoxFit.scaleDown, child: _summary()) : _trick(size),
               ),
             ),
           ],

@@ -199,7 +199,11 @@ class _MauMauScreenState extends State<MauMauScreen> {
                     ),
                 ],
               ),
-              Expanded(child: Center(child: _center(pileW))),
+              Expanded(
+                child: Center(
+                  child: FittedBox(fit: BoxFit.scaleDown, child: _center(pileW)),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: ResultBanner(text: _status, highlight: _e.finished && _e.winner!.human),
