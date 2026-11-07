@@ -157,5 +157,5 @@ class SpiderEngine {
   int get cardCount =>
       stock.length +
       completed.length * 13 +
-      tableau.fold(0, (s, t) => s + t.length);
+      tableau.fold<int>(0, (s, t) => s + t.length);
 }

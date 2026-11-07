@@ -26,7 +26,7 @@ int cardPoints(PlayingCard c) =>
     c.suit == Suit.hearts ? 1 : (isQueenOfSpades(c) ? 13 : 0);
 
 int pointsOf(Iterable<PlayingCard> cards) =>
-    cards.fold(0, (s, c) => s + cardPoints(c));
+    cards.fold<int>(0, (s, c) => s + cardPoints(c));
 
 /// Schwarze Dame für vier Spieler. Gespielt wird im Uhrzeigersinn:
 /// 0 unten, 1 links, 2 oben, 3 rechts. Ende ab 100 Punkten.

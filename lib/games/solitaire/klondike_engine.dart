@@ -174,6 +174,6 @@ class KlondikeEngine {
   int get cardCount =>
       stock.length +
       waste.length +
-      foundations.fold(0, (s, f) => s + f.length) +
-      tableau.fold(0, (s, t) => s + t.length);
+      foundations.fold<int>(0, (s, f) => s + f.length) +
+      tableau.fold<int>(0, (s, t) => s + t.length);
 }

@@ -104,13 +104,13 @@ void main() {
             e.choosePass(s, heartsBotPass(e.seats[s].hand));
           }
         }
-        final total = e.seats.fold(0, (s, x) => s + x.hand.length);
+        final total = e.seats.fold<int>(0, (s, x) => s + x.hand.length);
         expect(total, 52);
         playBots(e);
         hands++;
-        final pts = e.seats.fold(0, (s, x) => s + x.handPoints);
+        final pts = e.seats.fold<int>(0, (s, x) => s + x.handPoints);
         expect(pts, e.moonShooter == null ? 26 : 78);
-        expect(e.seats.fold(0, (s, x) => s + x.taken.length), 52);
+        expect(e.seats.fold<int>(0, (s, x) => s + x.taken.length), 52);
         expect(hands, lessThan(60));
       }
       expect(e.seats.any((s) => s.score >= 100), isTrue);

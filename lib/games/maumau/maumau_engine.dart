@@ -168,7 +168,7 @@ class MauMauEngine {
   int get cardCount =>
       drawPile.length +
       discard.length +
-      players.fold(0, (s, p) => s + p.hand.length);
+      players.fold<int>(0, (s, p) => s + p.hand.length);
 }
 
 String suitName(Suit s) => switch (s) {
