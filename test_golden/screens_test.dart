@@ -8,11 +8,15 @@ import 'package:gluckspfennig/core/settings.dart';
 import 'package:gluckspfennig/core/sfx.dart';
 import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/blackjack/blackjack_screen.dart';
+import 'package:gluckspfennig/games/hearts/hearts_screen.dart';
 import 'package:gluckspfennig/games/holdem/holdem_screen.dart';
+import 'package:gluckspfennig/games/maumau/maumau_screen.dart';
 import 'package:gluckspfennig/games/pachinko/pachinko_screen.dart';
 import 'package:gluckspfennig/games/roulette/roulette_screen.dart';
 import 'package:gluckspfennig/games/slots/slot_games.dart';
 import 'package:gluckspfennig/games/slots/slot_screen.dart';
+import 'package:gluckspfennig/games/solitaire/klondike_screen.dart';
+import 'package:gluckspfennig/games/solitaire/spider_screen.dart';
 import 'package:gluckspfennig/games/videopoker/video_poker_screen.dart';
 import 'package:gluckspfennig/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -115,6 +119,10 @@ void main() {
       'garten': SlotScreen(game: schrebergarten),
       'holdem': HoldemScreen(),
       'pachinko': PachinkoScreen(),
+      'solitaire': KlondikeScreen(),
+      'spider': SpiderScreen(),
+      'maumau': MauMauScreen(),
+      'schwarzedame': HeartsScreen(),
     };
     for (final g in games.entries) {
       await shot(tester, '${g.key}_handy', phone, Brightness.dark, screen: g.value);

@@ -4,13 +4,18 @@ import 'package:gluckspfennig/core/settings.dart';
 import 'package:gluckspfennig/core/sfx.dart';
 import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/blackjack/blackjack_screen.dart';
+import 'package:gluckspfennig/games/hearts/hearts_screen.dart';
 import 'package:gluckspfennig/games/holdem/holdem_screen.dart';
+import 'package:gluckspfennig/games/maumau/maumau_screen.dart';
 import 'package:gluckspfennig/games/pachinko/pachinko_screen.dart';
 import 'package:gluckspfennig/games/roulette/roulette_screen.dart';
 import 'package:gluckspfennig/games/slots/slot_games.dart';
 import 'package:gluckspfennig/games/slots/slot_screen.dart';
+import 'package:gluckspfennig/games/solitaire/klondike_screen.dart';
+import 'package:gluckspfennig/games/solitaire/spider_screen.dart';
 import 'package:gluckspfennig/games/videopoker/video_poker_screen.dart';
 import 'package:gluckspfennig/main.dart';
+import 'package:gluckspfennig/ui/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const sizes = <String, Size>{
@@ -60,6 +65,10 @@ void main() {
         SlotScreen(game: schrebergarten),
         HoldemScreen(),
         PachinkoScreen(),
+        KlondikeScreen(),
+        SpiderScreen(),
+        MauMauScreen(),
+        HeartsScreen(),
       ]) {
         await pumpApp(tester, size, screen: screen);
         expect(tester.takeException(), isNull, reason: '$screen bei $name');
@@ -77,6 +86,51 @@ void main() {
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 2));
     });
+  });
+
+  testWidgets('Schwarze Dame: weitergeben und spielen ohne Fehler', (tester) async {
+    await pumpApp(tester, const Size(393, 852), screen: const HeartsScreen());
+    final cards = find.byType(PlayingCardView);
+    final count = tester.widgetList(cards).length;
+    expect(count, greaterThanOrEqualTo(13));
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(cards.at(count - 1 - i), warnIfMissed: false);
+      await tester.pump();
+    }
+    await tester.tap(find.text('Weitergeben'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 6));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('Mau Mau: ziehen und Gegner spielen lassen', (tester) async {
+    await pumpApp(tester, const Size(393, 852), screen: const MauMauScreen());
+    await tester.tap(find.text('Ziehen'));
+    await tester.pump();
+    if (find.text('Behalten').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Behalten'));
+      await tester.pump();
+    }
+    await tester.pump(const Duration(seconds: 6));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('Solitaire: Stapel ziehen und Karten antippen', (tester) async {
+    await pumpApp(tester, const Size(393, 852), screen: const KlondikeScreen());
+    for (var i = 0; i < 5; i++) {
+      final cards = find.byType(PlayingCardView);
+      await tester.tap(cards.first, warnIfMissed: false);
+      await tester.pump();
+      await tester.tap(cards.last, warnIfMissed: false);
+      await tester.pump();
+    }
+    await tester.tap(find.text('Rückgängig'));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('Black Jack lässt sich austeilen', (tester) async {

@@ -523,6 +523,7 @@ class PlayingCardView extends StatelessWidget {
     required this.width,
     this.card,
     this.highlighted = false,
+    this.strip = false,
   });
 
   final double width;
@@ -530,6 +531,9 @@ class PlayingCardView extends StatelessWidget {
   /// null zeigt den Rücken.
   final PlayingCard? card;
   final bool highlighted;
+
+  /// Rang und Farbe groß in einer Zeile oben, für überlappende Patiencen-Spalten.
+  final bool strip;
 
   @override
   Widget build(BuildContext context) {
@@ -557,7 +561,7 @@ class PlayingCardView extends StatelessWidget {
           borderRadius: radius,
           child: c == null
               ? CustomPaint(painter: _CardBackPainter())
-              : _CardFace(card: c, width: width, height: height),
+              : _CardFace(card: c, width: width, height: height, strip: strip),
         ),
       ),
     );
@@ -565,10 +569,16 @@ class PlayingCardView extends StatelessWidget {
 }
 
 class _CardFace extends StatelessWidget {
-  const _CardFace({required this.card, required this.width, required this.height});
+  const _CardFace({
+    required this.card,
+    required this.width,
+    required this.height,
+    this.strip = false,
+  });
   final PlayingCard card;
   final double width;
   final double height;
+  final bool strip;
 
   @override
   Widget build(BuildContext context) {
@@ -581,6 +591,7 @@ class _CardFace extends StatelessWidget {
 
   Widget _build(String label) {
     final color = card.isRed ? const Color(0xFFC8321F) : const Color(0xFF241410);
+    if (strip) return _buildStrip(label, color);
     final corner = Padding(
       padding: EdgeInsets.all(width * 0.06),
       child: Column(
@@ -619,6 +630,48 @@ class _CardFace extends StatelessWidget {
         Align(
           alignment: Alignment.bottomRight,
           child: RotatedBox(quarterTurns: 2, child: corner),
+        ),
+      ],
+    );
+  }
+}
+
+extension on _CardFace {
+  Widget _buildStrip(String label, Color color) {
+    final isFace = card.rank >= 11 && card.rank <= 13;
+    return Stack(
+      children: [
+        Positioned(
+          left: width * 0.07,
+          top: width * 0.02,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: bodyFont,
+              fontWeight: FontWeight.w700,
+              fontSize: width * 0.36,
+              height: 1.05,
+              color: color,
+            ),
+          ),
+        ),
+        Positioned(
+          right: width * 0.07,
+          top: width * 0.08,
+          child: SuitIcon(suit: card.suit, size: width * 0.26, color: color),
+        ),
+        Align(
+          alignment: const Alignment(0, 0.5),
+          child: isFace
+              ? Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: displayFont,
+                    fontSize: width * 0.5,
+                    color: color,
+                  ),
+                )
+              : SuitIcon(suit: card.suit, size: width * 0.44, color: color),
         ),
       ],
     );

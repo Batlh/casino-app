@@ -8,7 +8,9 @@ import '../core/theme.dart';
 import '../core/wallet.dart';
 import '../games/blackjack/blackjack_screen.dart';
 import '../games/cards/playing_card.dart';
+import '../games/hearts/hearts_screen.dart';
 import '../games/holdem/holdem_screen.dart';
+import '../games/maumau/maumau_screen.dart';
 import '../games/pachinko/pachinko_screen.dart';
 import '../games/roulette/roulette_painters.dart';
 import '../games/roulette/roulette_screen.dart';
@@ -16,6 +18,8 @@ import '../games/slots/kosmos_art.dart';
 import '../games/slots/slot_games.dart';
 import '../games/slots/slot_screen.dart';
 import '../games/slots/tiefsee_art.dart';
+import '../games/solitaire/klondike_screen.dart';
+import '../games/solitaire/spider_screen.dart';
 import '../games/videopoker/video_poker_screen.dart';
 import 'settings_sheet.dart';
 import 'widgets.dart';
@@ -94,6 +98,36 @@ class _LobbyScreenState extends State<LobbyScreen> {
         () => _open(const VideoPokerScreen()),
       ),
     ];
+    final cardGames = <_Game>[
+      _Game(
+        'Solitaire',
+        'Ohne Einsatz, ein Sieg bringt bis zu 400 Münzen',
+        const Color(0xFF0F5B4A),
+        _SolitaireArt.new,
+        () => _open(const KlondikeScreen()),
+      ),
+      _Game(
+        'Spider Solitaire',
+        'Eine, zwei oder vier Farben, bis zu 1.000 Münzen',
+        const Color(0xFF2B0B45),
+        _SpiderArt.new,
+        () => _open(const SpiderScreen()),
+      ),
+      _Game(
+        'Mau Mau',
+        'Gegen bis zu drei Gegner, Sieben auf Sieben zählt',
+        const Color(0xFF7A1F12),
+        _MauMauArt.new,
+        () => _open(const MauMauScreen()),
+      ),
+      _Game(
+        'Schwarze Dame',
+        'Stiche ohne Herz und ohne die Pik Dame',
+        const Color(0xFF14506E),
+        _HeartsArt.new,
+        () => _open(const HeartsScreen()),
+      ),
+    ];
 
     return Scaffold(
       backgroundColor: p.bg,
@@ -131,32 +165,220 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              sliver: SliverLayoutBuilder(
-                builder: (context, constraints) {
-                  final width = constraints.crossAxisExtent;
-                  final columns = (width / 280).floor().clamp(1, 4);
-                  return SliverGrid(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: columns,
-                      mainAxisSpacing: 14,
-                      crossAxisSpacing: 14,
-                      mainAxisExtent: columns == 1 ? 250 : 300,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, i) => _Cabinet(game: games[i]),
-                      childCount: games.length,
-                    ),
-                  );
-                },
-              ),
-            ),
+            ..._section(context, 'Casino', games),
+            ..._section(context, 'Kartenspiele', cardGames),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
       ),
     );
   }
+}
+
+List<Widget> _section(BuildContext context, String title, List<_Game> games) => [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(20, 10, 16, 10),
+        sliver: SliverToBoxAdapter(
+          child: Text(title, style: Theme.of(context).textTheme.headlineMedium),
+        ),
+      ),
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+        sliver: SliverLayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.crossAxisExtent;
+            final columns = (width / 280).floor().clamp(1, 4);
+            return SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                mainAxisExtent: columns == 1 ? 250 : 300,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, i) => _Cabinet(game: games[i]),
+                childCount: games.length,
+              ),
+            );
+          },
+        ),
+      ),
+    ];
+
+/// Kleine Spielkarte für die Lobbybilder.
+void _miniCard(
+  Canvas canvas,
+  Offset center,
+  double w,
+  double angle,
+  String label,
+  Suit suit,
+) {
+  final h = w / cardAspect;
+  final ink = suit == Suit.hearts || suit == Suit.diamonds
+      ? const Color(0xFFC8321F)
+      : const Color(0xFF241410);
+  canvas.save();
+  canvas.translate(center.dx, center.dy);
+  canvas.rotate(angle);
+  final r = Rect.fromCenter(center: Offset.zero, width: w, height: h);
+  canvas.drawRRect(
+    RRect.fromRectAndRadius(r.shift(const Offset(2, 4)), Radius.circular(w * 0.09)),
+    Paint()..color = const Color(0x66000000),
+  );
+  canvas.drawRRect(
+    RRect.fromRectAndRadius(r, Radius.circular(w * 0.09)),
+    Paint()..color = const Color(0xFFFFF8E7),
+  );
+  final tp = TextPainter(
+    text: TextSpan(
+      text: label,
+      style: TextStyle(fontFamily: displayFont, fontSize: w * 0.32, color: ink),
+    ),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  tp.paint(canvas, r.topLeft + Offset(w * 0.08, w * 0.02));
+  paintSuit(
+    canvas,
+    Rect.fromCenter(center: Offset(0, h * 0.1), width: w * 0.5, height: w * 0.5),
+    suit,
+    ink,
+  );
+  canvas.restore();
+}
+
+class _SolitaireArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = math.min(size.width * 0.24, size.height * 0.5 * cardAspect);
+    const cards = [
+      ('K', Suit.spades),
+      ('Q', Suit.hearts),
+      ('J', Suit.clubs),
+      ('10', Suit.diamonds),
+    ];
+    for (var i = 0; i < cards.length; i++) {
+      _miniCard(
+        canvas,
+        Offset(
+          size.width / 2 + (i - 1.5) * w * 0.34,
+          size.height * 0.36 + i * w * 0.22,
+        ),
+        w,
+        0,
+        cards[i].$1,
+        cards[i].$2,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Spinnennetz mit kleiner Spinne, gezeichnet aus Linien.
+class _SpiderArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = Offset(size.width / 2, size.height * 0.42);
+    final r = math.min(size.width, size.height) * 0.62;
+    final thread = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..color = const Color(0x99E9D8FF);
+    const spokes = 12;
+    for (var i = 0; i < spokes; i++) {
+      final a = i * 2 * math.pi / spokes;
+      canvas.drawLine(c, c + Offset(math.cos(a), math.sin(a)) * r, thread);
+    }
+    for (var ring = 1; ring <= 6; ring++) {
+      final rr = r * ring / 6.5;
+      final path = Path();
+      for (var i = 0; i <= spokes; i++) {
+        final a = i * 2 * math.pi / spokes;
+        final p = c + Offset(math.cos(a), math.sin(a)) * rr;
+        if (i == 0) {
+          path.moveTo(p.dx, p.dy);
+        } else {
+          final mid = (i - 0.5) * 2 * math.pi / spokes;
+          final q = c + Offset(math.cos(mid), math.sin(mid)) * rr * 0.9;
+          path.quadraticBezierTo(q.dx, q.dy, p.dx, p.dy);
+        }
+      }
+      canvas.drawPath(path, thread);
+    }
+    final spider = c + Offset(r * 0.18, r * 0.28);
+    canvas.drawLine(c + Offset(r * 0.18, -r), spider, thread);
+    final leg = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.6
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0xFF120A1E);
+    final s = r * 0.1;
+    for (final side in [-1.0, 1.0]) {
+      for (var i = 0; i < 4; i++) {
+        final y = (i - 1.5) * s * 0.5;
+        canvas.drawPath(
+          Path()
+            ..moveTo(spider.dx, spider.dy + y)
+            ..lineTo(spider.dx + side * s * 1.2, spider.dy + y - s * 0.6)
+            ..lineTo(spider.dx + side * s * 1.9, spider.dy + y + s * 0.5),
+          leg,
+        );
+      }
+    }
+    canvas.drawCircle(spider, s * 0.75, Paint()..color = const Color(0xFF120A1E));
+    canvas.drawCircle(spider + Offset(0, -s * 0.85), s * 0.45, Paint()..color = const Color(0xFF120A1E));
+    canvas.drawCircle(spider + Offset(0, s * 0.1), s * 0.25, Paint()..color = const Color(0xFFC4391F));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _MauMauArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = math.min(size.width * 0.3, size.height * 0.6 * cardAspect);
+    final c = Offset(size.width / 2, size.height * 0.52);
+    _miniCard(canvas, c + Offset(-w * 0.42, 0), w, -0.22, '7', Suit.hearts);
+    _miniCard(canvas, c + Offset(w * 0.42, 0), w, 0.18, 'J', Suit.clubs);
+    final tp = TextPainter(
+      text: TextSpan(
+        text: 'Mau!',
+        style: TextStyle(
+          fontFamily: displayFont,
+          fontSize: w * 0.42,
+          color: const Color(0xFFFFC95C),
+          shadows: const [Shadow(offset: Offset(2, 2), color: Color(0xFF3A1206))],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset(size.width - tp.width - 16, 26));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _HeartsArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = math.min(size.width * 0.32, size.height * 0.62 * cardAspect);
+    final c = Offset(size.width / 2, size.height * 0.54);
+    final heart = Paint()..color = const Color(0x66FF8FB0);
+    final rng = math.Random(12);
+    for (var i = 0; i < 9; i++) {
+      final hs = 14.0 + rng.nextDouble() * 16;
+      final o = Offset(rng.nextDouble() * size.width, 30 + rng.nextDouble() * (size.height - 50));
+      paintSuit(canvas, Rect.fromCenter(center: o, width: hs, height: hs), Suit.hearts, heart.color);
+    }
+    _miniCard(canvas, c, w, -0.08, 'Q', Suit.spades);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _Game {
