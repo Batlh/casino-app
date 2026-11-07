@@ -96,13 +96,15 @@ class MauMauEngine {
       steps = 2;
       lastEvent = '${p.name}: Acht, ${players[(current + 1) % players.length].name} setzt aus';
     } else if (c.rank == 11) {
-      lastEvent = '${p.name} wünscht sich ${suitName(wish!)}';
+      lastEvent = p.human
+          ? 'Du wünschst dir ${suitName(wish!)}'
+          : '${p.name} wünscht sich ${suitName(wish!)}';
     } else {
       lastEvent = '';
     }
     if (p.hand.isEmpty) {
       winner = p;
-      lastEvent = '${p.name} hat keine Karten mehr';
+      lastEvent = p.human ? 'Du hast keine Karten mehr' : '${p.name} hat keine Karten mehr';
       return;
     }
     _advance(steps);
@@ -122,14 +124,14 @@ class MauMauEngine {
         p.hand.add(c);
         got++;
       }
-      lastEvent = '${p.name} zieht $got';
+      lastEvent = p.human ? 'Du ziehst $got' : '${p.name} zieht $got';
       _advance(1);
       return;
     }
     if (drewThisTurn) return;
     final c = _take();
     if (c == null) {
-      lastEvent = '${p.name} kann nicht ziehen';
+      lastEvent = p.human ? 'Du kannst nicht ziehen' : '${p.name} kann nicht ziehen';
       _advance(1);
       return;
     }
@@ -137,7 +139,7 @@ class MauMauEngine {
     drewThisTurn = true;
     drawnCard = c;
     if (!canPlay(c)) {
-      lastEvent = '${p.name} zieht';
+      lastEvent = p.human ? 'Du ziehst' : '${p.name} zieht';
       _advance(1);
     }
   }
@@ -145,7 +147,7 @@ class MauMauEngine {
   /// Nach dem Ziehen die passende Karte doch behalten.
   void pass() {
     if (drewThisTurn) {
-      lastEvent = '${actor.name} zieht';
+      lastEvent = actor.human ? 'Du ziehst' : '${actor.name} zieht';
       _advance(1);
     }
   }
