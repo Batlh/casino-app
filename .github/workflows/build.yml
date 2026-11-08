@@ -6,9 +6,13 @@ on:
   workflow_dispatch:
     inputs:
       desktop:
-        description: "Auch Windows, Linux und macOS bauen"
+        description: "Auch Windows und Linux bauen"
         type: boolean
         default: true
+      macos:
+        description: "Auch macOS bauen (nur bei Bedarf, kostet viel Kontingent)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -149,10 +153,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { os: windows-latest, target: windows }
-          - { os: macos-latest, target: macos }
-    runs-on: ${{ matrix.os }}
+        target: ${{ fromJSON(inputs.macos && '["windows","macos"]' || '["windows"]') }}
+    runs-on: ${{ matrix.target == 'macos' && 'macos-latest' || 'windows-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
