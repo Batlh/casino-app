@@ -785,7 +785,10 @@ class EinsEngine {
           power[me] = !power[me];
           _checkAllOff();
         }
-        if (useFlex) lastEvent = '${_who(p, 'legst', 'legt')} die Kraftfarbe ${colorName(f.flexColor!)}';
+        if (useFlex) {
+          lastEvent = '${_who(p, 'legst', 'legt')} über die Kraftseite auf ${colorName(f.flexColor!)}, '
+              'weiter mit ${colorName(f.color!)}';
+        }
         if (f.spin && (mode == EinsMode.spin || mode == EinsMode.spinNew)) spinPending = true;
       case EinsKind.skip:
         steps = 2;
