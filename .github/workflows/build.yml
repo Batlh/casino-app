@@ -42,7 +42,12 @@ jobs:
           if-no-files-found: ignore
       - name: APK bauen
         run: |
-          flutter build apk --release
+          # Der Gradle-Download bricht manchmal mit 504 ab, dann neu versuchen
+          for try in 1 2 3; do
+            flutter build apk --release && break
+            [ "$try" = 3 ] && exit 1
+            echo "Neuer Versuch in 30 Sekunden"; sleep 30
+          done
           mv build/app/outputs/flutter-apk/app-release.apk gluckspfennig.apk
       - name: Signatur prüfen
         run: |
