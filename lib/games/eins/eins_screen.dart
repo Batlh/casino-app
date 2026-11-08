@@ -915,27 +915,22 @@ class _EinsScreenState extends State<EinsScreen> {
     final center = FittedBox(fit: BoxFit.scaleDown, child: centerContent);
 
     if (landscape) {
+      // Meldung und Knöpfe sitzen direkt über der Hand und wandern mit ihr
       return Column(
         children: [
           const SizedBox(height: 6),
           opponents,
-          Expanded(
-            child: Row(
+          Expanded(child: Center(child: center)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 16,
+              runSpacing: 4,
               children: [
-                Expanded(child: Center(child: center)),
-                SizedBox(
-                  width: math.min(320, w * 0.38),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: SizedBox(
-                      width: math.min(320, w * 0.38),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [status, buttons],
-                      ),
-                    ),
-                  ),
-                ),
+                SizedBox(width: math.min(440, w * 0.42), child: status),
+                buttons,
               ],
             ),
           ),
