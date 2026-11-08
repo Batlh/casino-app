@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import '../games/chess/chess_board.dart';
 import '../games/chess/chess_engine.dart';
 import '../games/chess/chess_tutorial.dart';
+import '../games/mahjong/mahjong_tutorial.dart';
+import '../games/mahjong/tiles.dart';
+import '../games/shogi/shogi_board.dart';
+import '../games/shogi/shogi_engine.dart';
+import '../games/shogi/shogi_tutorial.dart';
 import '../games/slots/slot_games.dart';
 import 'guide.dart';
 
@@ -203,4 +208,142 @@ final chessGuide = GameGuide(
   ],
   tutorial: (_) => const ChessTutorialScreen(),
   tutorialLabel: 'Schach lernen: 12 kleine Übungen',
+);
+
+Widget _shogiPicture(String sfen) => SizedBox(
+      width: 260,
+      child: ShogiBoardView(game: ShogiGame.fromSfen(sfen)),
+    );
+
+Widget _pieceRow(List<int> pieces) => Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      alignment: WrapAlignment.center,
+      children: [for (final p in pieces) ShogiPieceView(piece: p, size: 40)],
+    );
+
+Widget _tileRow(List<int> tiles, {double width = 34}) => FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final t in tiles)
+            t < 0
+                ? const SizedBox(width: 12)
+                : Padding(padding: const EdgeInsets.all(1), child: TileView(tile: t, width: width, depth: 3)),
+        ],
+      ),
+    );
+
+final shogiGuide = GameGuide(
+  'Shogi',
+  [
+    GuideSection(
+      'Ziel',
+      'Shogi ist japanisches Schach auf 9 mal 9 Feldern. Wer den gegnerischen König mattsetzt, gewinnt. Sente zieht zuerst '
+          'und sitzt unten, Gote oben. Die Steine haben keine Farben: Ihre Spitze zeigt zum Gegner.',
+      picture: (_) => _shogiPicture(ShogiGame.startSfen),
+    ),
+    GuideSection(
+      'Die Steine',
+      'König 王: ein Feld in jede Richtung. Turm 飛: gerade beliebig weit. Läufer 角: schräg beliebig weit. '
+          'Goldgeneral 金: ein Feld, nur nicht schräg zurück. Silbergeneral 銀: ein Feld nach vorn oder schräg. '
+          'Springer 桂: nur nach vorn im L-Sprung. Lanze 香: geradeaus nach vorn beliebig weit. Bauer 歩: ein Feld vor.',
+      picture: (_) => _pieceRow(const [sKing, sRook, sBishop, sGold, sSilver, sKnight, sLance, sPawn]),
+    ),
+    GuideSection(
+      'Beförderung',
+      'Die drei Reihen auf der Gegnerseite sind die Zone. Ein Zug hinein, heraus oder darin darf einen Stein befördern; '
+          'er wird umgedreht und rot beschriftet. Bauer, Lanze, Springer und Silber ziehen dann wie Gold. Turm und Läufer '
+          'werden zu Drachenkönig 龍 und Drachenpferd 馬 und dürfen zusätzlich wie der König ziehen. Kann ein Stein sonst '
+          'nie wieder ziehen, muss er befördert werden.',
+      picture: (_) => _pieceRow(const [sTokin, 10, 11, 12, sHorse, sDragon]),
+    ),
+    const GuideSection(
+      'Einsetzen',
+      'Geschlagene Steine wandern in deine Hand. Statt zu ziehen darfst du einen davon auf ein freies Feld setzen, '
+          'immer unbefördert. Verboten sind: zwei eigene unbeförderte Bauern in einer Linie, ein Bauer, Springer oder eine '
+          'Lanze dort, wo sie nie mehr ziehen könnten, und ein eingesetzter Bauer, der sofort mattsetzt.',
+    ),
+    const GuideSection(
+      'Bedienung und Münzen',
+      'Tipp einen Stein auf dem Brett oder in deiner Hand an, die grünen Punkte zeigen, wohin er kann. Gegen den Computer '
+          'bringt ein Sieg 50 bis 400 Münzen. Viermal dieselbe Stellung ist ein Remis.',
+    ),
+  ],
+  tutorial: (_) => const ShogiTutorialScreen(),
+  tutorialLabel: 'Shogi lernen: 10 kleine Übungen',
+);
+
+final mahjongSolitaireGuide = GameGuide(
+  'Mahjong Solitär',
+  [
+    GuideSection(
+      'Ziel',
+      'Räum alle 144 Steine vom Turm ab, immer zwei gleiche auf einmal. Jede Sorte gibt es viermal. Blumen passen zu jeder '
+          'Blume, Jahreszeiten zu jeder Jahreszeit.',
+      picture: (_) => _tileRow(const [4, 4, -1, 31, 31, -1, 34, 36, -1, 39, 41]),
+    ),
+    const GuideSection(
+      'Freie Steine',
+      'Ein Stein ist frei, wenn nichts auf ihm liegt und seine linke oder rechte Seite frei ist. Nur freie Steine lassen '
+          'sich antippen. Steine, die gerade blockiert sind, erscheinen etwas dunkler.',
+    ),
+    const GuideSection(
+      'Hilfe',
+      'Der Tipp-Knopf zeigt ein freies Paar (30 Münzen vom Gewinn). Geht nichts mehr, mischt „Mischen“ die übrigen '
+          'Steine lösbar neu (50 Münzen vom Gewinn). Rückgängig ist kostenlos. Auf kleinen Bildschirmen lässt sich das '
+          'Brett mit zwei Fingern vergrößern.',
+    ),
+    const GuideSection(
+      'Münzen',
+      'Jedes abgeräumte Paar bringt 2 Münzen, ein leeres Brett 300 abzüglich Tipps und Mischen.',
+    ),
+  ],
+  tutorial: (_) => QuizTutorialScreen(title: 'Mahjong Solitär lernen', lessons: solitaireLessons),
+  tutorialLabel: 'Mahjong Solitär lernen: 3 kurze Übungen',
+);
+
+final riichiGuide = GameGuide(
+  'Riichi Mahjong',
+  [
+    GuideSection(
+      'Ziel',
+      'Vier Spieler, du und drei Computer. Bilde als Erster eine fertige Hand aus 14 Steinen: vier Gruppen und ein Paar. '
+          'Gruppen sind Folgen wie 3-4-5 in einer Farbe oder drei gleiche Steine.',
+      picture: (_) => _tileRow(const [0, 1, 2, -1, 12, 13, 14, -1, 19, 20, 21, -1, 27, 27, 27, -1, 33, 33], width: 24),
+    ),
+    GuideSection(
+      'Die Steine',
+      'Drei Farben von 1 bis 9: Zeichen, Kreise und Bambus. Dazu vier Winde und drei Drachen. Steine mit 1 und 9 heißen '
+          'Endsteine, Winde und Drachen Ehrensteine.',
+      picture: (_) => _tileRow(const [0, 8, -1, 9, 17, -1, 18, 26, -1, 27, 28, 29, 30, -1, 31, 32, 33], width: 24),
+    ),
+    const GuideSection(
+      'Ein Zug',
+      'Ziehen, dann einen Stein abwerfen: einmal antippen hebt ihn an, ein zweites Mal wirft ihn ab. Auf fremde Abwürfe '
+          'kannst du Pon (zwei gleiche dazu), Kan (drei gleiche dazu) oder, nur vom Spieler links von dir, Chi (Folge) rufen. '
+          'Damit wird deine Hand offen.',
+    ),
+    const GuideSection(
+      'Gewinnen',
+      'Mit dem letzten Stein vom Stapel sagst du Tsumo, mit einem fremden Abwurf Ron. Die Hand braucht mindestens ein Yaku, '
+          'zum Beispiel Riichi, Menzen Tsumo, Tanyao (nur 2 bis 8) oder einen Drilling aus Drachen oder deinem Wind. '
+          'Die Knöpfe erscheinen von selbst, sobald etwas möglich ist.',
+    ),
+    const GuideSection(
+      'Riichi und Furiten',
+      'Mit geschlossener Hand, der nur ein Stein fehlt, kannst du Riichi sagen: 1.000 Punkte Einsatz, dafür ein sicheres '
+          'Yaku. Danach wirfst du jeden gezogenen Stein ab, der nicht passt. Liegt einer deiner Wartesteine in deinen eigenen '
+          'Abwürfen, bist du Furiten und darfst nur mit Tsumo gewinnen.',
+    ),
+    const GuideSection(
+      'Punkte und Münzen',
+      'Han aus Yaku und Dora und Fu aus der Handform ergeben die Punkte. Jeder startet mit 25.000; gespielt wird eine '
+          'Ostrunde, also mindestens vier Hände. Jede eigene Hand bringt 20 Münzen plus 10 je Han, am Ende gibt es '
+          '300, 120 oder 40 Münzen für Platz 1 bis 3.',
+    ),
+  ],
+  tutorial: (_) => QuizTutorialScreen(title: 'Mahjong lernen', lessons: riichiLessons),
+  tutorialLabel: 'Mahjong lernen: 7 kurze Übungen',
 );

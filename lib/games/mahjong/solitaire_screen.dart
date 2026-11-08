@@ -1,0 +1,287 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
+import '../../core/scope.dart';
+import '../../core/sfx.dart';
+import '../../ui/guides.dart';
+import '../../ui/widgets.dart';
+import 'solitaire_engine.dart';
+import 'tiles.dart';
+
+const mahjongSolitaireReward = 300;
+const mahjongHintCost = 30;
+const mahjongShuffleCost = 50;
+
+class MahjongSolitaireScreen extends StatefulWidget {
+  const MahjongSolitaireScreen({super.key, this.seed});
+
+  /// Fester Zufall für Tests und Bilder.
+  final int? seed;
+
+  @override
+  State<MahjongSolitaireScreen> createState() => _MahjongSolitaireScreenState();
+}
+
+class _MahjongSolitaireScreenState extends State<MahjongSolitaireScreen> {
+  late MahjongSolitaire _e = MahjongSolitaire(rng: widget.seed == null ? null : math.Random(widget.seed));
+  int? _selected;
+  (int, int)? _hint;
+  int _penalty = 0;
+  int _paidPairs = 0;
+  bool _won = false;
+  String _message = '';
+
+  AppScope get _app => AppScope.of(context);
+  int get _reward => math.max(0, mahjongSolitaireReward - _penalty);
+
+  void _newGame() {
+    setState(() {
+      _e = MahjongSolitaire();
+      _selected = null;
+      _hint = null;
+      _penalty = 0;
+      _paidPairs = 0;
+      _won = false;
+      _message = '';
+    });
+    _app.sfx.play(Sound.card);
+  }
+
+  void _tap(int i) {
+    if (_won) return;
+    if (!_e.isFree(i)) {
+      _app.sfx.play(Sound.tick);
+      setState(() => _message = 'Dieser Stein ist nicht frei: Er braucht eine freie linke oder rechte Seite und nichts darauf');
+      return;
+    }
+    final sel = _selected;
+    if (sel == null || sel == i) {
+      setState(() {
+        _selected = sel == i ? null : i;
+        _message = '';
+      });
+      _app.sfx.play(Sound.tick);
+      return;
+    }
+    if (_e.remove(sel, i)) {
+      _app.sfx.play(Sound.chip);
+      if (_e.removedPairs > _paidPairs) {
+        _paidPairs = _e.removedPairs;
+        _app.wallet.credit(2);
+      }
+      setState(() {
+        _selected = null;
+        _hint = null;
+        _message = '';
+      });
+      if (_e.won) {
+        _won = true;
+        if (_reward > 0) _app.wallet.credit(_reward);
+        _app.sfx.play(Sound.bigWin);
+        setState(() => _message = 'Alles abgeräumt! +${formatCoins(_reward)} Münzen');
+      } else if (_e.stuck) {
+        _app.sfx.play(Sound.lose);
+        setState(() => _message = 'Kein passendes Paar mehr frei. Mischen oder Rückgängig');
+      }
+    } else {
+      setState(() {
+        _selected = i;
+        _message = '';
+      });
+      _app.sfx.play(Sound.tick);
+    }
+  }
+
+  void _hintTap() {
+    if (_won) return;
+    final pairs = _e.freePairs();
+    if (pairs.isEmpty) {
+      setState(() => _message = 'Kein Paar frei. Mischen hilft');
+      return;
+    }
+    setState(() {
+      if (_hint == null) _penalty += mahjongHintCost;
+      _hint = pairs[math.Random().nextInt(pairs.length)];
+      _message = 'Tipp: ${tileName(_e.tiles[_hint!.$1])}';
+    });
+  }
+
+  void _shuffle() {
+    if (_won) return;
+    _e.shuffle();
+    _app.sfx.play(Sound.card);
+    setState(() {
+      _penalty += mahjongShuffleCost;
+      _selected = null;
+      _hint = null;
+      _message = 'Neu gemischt';
+    });
+  }
+
+  void _undo() {
+    if (_won || !_e.canUndo) return;
+    _e.undo();
+    setState(() {
+      _selected = null;
+      _hint = null;
+      _message = '';
+    });
+  }
+
+  String get _status {
+    if (_message.isNotEmpty) return _message;
+    final pairs = _e.freePairs().length;
+    return '${_e.remaining} Steine übrig, $pairs ${pairs == 1 ? 'Paar' : 'Paare'} frei. Sieg bringt ${formatCoins(_reward)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GameFrame(
+      title: 'Mahjong Solitär',
+      guide: mahjongSolitaireGuide,
+      background: const BoxDecoration(
+        gradient: RadialGradient(radius: 1.1, colors: [Color(0xFF1F5E4A), Color(0xFF0E2E24)]),
+      ),
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final landscape = box.maxWidth > box.maxHeight * 1.2;
+          final board = InteractiveViewer(
+            maxScale: 3,
+            child: LayoutBuilder(builder: (context, b) => _board(b)),
+          );
+          final buttons = Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              ActionButton(label: 'Tipp (−$mahjongHintCost)', onPressed: _won ? null : _hintTap),
+              ActionButton(
+                primary: _e.stuck,
+                label: 'Mischen (−$mahjongShuffleCost)',
+                onPressed: _won ? null : _shuffle,
+              ),
+              ActionButton(label: 'Rückgängig', onPressed: _e.canUndo && !_won ? _undo : null),
+              ActionButton(primary: _won, label: 'Neues Spiel', onPressed: _newGame),
+            ],
+          );
+          final status = ResultBanner(text: _status, highlight: _won, maxLines: 2);
+          if (landscape && box.maxWidth > 900) {
+            return Row(
+              children: [
+                Expanded(child: board),
+                SizedBox(
+                  width: 240,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [status, const SizedBox(height: 8), buttons],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+          return Column(
+            children: [
+              Expanded(child: board),
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: status),
+              Padding(padding: const EdgeInsets.fromLTRB(8, 2, 8, 8), child: buttons),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _board(BoxConstraints b) {
+    final m = _Metrics.fit(b.maxWidth, b.maxHeight);
+    return GestureDetector(
+      onTapUp: (d) {
+        final i = m.hit(_e, d.localPosition);
+        if (i != null) _tap(i);
+      },
+      child: CustomPaint(
+        size: Size(b.maxWidth, b.maxHeight),
+        painter: _SolitairePainter(_e, m, _selected, _hint),
+      ),
+    );
+  }
+}
+
+class _Metrics {
+  _Metrics(this.ux, this.ox, this.oy);
+
+  factory _Metrics.fit(double w, double h) {
+    // Breite: 30 Einheiten, Höhe: 16 Einheiten, dazu Ebenenversatz und Kante
+    final byW = w / (30 + 4 * 0.35 + 0.3);
+    final byH = h / (16 / TileView.aspect + 4 * 0.35 + 0.3);
+    final ux = math.min(byW, byH) * 0.97;
+    final bw = ux * (30 + 4 * 0.35 + 0.3);
+    final bh = ux * (16 / TileView.aspect + 4 * 0.35 + 0.3);
+    return _Metrics(ux, (w - bw) / 2, (h - bh) / 2);
+  }
+
+  final double ux;
+  final double ox;
+  final double oy;
+
+  double get uy => ux / TileView.aspect;
+  double get dz => ux * 0.35;
+  double get depth => ux * 0.3;
+
+  Rect face(Slot s) => Rect.fromLTWH(
+        ox + 4 * dz + s.x * ux - s.z * dz,
+        oy + 4 * dz + s.y * uy - s.z * dz,
+        2 * ux,
+        2 * uy,
+      );
+
+  int? hit(MahjongSolitaire e, Offset p) {
+    final order = drawOrder(e).reversed;
+    for (final i in order) {
+      if (face(e.slots[i]).contains(p)) return i;
+    }
+    return null;
+  }
+
+  List<int> drawOrder(MahjongSolitaire e) {
+    final idx = [for (var i = 0; i < e.slots.length; i++) if (e.present[i]) i];
+    idx.sort((a, b) {
+      final sa = e.slots[a];
+      final sb = e.slots[b];
+      if (sa.z != sb.z) return sa.z - sb.z;
+      if (sa.y != sb.y) return sa.y - sb.y;
+      return sa.x - sb.x;
+    });
+    return idx;
+  }
+}
+
+class _SolitairePainter extends CustomPainter {
+  _SolitairePainter(this.e, this.m, this.selected, this.hint);
+  final MahjongSolitaire e;
+  final _Metrics m;
+  final int? selected;
+  final (int, int)? hint;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final i in m.drawOrder(e)) {
+      final free = e.isFree(i);
+      paintTile(
+        canvas,
+        m.face(e.slots[i]),
+        e.tiles[i],
+        depth: m.depth,
+        selected: i == selected,
+        hint: hint != null && (hint!.$1 == i || hint!.$2 == i),
+        dim: !free,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SolitairePainter old) => true;
+}

@@ -11,6 +11,12 @@ import '../games/cards/playing_card.dart';
 import '../games/chess/chess_engine.dart';
 import '../games/chess/chess_pieces.dart';
 import '../games/chess/chess_screen.dart';
+import '../games/mahjong/riichi_screen.dart';
+import '../games/mahjong/solitaire_screen.dart';
+import '../games/mahjong/tiles.dart';
+import '../games/shogi/shogi_board.dart';
+import '../games/shogi/shogi_engine.dart';
+import '../games/shogi/shogi_screen.dart';
 import '../games/eins/eins_card.dart';
 import '../games/eins/eins_engine.dart';
 import '../games/eins/eins_screen.dart';
@@ -156,6 +162,27 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF3A2116),
         _ChessArt.new,
         () => _open(const ChessScreen()),
+      ),
+      _Game(
+        'Shogi',
+        'Japanisches Schach: geschlagene Steine kommen zurück',
+        const Color(0xFF5A3420),
+        _ShogiArt.new,
+        () => _open(const ShogiScreen()),
+      ),
+      _Game(
+        'Mahjong Solitär',
+        'Paare vom Turm abräumen, ein leeres Brett bringt 300',
+        const Color(0xFF0F5B4A),
+        () => _MahjongArt(const [4, 31, 4]),
+        () => _open(const MahjongSolitaireScreen()),
+      ),
+      _Game(
+        'Riichi Mahjong',
+        'Gegen drei Computer: Pon, Chi, Riichi und Ron',
+        const Color(0xFF7A1F12),
+        () => _MahjongArt(const [33, 27, 32]),
+        () => _open(const RiichiScreen()),
       ),
     ];
 
@@ -512,6 +539,46 @@ class _ChessArt extends CustomPainter {
     piece(-knight, size.width * 0.28, cell * 2.2);
     piece(king, size.width * 0.5, cell * 2.8);
     piece(-queen, size.width * 0.72, cell * 2.4);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _ShogiArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = math.min(size.width / 4.2, size.height / 2.3);
+    final cy = size.height * 0.56;
+    final pieces = [sRook, -sKing, sBishop];
+    for (var i = 0; i < 3; i++) {
+      final cx = size.width / 2 + (i - 1) * s * 1.15;
+      final big = i == 1 ? 1.2 : 1.0;
+      paintShogiPiece(canvas, Rect.fromCenter(center: Offset(cx, cy), width: s * big, height: s * 1.1 * big), pieces[i]);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _MahjongArt extends CustomPainter {
+  _MahjongArt(this.tiles);
+  final List<int> tiles;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = math.min(size.width / 4.6, size.height / 2.2 * TileView.aspect);
+    final h = w / TileView.aspect;
+    final cy = size.height * 0.56;
+    for (var i = 0; i < tiles.length; i++) {
+      final cx = size.width / 2 + (i - 1) * w * 1.15;
+      canvas.save();
+      canvas.translate(cx, cy);
+      canvas.rotate((i - 1) * 0.12);
+      paintTile(canvas, Rect.fromCenter(center: Offset.zero, width: w, height: h), tiles[i], depth: w * 0.12);
+      canvas.restore();
+    }
   }
 
   @override

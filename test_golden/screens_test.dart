@@ -7,6 +7,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gluckspfennig/core/settings.dart';
 import 'package:gluckspfennig/core/sfx.dart';
 import 'package:gluckspfennig/core/wallet.dart';
+import 'package:gluckspfennig/games/chess/chess_screen.dart';
+import 'package:gluckspfennig/games/chess/chess_tutorial.dart';
+import 'package:gluckspfennig/games/mahjong/mahjong_tutorial.dart';
+import 'package:gluckspfennig/games/mahjong/riichi_screen.dart';
+import 'package:gluckspfennig/games/mahjong/solitaire_screen.dart';
+import 'package:gluckspfennig/games/shogi/shogi_screen.dart';
+import 'package:gluckspfennig/games/shogi/shogi_tutorial.dart';
+import 'package:gluckspfennig/ui/guide.dart';
+import 'package:gluckspfennig/ui/guides.dart';
 import 'package:gluckspfennig/games/blackjack/blackjack_screen.dart';
 import 'package:gluckspfennig/games/eins/eins_engine.dart';
 import 'package:gluckspfennig/games/eins/eins_screen.dart';
@@ -134,11 +143,30 @@ void main() {
       'eins_gnadenlos': EinsScreen(mode: EinsMode.noMercy),
       'schwarzedame': HeartsScreen(),
       'viererkette': QuatroScreen(),
+      'schach': ChessScreen(),
+      'schach_lernen': ChessTutorialScreen(),
+      'shogi': ShogiScreen(),
+      'shogi_lernen': ShogiTutorialScreen(),
+      'mahjong_solitaer': MahjongSolitaireScreen(seed: 3),
+      'riichi': RiichiScreen(seed: 5),
     };
     for (final g in games.entries) {
       await shot(tester, '${g.key}_handy', phone, Brightness.dark, screen: g.value);
       await shot(tester, '${g.key}_quer', landscape, Brightness.light, screen: g.value);
       await shot(tester, '${g.key}_desktop', desktop, Brightness.dark, screen: g.value);
+    }
+
+    final extra = <String, Widget>{
+      'erklaerung_schach': GuideScreen(guide: chessGuide),
+      'erklaerung_shogi': GuideScreen(guide: shogiGuide),
+      'erklaerung_riichi': GuideScreen(guide: riichiGuide),
+      'erklaerung_eins': const GuideScreen(guide: einsGuide),
+      'mahjong_lernen': QuizTutorialScreen(title: 'Mahjong lernen', lessons: riichiLessons),
+      'mahjong_solitaer_lernen': QuizTutorialScreen(title: 'Mahjong Solitär lernen', lessons: solitaireLessons),
+    };
+    for (final g in extra.entries) {
+      await shot(tester, '${g.key}_handy', phone, Brightness.dark, screen: g.value);
+      await shot(tester, '${g.key}_desktop', desktop, Brightness.light, screen: g.value);
     }
 
     await shot(
