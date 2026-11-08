@@ -8,6 +8,9 @@ import '../core/theme.dart';
 import '../core/wallet.dart';
 import '../games/blackjack/blackjack_screen.dart';
 import '../games/cards/playing_card.dart';
+import '../games/eins/eins_card.dart';
+import '../games/eins/eins_engine.dart';
+import '../games/eins/eins_screen.dart';
 import '../games/hearts/hearts_screen.dart';
 import '../games/holdem/holdem_screen.dart';
 import '../games/maumau/maumau_screen.dart';
@@ -119,6 +122,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF7A1F12),
         _MauMauArt.new,
         () => _open(const MauMauScreen()),
+      ),
+      _Game(
+        'Eins!',
+        'Farbwahl, Plus-Vier und Richtungswechsel',
+        const Color(0xFF2A160E),
+        _EinsArt.new,
+        () => _open(const EinsScreen()),
       ),
       _Game(
         'Schwarze Dame',
@@ -356,6 +366,30 @@ class _MauMauArt extends CustomPainter {
       textDirection: TextDirection.ltr,
     )..layout();
     tp.paint(canvas, Offset(size.width - tp.width - 16, 26));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _EinsArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = math.min(size.width * 0.28, size.height * 0.62 * cardAspect);
+    final h = w / cardAspect;
+    final c = Offset(size.width / 2, size.height * 0.55);
+    const cards = [
+      EinsCard(0, EinsKind.number, color: EinsColor.blue, number: 7),
+      EinsCard(1, EinsKind.reverse, color: EinsColor.yellow),
+      EinsCard(2, EinsKind.wildDrawFour),
+    ];
+    for (var i = 0; i < cards.length; i++) {
+      canvas.save();
+      canvas.translate(c.dx + (i - 1) * w * 0.62, c.dy);
+      canvas.rotate((i - 1) * 0.2);
+      paintEinsCard(canvas, Rect.fromCenter(center: Offset.zero, width: w, height: h), cards[i]);
+      canvas.restore();
+    }
   }
 
   @override

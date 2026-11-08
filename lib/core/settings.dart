@@ -12,12 +12,16 @@ class Settings extends ChangeNotifier {
         ),
         _penaltyEndsTurn = _prefs.getBool(_penaltyKey) ?? true,
         _jackOnJack = _prefs.getBool(_jackKey) ?? true,
-        _cardScale = (_prefs.getDouble(_scaleKey) ?? 1.0).clamp(minCardScale, maxCardScale);
+        _cardScale = (_prefs.getDouble(_scaleKey) ?? 1.0).clamp(minCardScale, maxCardScale),
+        _einsStackDraws = _prefs.getBool(_einsStackKey) ?? true,
+        _einsCallRequired = _prefs.getBool(_einsCallKey) ?? true;
 
   static const _cardNamesKey = 'settings.cardNames';
   static const _penaltyKey = 'settings.mauPenaltyEndsTurn';
   static const _jackKey = 'settings.mauJackOnJack';
   static const _scaleKey = 'settings.cardScale';
+  static const _einsStackKey = 'settings.einsStackDraws';
+  static const _einsCallKey = 'settings.einsCallRequired';
   static const minCardScale = 0.8;
   static const maxCardScale = 1.6;
 
@@ -26,6 +30,28 @@ class Settings extends ChangeNotifier {
   bool _penaltyEndsTurn;
   bool _jackOnJack;
   double _cardScale;
+  bool _einsStackDraws;
+  bool _einsCallRequired;
+
+  /// Eins!: Plus-Karten dürfen gestapelt werden.
+  bool get einsStackDraws => _einsStackDraws;
+
+  set einsStackDraws(bool value) {
+    if (value == _einsStackDraws) return;
+    _einsStackDraws = value;
+    _prefs.setBool(_einsStackKey, value);
+    notifyListeners();
+  }
+
+  /// Eins!: Wer auf eine Karte kommt, muss rufen.
+  bool get einsCallRequired => _einsCallRequired;
+
+  set einsCallRequired(bool value) {
+    if (value == _einsCallRequired) return;
+    _einsCallRequired = value;
+    _prefs.setBool(_einsCallKey, value);
+    notifyListeners();
+  }
 
   CardNames get cardNames => _cardNames;
 

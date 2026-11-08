@@ -130,7 +130,11 @@ class OpponentBadge extends StatelessWidget {
     required this.active,
     this.detail = '',
     this.width = 104,
+    this.backBuilder,
   });
+
+  /// Eigener Kartenrücken, sonst der Rücken der Spielkarten.
+  final Widget Function(double width)? backBuilder;
 
   final String name;
   final int cardCount;
@@ -157,7 +161,10 @@ class OpponentBadge extends StatelessWidget {
                 clipBehavior: Clip.hardEdge,
                 children: [
                   for (var i = 0; i < shown; i++)
-                    Positioned(left: i * step, child: PlayingCardView(width: cw)),
+                    Positioned(
+                      left: i * step,
+                      child: backBuilder?.call(cw) ?? PlayingCardView(width: cw),
+                    ),
                 ],
               ),
             ),
@@ -314,4 +321,66 @@ String formatClock(Duration d) {
   final m = d.inMinutes;
   final s = d.inSeconds % 60;
   return '$m:${s.toString().padLeft(2, '0')}';
+}
+
+/// Wie [HandFan], aber für beliebige Karten mit eigenem Aussehen.
+class CardFan<T> extends StatelessWidget {
+  const CardFan({
+    super.key,
+    required this.items,
+    required this.maxCardWidth,
+    required this.cardBuilder,
+    this.isEnabled,
+    this.isRaised,
+    this.onTap,
+  });
+
+  final List<T> items;
+  final double maxCardWidth;
+  final Widget Function(T item, double width, bool raised) cardBuilder;
+  final bool Function(T item)? isEnabled;
+  final bool Function(T item)? isRaised;
+  final ValueChanged<T>? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        final total = box.maxWidth;
+        final n = items.length;
+        var w = math.min(maxCardWidth, total);
+        var step = w * 1.04;
+        if (n > 1) {
+          step = math.min(step, (total - w) / (n - 1));
+          if (step < w * 0.3) {
+            w = total / (1 + 0.3 * (n - 1));
+            step = w * 0.3;
+          }
+        }
+        final lift = w * 0.2;
+        final width = n == 0 ? 0.0 : w + step * (n - 1);
+        return SizedBox(
+          height: w / cardAspect + lift,
+          width: total,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              for (var i = 0; i < n; i++)
+                Positioned(
+                  left: (total - width) / 2 + i * step,
+                  top: (isRaised?.call(items[i]) ?? false) ? 0 : lift,
+                  child: GestureDetector(
+                    onTap: onTap == null ? null : () => onTap!(items[i]),
+                    child: Opacity(
+                      opacity: (isEnabled?.call(items[i]) ?? true) ? 1 : 0.55,
+                      child: cardBuilder(items[i], w, isRaised?.call(items[i]) ?? false),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }

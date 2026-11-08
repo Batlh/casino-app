@@ -8,6 +8,7 @@ import 'package:gluckspfennig/core/settings.dart';
 import 'package:gluckspfennig/core/sfx.dart';
 import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/blackjack/blackjack_screen.dart';
+import 'package:gluckspfennig/games/eins/eins_screen.dart';
 import 'package:gluckspfennig/games/hearts/hearts_screen.dart';
 import 'package:gluckspfennig/games/holdem/holdem_screen.dart';
 import 'package:gluckspfennig/games/maumau/maumau_screen.dart';
@@ -122,6 +123,7 @@ void main() {
       'solitaire': KlondikeScreen(),
       'spider': SpiderScreen(),
       'maumau': MauMauScreen(),
+      'eins': EinsScreen(),
       'schwarzedame': HeartsScreen(),
     };
     for (final g in games.entries) {

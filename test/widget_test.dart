@@ -4,6 +4,7 @@ import 'package:gluckspfennig/core/settings.dart';
 import 'package:gluckspfennig/core/sfx.dart';
 import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/blackjack/blackjack_screen.dart';
+import 'package:gluckspfennig/games/eins/eins_screen.dart';
 import 'package:gluckspfennig/games/hearts/hearts_screen.dart';
 import 'package:gluckspfennig/games/holdem/holdem_screen.dart';
 import 'package:gluckspfennig/games/maumau/maumau_screen.dart';
@@ -68,6 +69,7 @@ void main() {
         KlondikeScreen(),
         SpiderScreen(),
         MauMauScreen(),
+        EinsScreen(),
         HeartsScreen(),
       ]) {
         await pumpApp(tester, size, screen: screen);
@@ -100,6 +102,7 @@ void main() {
           KlondikeScreen(),
           SpiderScreen(),
           MauMauScreen(),
+          EinsScreen(),
           HeartsScreen(),
         ]) {
           await tester.pumpWidget(const SizedBox());
@@ -150,6 +153,20 @@ void main() {
       await tester.pump();
     }
     await tester.pump(const Duration(seconds: 6));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('Eins!: ziehen und Gegner spielen lassen', (tester) async {
+    await pumpApp(tester, const Size(393, 852), screen: const EinsScreen());
+    await tester.tap(find.text('Ziehen'));
+    await tester.pump();
+    if (find.text('Behalten').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Behalten'));
+      await tester.pump();
+    }
+    await tester.pump(const Duration(seconds: 8));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 3));

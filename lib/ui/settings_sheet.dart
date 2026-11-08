@@ -73,7 +73,7 @@ class _SettingsSheet extends StatelessWidget {
                   style: TextStyle(color: p.ink, fontSize: 17),
                 ),
                 Text(
-                  'Gilt für Solitaire, Spider, Mau Mau und Schwarze Dame. Passt Spider nicht mehr auf den Bildschirm, lässt es sich seitlich schieben.',
+                  'Gilt für Solitaire, Spider, Mau Mau, Eins! und Schwarze Dame. Passt eine Patience nicht mehr auf den Bildschirm, lässt sie sich seitlich schieben.',
                   style: TextStyle(color: p.inkSoft, fontSize: 14),
                 ),
                 Slider(
@@ -110,6 +110,28 @@ class _SettingsSheet extends StatelessWidget {
                   ),
                   value: app.settings.jackOnJack,
                   onChanged: (v) => app.settings.jackOnJack = v,
+                ),
+                const SizedBox(height: 8),
+                Text('Eins!', style: TextStyle(color: p.ink, fontSize: 17, fontWeight: FontWeight.w700)),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Plus-Karten stapeln', style: TextStyle(color: p.ink, fontSize: 16)),
+                  subtitle: Text(
+                    'Auf +2 darf +2 oder +4, auf +4 nur +4',
+                    style: TextStyle(color: p.inkSoft, fontSize: 14),
+                  ),
+                  value: app.settings.einsStackDraws,
+                  onChanged: (v) => app.settings.einsStackDraws = v,
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Eins! rufen ist Pflicht', style: TextStyle(color: p.ink, fontSize: 16)),
+                  subtitle: Text(
+                    'Wer bei der vorletzten Karte nicht ruft, zieht zwei',
+                    style: TextStyle(color: p.inkSoft, fontSize: 14),
+                  ),
+                  value: app.settings.einsCallRequired,
+                  onChanged: (v) => app.settings.einsCallRequired = v,
                 ),
               ],
             ),
