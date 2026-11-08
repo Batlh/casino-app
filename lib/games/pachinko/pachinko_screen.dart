@@ -108,6 +108,8 @@ class _PachinkoScreenState extends State<PachinkoScreen>
           _sfx.play(Sound.bigWin);
         case PachinkoEventKind.refund:
           text = 'Schuss zu schwach, Ball zurück';
+        case PachinkoEventKind.stuck:
+          text = 'Ball hing fest, Einsatz zurück';
         case PachinkoEventKind.reelsDone:
         case PachinkoEventKind.lost:
           break;
@@ -310,6 +312,20 @@ class _BoardPainter extends CustomPainter {
       PachinkoBoard.lcdRight,
       PachinkoBoard.lcdBottom,
     );
+    final roof = Path()
+      ..moveTo(lcd.left + 0.05, lcd.top + 0.1)
+      ..lineTo(lcd.center.dx, lcd.top - PachinkoBoard.lcdRoof)
+      ..lineTo(lcd.right - 0.05, lcd.top + 0.1)
+      ..close();
+    canvas.drawPath(roof, Paint()..color = const Color(0xFF0A0618));
+    canvas.drawPath(
+      roof,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.08
+        ..strokeJoin = StrokeJoin.round
+        ..color = board.feverActive ? const Color(0xFFFF5EA8) : const Color(0xFFFFC95C),
+    );
     canvas.drawRRect(
       RRect.fromRectAndRadius(lcd, const Radius.circular(0.25)),
       Paint()..color = const Color(0xFF0A0618),
@@ -327,7 +343,7 @@ class _BoardPainter extends CustomPainter {
       // Die Ziffern halten von links nach rechts an
       final spinningNow = board.reelsSpinning && board.reelProgress < (i + 1) / 3;
       final value = spinningNow ? 1 + ((t * 14 + i * 3).floor() % 7) : board.reels[i];
-      _text(canvas, '$value', center, 1.3, const Color(0xFFFFE9A8));
+      _text(canvas, '$value', center, 1.15, const Color(0xFFFFE9A8));
     }
     _text(
       canvas,

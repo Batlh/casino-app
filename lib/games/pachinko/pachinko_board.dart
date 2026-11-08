@@ -26,7 +26,7 @@ class Pocket {
 
 enum PocketKind { tulip, start, gate }
 
-enum PachinkoEventKind { tulip, start, gate, fever, lost, refund, reelsDone }
+enum PachinkoEventKind { tulip, start, gate, fever, lost, refund, stuck, reelsDone }
 
 class PachinkoEvent {
   const PachinkoEvent(this.kind, this.payout);
@@ -65,6 +65,9 @@ class PachinkoBoard {
   final List<Body> _balls = [];
   final List<Body> _spinners = [];
 
+  /// Wie lange ein Ball schon fast stillsteht.
+  final Map<Body, double> _still = {};
+
   final List<Point2> pegs = [];
   final List<Point2> arc = [];
   final List<Pocket> pockets = [];
@@ -74,6 +77,9 @@ class PachinkoBoard {
   static const double lcdTop = 3.3;
   static const double lcdRight = 6.2;
   static const double lcdBottom = 6.3;
+
+  /// Spitzdach über dem Anzeigefeld, damit kein Ball oben liegen bleibt.
+  static const double lcdRoof = 0.55;
 
   List<int> reels = [7, 7, 7];
   bool reelsSpinning = false;
@@ -144,14 +150,15 @@ class PachinkoBoard {
     // Abschussbahn
     _edge(ground, laneX, 16, laneX, 3.4, bounce: 0.1);
 
-    // Anzeigefeld als fester Block
+    // Anzeigefeld als fester Block mit Spitzdach
     final lcd = PolygonShape()
-      ..setAsBox(
-        (lcdRight - lcdLeft) / 2,
-        (lcdBottom - lcdTop) / 2,
-        Vector2((lcdLeft + lcdRight) / 2, (lcdTop + lcdBottom) / 2),
-        0,
-      );
+      ..set([
+        Vector2(lcdLeft, lcdBottom),
+        Vector2(lcdRight, lcdBottom),
+        Vector2(lcdRight, lcdTop),
+        Vector2((lcdLeft + lcdRight) / 2, lcdTop - lcdRoof),
+        Vector2(lcdLeft, lcdTop),
+      ]);
     ground.createFixture(FixtureDef(lcd, friction: 0.05, restitution: 0.4));
 
     pockets
@@ -207,10 +214,19 @@ class PachinkoBoard {
 
   /// Schießt einen Ball. power: 0 bis 1.
   void launch(double power) {
+    final body = _ball(9.5, 15.5);
+    final jitter = (_rng.nextDouble() - 0.5) * 0.25;
+    body.linearVelocity = Vector2(0, -(15.5 + power * 6 + jitter));
+  }
+
+  /// Legt einen ruhenden Ball an eine Stelle, für Tests.
+  void dropAt(double x, double y) => _ball(x, y);
+
+  Body _ball(double x, double y) {
     final body = _world.createBody(
       BodyDef(
         type: BodyType.dynamic,
-        position: Vector2(9.5, 15.5),
+        position: Vector2(x, y),
         bullet: true,
       ),
     );
@@ -218,9 +234,8 @@ class PachinkoBoard {
     body.createFixture(
       FixtureDef(shape, density: 1, friction: 0.02, restitution: 0.35),
     );
-    final jitter = (_rng.nextDouble() - 0.5) * 0.25;
-    body.linearVelocity = Vector2(0, -(15.5 + power * 6 + jitter));
     _balls.add(body);
+    return body;
   }
 
   void _startReels() {
@@ -263,7 +278,15 @@ class PachinkoBoard {
       final x = b.position.x;
       final y = b.position.y;
       PachinkoEvent? ev;
-      if (y > 15.8) {
+      // Notlösung gegen hängende Bälle: erst anstupsen, später erstatten
+      final still = b.linearVelocity.length < 0.25 ? (_still[b] ?? 0) + dt : 0.0;
+      _still[b] = still;
+      if (still > 1.2 && still - dt <= 1.2) {
+        b.applyLinearImpulse(Vector2((_rng.nextBool() ? 1 : -1) * 0.03, -0.02));
+      }
+      if (still > 5) {
+        ev = const PachinkoEvent(PachinkoEventKind.stuck, ballCost);
+      } else if (y > 15.8) {
         // Zu schwacher Schuss landet wieder in der Bahn und zählt nicht
         ev = x > laneX
             ? const PachinkoEvent(PachinkoEventKind.refund, ballCost)
@@ -288,6 +311,7 @@ class PachinkoBoard {
         events.add(ev);
         _world.destroyBody(b);
         _balls.remove(b);
+        _still.remove(b);
       }
     }
   }
