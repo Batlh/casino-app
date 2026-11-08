@@ -299,10 +299,17 @@ QuatroMove quatroBotChoice(QuatroEngine e, Random rng) {
   QuatroMove? best;
   var bestScore = -1e9;
   final nextPlayer = e.players[(e.current + 1) % e.players.length];
+  // Spalten, in denen der Nächste sofort gewinnen könnte: dort lieber selbst legen
+  final threats = <int>{
+    for (final t in nextPlayer.hand)
+      for (final c in e.columnsFor(t))
+        if (t.kind != TileKind.push && e.wouldWin(t, c)) c,
+  };
   for (final t in e.actor.hand) {
     for (final c in e.columnsFor(t)) {
       if (e.wouldWin(t, c)) return (tile: t, col: c);
       var s = e.lineScore(t, c) * 10.0 + rng.nextDouble() * 3;
+      if (threats.contains(c)) s += 25;
       if (t.kind == TileKind.minusTwo) s += nextPlayer.hand.length >= 3 ? 8 : 0;
       if (t.kind == TileKind.swap) s += 4;
       if (t.kind == TileKind.push) s -= 6;
