@@ -103,8 +103,9 @@ void main() {
 
   test('Tauschen mit dem Beutel: Passt der neue Stein, darf er sofort gelegt werden', () {
     final e = game();
+    // Unterste Reihe ohne Viererreihe: Rot und Gelb im Wechsel, Zahlen 0 bis 2
     for (var c = 0; c < 7; c++) {
-      e.board[c].add(n(red, 0));
+      e.board[c].add(n(c.isEven ? red : yellow, c % 3));
     }
     e.players[0].hand = [n(blue, 3), n(blue, 4), n(green, 5)];
     expect(e.canMove, isFalse);
