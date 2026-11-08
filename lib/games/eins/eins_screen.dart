@@ -8,11 +8,20 @@ import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/widgets.dart';
 import '../cards/card_widgets.dart';
+import '../cards/rewards.dart';
 import 'eins_card.dart';
 import 'eins_engine.dart';
 
 const _names = ['Helga', 'Otto', 'Bärbel', 'Klaus', 'Rosi', 'Horst'];
 const einsRewardPerOpponent = 50;
+
+/// Schwere Spielweisen zahlen mehr.
+double einsModeFactor(EinsMode mode, {bool expansion = false}) => switch (mode) {
+      EinsMode.classic => 1.0,
+      EinsMode.flip || EinsMode.spin || EinsMode.spinNew || EinsMode.flex => 1.25,
+      EinsMode.extreme => 1.5,
+      EinsMode.noMercy => expansion ? 2.0 : 1.5,
+    };
 
 /// Reihenfolge auf der Hand: nach Farbe, dann Zahl, Sonderkarten am Ende.
 List<EinsCard> sortedEins(EinsEngine e, List<EinsCard> cards) {
@@ -134,6 +143,20 @@ class _EinsScreenState extends State<EinsScreen> {
   AppScope get _app => AppScope.of(context);
   bool get _humanOut => _e.out[0];
   bool get _over => _e.finished || _humanOut;
+
+  double get _factor => einsModeFactor(_mode, expansion: _e.expansion);
+  int get _winReward => (einsRewardPerOpponent * _opponents * _factor).round();
+
+  /// Trostpreis: je Gegner mit mehr Karten oder schon ausgeschieden.
+  int get _placeReward {
+    if (_humanOut) return 0;
+    final mine = _e.players[0].hand.length;
+    var beaten = 0;
+    for (var i = 1; i < _e.players.length; i++) {
+      if (_e.out[i] || _e.players[i].hand.length > mine) beaten++;
+    }
+    return placeReward(beaten, factor: _factor);
+  }
   bool get _myTurn => !_over && _e.actor.human && !_running && !_spinning;
 
   @override
@@ -320,6 +343,7 @@ class _EinsScreenState extends State<EinsScreen> {
       );
       if (chosen == null || !mounted || !_myTurn) return;
     }
+    final callBonus = _called && _e.actor.hand.length == 2;
     _e.play(
       c,
       chosen: chosen,
@@ -330,6 +354,7 @@ class _EinsScreenState extends State<EinsScreen> {
       called: _called,
     );
     _called = false;
+    if (callBonus && !_e.finished) _app.wallet.credit(callReward);
     _app.sfx.play(Sound.card);
     setState(() {});
     _after();
@@ -339,6 +364,7 @@ class _EinsScreenState extends State<EinsScreen> {
     if (!_myTurn || !_e.canChallenge) return;
     _e.challenge();
     _app.sfx.play(Sound.chip);
+    if (_e.lastChallengeWon) _app.wallet.credit(challengeReward);
     setState(() {});
     _after();
   }
@@ -691,9 +717,10 @@ class _EinsScreenState extends State<EinsScreen> {
     if (_rewarded) return;
     _rewarded = true;
     if (_e.finished && _e.winner!.human) {
-      _app.wallet.credit(einsRewardPerOpponent * _opponents);
+      _app.wallet.credit(_winReward);
       _app.sfx.play(Sound.win);
     } else {
+      if (_placeReward > 0) _app.wallet.credit(_placeReward);
       _app.sfx.play(Sound.lose);
     }
     setState(() {});
@@ -703,8 +730,9 @@ class _EinsScreenState extends State<EinsScreen> {
     if (_humanOut) return 'Du hast 25 Karten und bist raus';
     if (_e.finished) {
       return _e.winner!.human
-          ? 'Gewonnen! +${formatCoins(einsRewardPerOpponent * _opponents)} Münzen'
-          : '${_e.winner!.name} gewinnt die Runde';
+          ? 'Gewonnen! +${formatCoins(_winReward)} Münzen'
+          : '${_e.winner!.name} gewinnt die Runde'
+              '${_placeReward > 0 ? '. Trostpreis +${formatCoins(_placeReward)} Münzen' : ''}';
     }
     if (_race != null) return 'Wettrennen! Schnell drücken';
     if (_spinning) return '${_e.actor.human ? 'Du drehst' : '${_e.actor.name} dreht'} am Glücksrad';

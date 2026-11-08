@@ -8,6 +8,7 @@ import '../../core/theme.dart';
 import '../../ui/widgets.dart';
 import '../cards/card_widgets.dart';
 import '../cards/playing_card.dart';
+import '../cards/rewards.dart';
 import 'maumau_engine.dart';
 
 const _names = ['Helga', 'Otto', 'Bärbel', 'Klaus', 'Rosi', 'Horst'];
@@ -78,6 +79,8 @@ class _MauMauScreenState extends State<MauMauScreen> {
     }
     _e.play(c, wishSuit: wish);
     _app.sfx.play(Sound.card);
+    // „Mau!“: nur noch eine Karte
+    if (!_e.finished && _e.players.first.hand.length == 1) _app.wallet.credit(callReward);
     setState(() {});
     _after();
   }
@@ -140,6 +143,10 @@ class _MauMauScreenState extends State<MauMauScreen> {
     if (_e.finished) _finish();
   }
 
+  /// Trostpreis: je Gegner mit mehr Karten auf der Hand.
+  int get _placeReward =>
+      placeReward(beatenCount([for (final p in _e.players) p.hand.length], 0));
+
   void _finish() {
     if (_rewarded) return;
     _rewarded = true;
@@ -147,6 +154,7 @@ class _MauMauScreenState extends State<MauMauScreen> {
       _app.wallet.credit(mauRewardPerOpponent * _opponents);
       _app.sfx.play(Sound.win);
     } else {
+      if (_placeReward > 0) _app.wallet.credit(_placeReward);
       _app.sfx.play(Sound.lose);
     }
     setState(() {});
@@ -156,7 +164,8 @@ class _MauMauScreenState extends State<MauMauScreen> {
     if (_e.finished) {
       return _e.winner!.human
           ? 'Gewonnen! +${formatCoins(mauRewardPerOpponent * _opponents)} Münzen'
-          : '${_e.winner!.name} gewinnt die Runde';
+          : '${_e.winner!.name} gewinnt die Runde'
+              '${_placeReward > 0 ? '. Trostpreis +${formatCoins(_placeReward)} Münzen' : ''}';
     }
     if (_e.actor.human) {
       if (_e.pendingDraw > 0) return 'Lege eine Sieben oder zieh ${_e.pendingDraw}';

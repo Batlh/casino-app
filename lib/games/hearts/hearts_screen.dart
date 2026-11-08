@@ -8,6 +8,7 @@ import '../../core/theme.dart';
 import '../../ui/widgets.dart';
 import '../cards/card_widgets.dart';
 import '../cards/playing_card.dart';
+import '../cards/rewards.dart';
 import 'hearts_engine.dart';
 
 const heartsWinBonus = 500;
@@ -95,6 +96,10 @@ class _HeartsScreenState extends State<HeartsScreen> {
   }
 
   Future<void> _showTrick() async {
+    // Ein sauberer Stich ohne Strafpunkte bringt ein paar Münzen
+    if (_e.lastTrickWinner == 0 && pointsOf(_e.lastTrick.map((t) => t.card)) == 0) {
+      _app.wallet.credit(cleanTrickReward);
+    }
     setState(() => _showLast = true);
     await Future<void>.delayed(const Duration(milliseconds: 1100));
     if (!mounted) return;
@@ -123,8 +128,13 @@ class _HeartsScreenState extends State<HeartsScreen> {
     if (_e.phase != HeartsPhase.handOver && _e.phase != HeartsPhase.gameOver) return;
     _rewardDone = true;
     var reward = _e.moonShooter == 0 ? heartsMoonReward : heartsHandReward(_me.handPoints);
-    if (_e.phase == HeartsPhase.gameOver && _e.leaders.contains(0)) {
-      reward += heartsWinBonus;
+    if (_e.phase == HeartsPhase.gameOver) {
+      if (_e.leaders.contains(0)) {
+        reward += heartsWinBonus;
+      } else {
+        // Trostpreis je Gegner mit mehr Punkten
+        reward += placeReward(beatenCount([for (final s in _e.seats) s.score], 0), factor: 4);
+      }
     }
     _reward = reward;
     if (reward > 0) {

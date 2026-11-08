@@ -62,46 +62,110 @@ class _CoinPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Münzstand mit hochzählender Anzeige.
-class BalanceBadge extends StatelessWidget {
+/// Münzstand mit hochzählender Anzeige. Gewinne blitzen kurz als „+N“ auf.
+class BalanceBadge extends StatefulWidget {
   const BalanceBadge({super.key});
 
   @override
+  State<BalanceBadge> createState() => _BalanceBadgeState();
+}
+
+class _BalanceBadgeState extends State<BalanceBadge> {
+  Wallet? _wallet;
+  int _last = 0;
+  int _gain = 0;
+  int _gainKey = 0;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final w = AppScope.of(context).wallet;
+    if (w != _wallet) {
+      _wallet?.removeListener(_changed);
+      _wallet = w..addListener(_changed);
+      _last = w.balance;
+    }
+  }
+
+  void _changed() {
+    final now = _wallet!.balance;
+    final delta = now - _last;
+    _last = now;
+    if (delta > 0 && mounted) {
+      setState(() {
+        _gain = delta;
+        _gainKey++;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _wallet?.removeListener(_changed);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final wallet = AppScope.of(context).wallet;
+    final wallet = _wallet!;
     final p = Palette.of(context);
-    return ListenableBuilder(
-      listenable: wallet,
-      builder: (context, _) => Semantics(
-        label: '${formatCoins(wallet.balance)} Münzen',
-        excludeSemantics: true,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(6, 5, 12, 5),
-          decoration: BoxDecoration(
-            color: p.panel,
-            borderRadius: BorderRadius.circular(40),
-            border: Border.all(color: p.panelEdge, width: 2),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CoinIcon(size: 24),
-              const SizedBox(width: 6),
-              TweenAnimationBuilder<double>(
-                tween: Tween(end: wallet.balance.toDouble()),
-                duration: const Duration(milliseconds: 500),
-                builder: (context, v, _) => Text(
-                  formatCoins(v.round()),
-                  style: TextStyle(
-                    color: p.ink,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 17,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+    return Semantics(
+      label: '${formatCoins(wallet.balance)} Münzen',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(6, 5, 12, 5),
+        decoration: BoxDecoration(
+          color: p.panel,
+          borderRadius: BorderRadius.circular(40),
+          border: Border.all(color: p.panelEdge, width: 2),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CoinIcon(size: 24),
+            const SizedBox(width: 6),
+            TweenAnimationBuilder<double>(
+              tween: Tween(end: wallet.balance.toDouble()),
+              duration: const Duration(milliseconds: 500),
+              builder: (context, v, _) => Text(
+                formatCoins(v.round()),
+                style: TextStyle(
+                  color: p.ink,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 17,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
-            ],
-          ),
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              child: _gain == 0
+                  ? const SizedBox.shrink()
+                  : TweenAnimationBuilder<double>(
+                      key: ValueKey(_gainKey),
+                      tween: Tween(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 1800),
+                      onEnd: () {
+                        if (mounted) setState(() => _gain = 0);
+                      },
+                      builder: (context, t, _) => Opacity(
+                        // schnell ein, langsam aus
+                        opacity: t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Text(
+                            '+${formatCoins(_gain)}',
+                            style: TextStyle(
+                              color: p.accent,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+          ],
         ),
       ),
     );

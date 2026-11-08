@@ -113,6 +113,9 @@ class CardRunDraggable extends StatelessWidget {
 }
 
 /// Eine Spalte der Auslage: Ablageziel und Quelle zugleich.
+/// Rahmenfarbe für die Karten, die ein Tipp bewegen will.
+const hintColor = Color(0xFF63E6FF);
+
 class TableauColumn extends StatelessWidget {
   const TableauColumn({
     super.key,
@@ -129,9 +132,17 @@ class TableauColumn extends StatelessWidget {
     this.hideFrom,
     this.emptyLabel,
     this.longPress = false,
+    this.hintFrom,
+    this.hintTarget = false,
   });
 
   final bool longPress;
+
+  /// Tipp: Ab dieser Karte wird umgezogen.
+  final int? hintFrom;
+
+  /// Tipp: Hierhin soll die Reihe.
+  final bool hintTarget;
 
   final PileRef ref;
   final List<TableCard> cards;
@@ -161,7 +172,7 @@ class TableauColumn extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             if (cards.isEmpty)
-              CardSlot(width: width, label: emptyLabel, glow: candidates.isNotEmpty),
+              CardSlot(width: width, label: emptyLabel, glow: candidates.isNotEmpty || hintTarget),
             for (var i = 0; i < cards.length; i++)
               Positioned(
                 top: offs[i],
@@ -170,7 +181,21 @@ class TableauColumn extends StatelessWidget {
                   child: _card(i, offs, ch),
                 ),
               ),
-            if (candidates.isNotEmpty && cards.isNotEmpty)
+            if (hintFrom != null && hintFrom! < cards.length)
+              Positioned(
+                top: offs[hintFrom!],
+                child: IgnorePointer(
+                  child: Container(
+                    width: width,
+                    height: offs.last - offs[hintFrom!] + ch,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(width * 0.09),
+                      border: Border.all(color: hintColor, width: 3),
+                    ),
+                  ),
+                ),
+              ),
+            if ((candidates.isNotEmpty || hintTarget) && cards.isNotEmpty)
               Positioned(
                 top: offs.last,
                 child: IgnorePointer(
@@ -220,6 +245,8 @@ class SolitaireBar extends StatelessWidget {
     required this.onUndo,
     required this.onNew,
     this.vertical = false,
+    this.onHint,
+    this.hintLabel = 'Tipp',
   });
 
   final String message;
@@ -227,10 +254,13 @@ class SolitaireBar extends StatelessWidget {
   final VoidCallback? onUndo;
   final VoidCallback onNew;
   final bool vertical;
+  final VoidCallback? onHint;
+  final String hintLabel;
 
   @override
   Widget build(BuildContext context) {
     final buttons = [
+      ActionButton(label: hintLabel, onPressed: onHint),
       ActionButton(label: 'Rückgängig', onPressed: onUndo),
       ActionButton(primary: highlight, label: 'Neues Spiel', onPressed: onNew),
     ];
@@ -255,7 +285,7 @@ class SolitaireBar extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ResultBanner(text: message, highlight: highlight),
+        ResultBanner(text: message, highlight: highlight, maxLines: 2),
         Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: buttons),
       ],
     );

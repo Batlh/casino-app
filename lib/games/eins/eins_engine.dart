@@ -1102,10 +1102,14 @@ class EinsEngine {
   }
 
   /// Anzweifeln: War die Strafkarte erlaubt?
+  /// Ob das letzte Anzweifeln berechtigt war.
+  bool lastChallengeWon = false;
+
   void challenge() {
     final ch = _challenge;
     if (!canChallenge || ch == null) return;
     _challenge = null;
+    lastChallengeWon = ch.guilty;
     final victim = actor;
     final offender = players[ch.offender];
     if (ch.guilty) {

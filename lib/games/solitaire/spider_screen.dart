@@ -8,11 +8,15 @@ import '../../core/sfx.dart';
 import '../../ui/widgets.dart';
 import '../cards/card_widgets.dart';
 import '../cards/playing_card.dart';
+import 'hints.dart';
 import 'solitaire_board.dart';
 import 'spider_engine.dart';
 import 'table_card.dart';
 
 const spiderRewards = {1: 250, 2: 500, 4: 1000};
+
+/// Münzen je fertiger Reihe, jede Reihe zählt einmal.
+const spiderRunRewards = {1: 15, 2: 30, 4: 60};
 
 class SpiderScreen extends StatefulWidget {
   const SpiderScreen({super.key});
@@ -27,6 +31,9 @@ class _SpiderScreenState extends State<SpiderScreen> {
   Grab? _drag;
   String _message = '';
   bool _won = false;
+  int _hints = 0;
+  SolitaireHint? _hint;
+  int _paidRuns = 0;
   final _clock = Stopwatch()..start();
   Timer? _timer;
 
@@ -53,6 +60,9 @@ class _SpiderScreenState extends State<SpiderScreen> {
       _won = false;
       _message = '';
       _drag = null;
+      _hints = 0;
+      _hint = null;
+      _paidRuns = 0;
       _clock
         ..reset()
         ..start();
@@ -71,6 +81,28 @@ class _SpiderScreenState extends State<SpiderScreen> {
     if (i != null && mounted) _newGame(const [1, 2, 4][i]);
   }
 
+  int get _cost => hintCost(spiderRewards[_suits]!);
+  int get _reward => math.max(0, spiderRewards[_suits]! - _hints * _cost);
+
+  void _hintTap() {
+    if (_won || _hint != null) return;
+    final h = spiderHint(_e);
+    if (h == null) {
+      setState(() => _message = _e.hasEmptyColumn && _e.stock.isNotEmpty
+          ? 'Leg eine beliebige Reihe in die leere Spalte, dann austeilen'
+          : 'Keine sinnvollen Züge mehr. Rückgängig oder neues Spiel');
+      return;
+    }
+    _app.sfx.play(Sound.tick);
+    setState(() {
+      _hints++;
+      _hint = h;
+      _message = h.draw
+          ? 'Tipp: Neue Karten austeilen'
+          : 'Tipp: ${describeHint(h, (r) => _e.tableau[r.index])}';
+    });
+  }
+
   void _deal() {
     if (_won) return;
     if (_e.stock.isEmpty) return;
@@ -81,7 +113,10 @@ class _SpiderScreenState extends State<SpiderScreen> {
     final before = _e.completed.length;
     _e.deal();
     _app.sfx.play(Sound.card);
-    setState(() => _message = '');
+    setState(() {
+      _message = '';
+      _hint = null;
+    });
     _afterMove(before);
   }
 
@@ -101,20 +136,29 @@ class _SpiderScreenState extends State<SpiderScreen> {
     final before = _e.completed.length;
     if (_won || !_e.move(from, index, to)) return;
     _app.sfx.play(Sound.card);
-    setState(() => _message = '');
+    setState(() {
+      _message = '';
+      _hint = null;
+    });
     _afterMove(before);
   }
 
   void _afterMove(int completedBefore) {
     if (_e.completed.length > completedBefore) _app.sfx.play(Sound.coin);
+    if (_e.completed.length > _paidRuns) {
+      _app.wallet.credit((_e.completed.length - _paidRuns) * spiderRunRewards[_suits]!);
+      _paidRuns = _e.completed.length;
+    }
     if (_e.isWon) {
-      final reward = spiderRewards[_suits]!;
+      final reward = _reward;
       _clock.stop();
-      _app.wallet.credit(reward);
+      if (reward > 0) _app.wallet.credit(reward);
       _app.sfx.play(Sound.bigWin);
+      final tips = _hints == 0 ? '' : ' (${_hints == 1 ? 'ein Tipp' : '$_hints Tipps'} abgezogen)';
       setState(() {
         _won = true;
-        _message = 'Gewonnen! +${formatCoins(reward)} Münzen';
+        _hint = null;
+        _message = 'Gewonnen! +${formatCoins(reward)} Münzen$tips';
       });
     }
   }
@@ -122,7 +166,10 @@ class _SpiderScreenState extends State<SpiderScreen> {
   void _undo() {
     if (_won || !_e.canUndo) return;
     _e.undo();
-    setState(() => _message = '');
+    setState(() {
+      _message = '';
+      _hint = null;
+    });
   }
 
   String get _status => _message.isNotEmpty
@@ -144,6 +191,8 @@ class _SpiderScreenState extends State<SpiderScreen> {
             onUndo: _e.canUndo && !_won ? _undo : null,
             onNew: _askNew,
             vertical: side,
+            onHint: _won ? null : _hintTap,
+            hintLabel: 'Tipp (−${formatCoins(_cost)})',
           );
           if (side) {
             return Row(
@@ -207,7 +256,7 @@ class _SpiderScreenState extends State<SpiderScreen> {
             top: g,
             child: GestureDetector(
               onTap: _deal,
-              child: PlayingCardView(width: cw),
+              child: PlayingCardView(width: cw, highlighted: i == _e.dealsLeft - 1 && (_hint?.draw ?? false)),
             ),
           ),
         for (var t = 0; t < 10; t++)
@@ -220,6 +269,8 @@ class _SpiderScreenState extends State<SpiderScreen> {
               width: cw,
               height: tabH,
               hideFrom: _drag?.from.index == t ? _drag!.index : null,
+              hintFrom: _hint?.from?.index == t && !_hint!.draw ? _hint!.index : null,
+              hintTarget: _hint?.to?.index == t,
               canPick: (i) => _e.canPick(t, i),
               onTap: (i) => _tap(t, i),
               canAccept: (grab) => _e.canDrop(grab.from.index, grab.index, t),

@@ -7,11 +7,16 @@ import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../ui/widgets.dart';
 import '../cards/card_widgets.dart';
+import '../cards/playing_card.dart';
+import 'hints.dart';
 import 'klondike_engine.dart';
 import 'solitaire_board.dart';
 import 'table_card.dart';
 
 const klondikeRewards = {1: 200, 3: 400};
+
+/// Münzen je Karte, die zum ersten Mal auf die Ablage kommt.
+const klondikeCardRewards = {1: 2, 3: 4};
 
 class KlondikeScreen extends StatefulWidget {
   const KlondikeScreen({super.key});
@@ -27,6 +32,9 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
   String _message = '';
   bool _won = false;
   bool _auto = false;
+  int _hints = 0;
+  SolitaireHint? _hint;
+  final Set<PlayingCard> _paidCards = {};
   final _clock = Stopwatch()..start();
   Timer? _timer;
 
@@ -53,6 +61,9 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
       _won = false;
       _message = '';
       _drag = null;
+      _hints = 0;
+      _hint = null;
+      _paidCards.clear();
       _clock
         ..reset()
         ..start();
@@ -71,11 +82,45 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     if (i != null && mounted) _newGame(i == 0 ? 1 : 3);
   }
 
+  int get _cost => hintCost(klondikeRewards[_drawCount]!);
+  int get _reward => math.max(0, klondikeRewards[_drawCount]! - _hints * _cost);
+
   void _drawStock() {
     if (_won || _auto || !_e.canDraw) return;
     _e.draw();
     _app.sfx.play(Sound.card);
-    setState(() => _message = '');
+    setState(() {
+      _message = '';
+      _hint = null;
+    });
+  }
+
+  /// Zahlt für jede Karte, die zum ersten Mal auf der Ablage liegt.
+  void _payFoundations() {
+    var n = 0;
+    for (final f in _e.foundations) {
+      for (final c in f) {
+        if (_paidCards.add(c.card)) n++;
+      }
+    }
+    if (n > 0) _app.wallet.credit(n * klondikeCardRewards[_drawCount]!);
+  }
+
+  void _hintTap() {
+    if (_won || _auto || _hint != null) return;
+    final h = klondikeHint(_e);
+    if (h == null) {
+      setState(() => _message = 'Keine sinnvollen Züge mehr. Rückgängig oder neues Spiel');
+      return;
+    }
+    _app.sfx.play(Sound.tick);
+    setState(() {
+      _hints++;
+      _hint = h;
+      _message = h.draw
+          ? (_e.stock.isEmpty ? 'Tipp: Stapel wieder umdrehen' : 'Tipp: Karte vom Stapel ziehen')
+          : 'Tipp: ${describeHint(h, _e.pile)}';
+    });
   }
 
   void _tap(PileRef from, int index) {
@@ -91,7 +136,11 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
   void _move(PileRef from, int index, PileRef to) {
     if (_won || _auto || !_e.move(from, index, to)) return;
     _app.sfx.play(Sound.card);
-    setState(() => _message = '');
+    if (to.kind == PileKind.foundation) _payFoundations();
+    setState(() {
+      _message = '';
+      _hint = null;
+    });
     if (_e.isWon) {
       _win();
     } else if (_e.canAutoFinish) {
@@ -108,25 +157,33 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
       await Future<void>.delayed(const Duration(milliseconds: 80));
     }
     _auto = false;
-    if (mounted && _e.isWon) _win();
+    if (!mounted) return;
+    _payFoundations();
+    if (_e.isWon) _win();
   }
 
   void _win() {
     if (_won) return;
-    final reward = klondikeRewards[_drawCount]!;
+    final reward = _reward;
     _clock.stop();
-    _app.wallet.credit(reward);
+    _payFoundations();
+    if (reward > 0) _app.wallet.credit(reward);
     _app.sfx.play(Sound.bigWin);
+    final tips = _hints == 0 ? '' : ' (${_hints == 1 ? 'ein Tipp' : '$_hints Tipps'} abgezogen)';
     setState(() {
       _won = true;
-      _message = 'Gewonnen! +${formatCoins(reward)} Münzen';
+      _hint = null;
+      _message = 'Gewonnen! +${formatCoins(reward)} Münzen$tips';
     });
   }
 
   void _undo() {
     if (_auto || _won || !_e.canUndo) return;
     _e.undo();
-    setState(() => _message = '');
+    setState(() {
+      _message = '';
+      _hint = null;
+    });
   }
 
   String get _status => _message.isNotEmpty
@@ -148,6 +205,8 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
             onUndo: _e.canUndo && !_won && !_auto ? _undo : null,
             onNew: _askNew,
             vertical: side,
+            onHint: _won || _auto ? null : _hintTap,
+            hintLabel: 'Tipp (−${formatCoins(_cost)})',
           );
           if (side) {
             return Row(
@@ -202,8 +261,8 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
           child: GestureDetector(
             onTap: _drawStock,
             child: _e.stock.isEmpty
-                ? CardSlot(width: cw, icon: waste.isEmpty ? null : Icons.refresh)
-                : PlayingCardView(width: cw),
+                ? CardSlot(width: cw, icon: waste.isEmpty ? null : Icons.refresh, glow: _hint?.draw ?? false)
+                : PlayingCardView(width: cw, highlighted: _hint?.draw ?? false),
           ),
         ),
         for (var i = 0; i < shown; i++)
@@ -212,7 +271,12 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
             top: g,
             child: () {
               final index = waste.length - shown + i;
-              final view = PlayingCardView(width: cw, card: waste[index].card, strip: true);
+              final view = PlayingCardView(
+                width: cw,
+                card: waste[index].card,
+                strip: true,
+                highlighted: index == waste.length - 1 && _hint?.from?.kind == PileKind.waste,
+              );
               if (index != waste.length - 1) return view;
               const ref = PileRef(PileKind.waste);
               final grab = Grab(ref, index);
@@ -242,6 +306,8 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
               height: tabH,
               emptyLabel: 'K',
               hideFrom: _drag?.from == PileRef(PileKind.tableau, t) ? _drag!.index : null,
+              hintFrom: _hint?.from == PileRef(PileKind.tableau, t) ? _hint!.index : null,
+              hintTarget: _hint?.to == PileRef(PileKind.tableau, t),
               canPick: (i) => _e.canPick(PileRef(PileKind.tableau, t), i),
               onTap: (i) => _tap(PileRef(PileKind.tableau, t), i),
               canAccept: (grab) => _e.canDrop(grab.from, grab.index, PileRef(PileKind.tableau, t)),
@@ -270,7 +336,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
       onAcceptWithDetails: (d) => _move(d.data.from, d.data.index, ref),
       builder: (context, candidates, _) {
         if (pile.isEmpty) {
-          return CardSlot(width: cw, label: 'A', glow: candidates.isNotEmpty);
+          return CardSlot(width: cw, label: 'A', glow: candidates.isNotEmpty || _hint?.to == ref);
         }
         final index = pile.length - 1;
         final grab = Grab(ref, index);
@@ -290,7 +356,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
                 width: cw,
                 card: pile.last.card,
                 strip: true,
-                highlighted: candidates.isNotEmpty,
+                highlighted: candidates.isNotEmpty || _hint?.to == ref,
               ),
             ),
           ],

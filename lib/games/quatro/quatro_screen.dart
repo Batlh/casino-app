@@ -7,6 +7,7 @@ import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/widgets.dart';
 import '../cards/card_widgets.dart';
+import '../cards/rewards.dart';
 import '../eins/eins_card.dart' show einsColors;
 import 'quatro_engine.dart';
 
@@ -104,12 +105,27 @@ class _QuatroScreenState extends State<QuatroScreen> {
       t = fits.first;
     }
     if (!_e.canPlace(t, col)) return;
+    final next = _e.players[(_e.current + 1) % _e.players.length];
+    final threatsBefore = _threats(next);
     _e.place(t, col);
     _selected = null;
+    if (!_e.finished) {
+      var bonus = t.kind == TileKind.plain ? 0 : actionTileReward;
+      // Eine Viererreihe des Nächsten verhindert
+      if (threatsBefore > 0 && _threats(next) < threatsBefore) bonus += blockReward;
+      if (bonus > 0) _app.wallet.credit(bonus);
+    }
     _app.sfx.play(Sound.chip);
     setState(() {});
     if (!_e.swapPending) _after();
   }
+
+  /// In wie vielen Spalten dieser Spieler sofort gewinnen könnte.
+  int _threats(QPlayer p) => {
+        for (final h in p.hand)
+          for (final c in _e.columnsFor(h))
+            if (h.kind != TileKind.push && _e.wouldWin(h, c)) c,
+      }.length;
 
   void _exchange() {
     if (!_myTurn) return;
