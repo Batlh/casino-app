@@ -23,3 +23,10 @@ Regeln laut Quelle:
 - Rundenende: Ausgelegtes zählt plus, Karten auf der Hand minus.
 - „Hand“ (alles auf einmal ohne vorherige Auslage): eigene Punkte doppelt, Handkarten der anderen doppelt minus, deren Auslagen einfach plus.
 - Ziel: als Erster 1.000 Punkte.
+
+## Flipper / Pinball (Wunsch vom 8.11.2026)
+
+- Mindestens ein Flipper-Tisch mit Physik (forge2d wie Pachinko).
+- PC: Tastatur (linker/rechter Flipper, Abschuss mit Leertaste oder Pfeil runter).
+- Handy: Tasten auf dem Bildschirm links/rechts und Abschuss.
+- Spielmünzen für Punkte, kein Echtgeld; Erklärungsseite wie bei den anderen Spielen.
