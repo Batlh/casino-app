@@ -50,6 +50,21 @@ void paintEinsCard(Canvas canvas, Rect rect, EinsFace? face, {bool dark = false}
       Paint()..color = (dark ? Colors.black : Colors.white).withValues(alpha: 0.10 + i * 0.04),
     );
   }
+  if (face.flexColor != null) {
+    // Kraftkarten: zweite Farbe als Ecke unten rechts
+    final r = inner.outerRect;
+    final tri = Path()
+      ..moveTo(r.right, r.bottom - r.height * 0.36)
+      ..lineTo(r.right, r.bottom)
+      ..lineTo(r.right - r.width * 0.62, r.bottom)
+      ..close();
+    canvas.drawPath(tri, Paint()..color = einsColors[face.flexColor]!);
+    canvas.drawLine(
+      Offset(r.right, r.bottom - r.height * 0.36),
+      Offset(r.right - r.width * 0.62, r.bottom),
+      _stroke(w * 0.025)..color = _cream,
+    );
+  }
   if (dark) {
     // Sterne für die dunkle Seite
     final star = Paint()..color = Colors.white.withValues(alpha: 0.35);
@@ -75,7 +90,7 @@ void paintEinsCard(Canvas canvas, Rect rect, EinsFace? face, {bool dark = false}
     canvas.drawCircle(badgeAt, w * 0.14, _stroke(w * 0.02));
     _flip(canvas, badgeAt, w * 0.075);
   }
-  if (face.isFlex) _boltBadge(canvas, badgeAt, w * 0.11);
+  if (face.hasFlex) _boltBadge(canvas, badgeAt, w * 0.11);
 }
 
 void _symbol(Canvas c, EinsFace f, Offset o, double w, {required bool big, required List<EinsColor> colors}) {
@@ -88,9 +103,15 @@ void _symbol(Canvas c, EinsFace f, Offset o, double w, {required bool big, requi
     if (big || f.kind == EinsKind.wild || f.kind == EinsKind.wildAllFlip) _wheel(c, at, r, cs);
   }
 
+  // Kleiner goldener Hinweis auf die Kraftseite, nur auf der großen Ansicht
+  void flexNote(String t) {
+    if (big) _text(c, t, o + Offset(0, w * 0.4), w * 0.11, shadow: false, color: _gold);
+  }
+
   switch (f.kind) {
     case EinsKind.number:
-      _text(c, '${f.number}', o, w * (big ? 0.62 : 0.7), shadow: shadow, underline: f.number == 6 || f.number == 9);
+      _text(c, '${f.number}', o, w * (big ? (f.number >= 10 ? 0.5 : 0.62) : 0.7),
+          shadow: shadow, underline: f.number == 6 || f.number == 9);
     case EinsKind.drawOne:
       txt('+1', 0.5);
     case EinsKind.drawTwo:
@@ -112,24 +133,33 @@ void _symbol(Canvas c, EinsFace f, Offset o, double w, {required bool big, requi
       _discard(c, o, w * 0.26 * s);
     case EinsKind.hitTwo:
       txt('2×', 0.44);
-    case EinsKind.tradeHands:
-      _trade(c, o, w * 0.26 * s);
     case EinsKind.flexSkip:
       _skip(c, o, w * 0.25 * s);
+      flexNote('Alle aus');
     case EinsKind.flexReverse:
       _reverse(c, o, w * 0.25 * s);
+      flexNote('+ Aussetzen');
     case EinsKind.flexDrawTwo:
       txt('+2', 0.46);
+      flexNote('Alle +1');
     case EinsKind.wild:
       wheel(o, w * 0.28 * s, colors);
-    case EinsKind.wildDrawTwo:
     case EinsKind.flexWildTargetDraw:
+      wheel(o, w * 0.28 * s, colors);
+      flexNote('Ziel +2');
+    case EinsKind.flexWildAllDraw:
+      wheel(o, w * 0.28 * s, colors);
+      flexNote('Alle +2');
+    case EinsKind.wildDrawTwo:
       wheel(o, w * 0.28 * s, colors);
       txt('+2', 0.36);
     case EinsKind.wildDrawFour:
+      wheel(o, w * 0.28 * s, colors);
+      txt('+4', 0.36);
     case EinsKind.flexWildDrawFour:
       wheel(o, w * 0.28 * s, colors);
       txt('+4', 0.36);
+      flexNote('Ziel +4');
     case EinsKind.wildDrawSix:
       wheel(o, w * 0.28 * s, colors);
       txt('+6', 0.36);
@@ -137,8 +167,9 @@ void _symbol(Canvas c, EinsFace f, Offset o, double w, {required bool big, requi
       wheel(o, w * 0.28 * s, colors);
       txt('+10', 0.3);
     case EinsKind.wildReverseDrawFour:
+    case EinsKind.wildReverseDrawEight:
       wheel(o, w * 0.28 * s, colors);
-      txt('+4', 0.3, shift: Offset(0, w * 0.1 * s));
+      txt(f.kind == EinsKind.wildReverseDrawFour ? '+4' : '+8', 0.3, shift: Offset(0, w * 0.1 * s));
       _reverse(c, o - Offset(0, w * 0.1 * s), w * 0.1 * s);
     case EinsKind.wildDrawColor:
       wheel(o, w * 0.28 * s, colors);
@@ -146,19 +177,30 @@ void _symbol(Canvas c, EinsFace f, Offset o, double w, {required bool big, requi
     case EinsKind.wildColorRoulette:
       wheel(o, w * 0.28 * s, colors);
       txt('?', 0.4);
-    case EinsKind.wildHitFire:
+    case EinsKind.wildDiscardAll:
       wheel(o, w * 0.28 * s, colors);
-      _flame(c, o, w * 0.17 * s);
-    case EinsKind.wildAllHit:
+      if (big) _discard(c, o, w * 0.16 * s);
+    case EinsKind.wildFinalAttack:
       wheel(o, w * 0.28 * s, colors);
-      txt('ALLE', 0.18);
-    case EinsKind.flexWildAllDraw:
+      _flame(c, o, w * 0.15 * s);
+    case EinsKind.wildSuddenDeath:
       wheel(o, w * 0.28 * s, colors);
-      txt('ALLE', 0.18);
+      txt('24', 0.3);
+    case EinsKind.extremeHit:
+      wheel(o, w * 0.28 * s, colors);
+      if (big) _target(c, o, w * 0.16 * s);
+      txt('2×', big ? 0.2 : 0.36, shift: big ? Offset(0, w * 0.4) : Offset.zero);
     case EinsKind.wildAllFlip:
       wheel(o, w * 0.28 * s, colors);
       _bolt(c, o, w * 0.16 * s, Colors.white);
   }
+}
+
+/// Zielscheibe für den Extrem-Treffer.
+void _target(Canvas c, Offset o, double r) {
+  c.drawCircle(o, r, Paint()..color = Colors.white);
+  c.drawCircle(o, r * 0.66, Paint()..color = einsColors[EinsColor.red]!);
+  c.drawCircle(o, r * 0.33, Paint()..color = Colors.white);
 }
 
 void _text(
@@ -168,6 +210,7 @@ void _text(
   double fontSize, {
   bool shadow = true,
   bool underline = false,
+  Color color = Colors.white,
 }) {
   final tp = TextPainter(
     text: TextSpan(
@@ -176,7 +219,7 @@ void _text(
         fontFamily: displayFont,
         fontSize: fontSize,
         height: 1,
-        color: Colors.white,
+        color: color,
         decoration: underline ? TextDecoration.underline : null,
         decorationColor: Colors.white,
         shadows: shadow
@@ -258,23 +301,6 @@ void _discard(Canvas c, Offset o, double r) {
   c.drawLine(a, b, p);
   c.drawLine(b, b + Offset(-r * 0.25, -r * 0.25), p);
   c.drawLine(b, b + Offset(r * 0.25, -r * 0.25), p);
-}
-
-/// Zwei Karten, die die Plätze tauschen.
-void _trade(Canvas c, Offset o, double r) {
-  final fill = Paint()..color = Colors.white.withValues(alpha: 0.25);
-  final p = _stroke(r * 0.12);
-  for (final dx in [-0.5, 0.5]) {
-    final rr = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: o + Offset(dx * r, dx * r * 0.4), width: r * 0.75, height: r * 1.05),
-      Radius.circular(r * 0.12),
-    );
-    c.drawRRect(rr, fill);
-    c.drawRRect(rr, p);
-  }
-  final rect = Rect.fromCircle(center: o, radius: r * 0.95);
-  c.drawArc(rect, -math.pi * 0.85, math.pi * 0.5, false, p);
-  c.drawArc(rect, math.pi * 0.15, math.pi * 0.5, false, p);
 }
 
 void _flame(Canvas c, Offset o, double r) {
@@ -462,14 +488,15 @@ Future<EinsColor?> showColorPicker(
   );
 }
 
-/// Glücksrad mit den neun Feldern, dreht sich auf das Ergebnis.
+/// Glücksrad, dreht sich auf das Ergebnis.
 class SpinWheel extends StatelessWidget {
-  const SpinWheel({super.key, required this.size, required this.turns});
+  const SpinWheel({super.key, required this.size, required this.turns, this.spaces = wheel2005});
 
   final double size;
 
   /// Umdrehungen, 0 zeigt Feld 0 oben.
   final double turns;
+  final List<SpinSpace> spaces;
 
   @override
   Widget build(BuildContext context) {
@@ -481,7 +508,7 @@ class SpinWheel extends StatelessWidget {
         children: [
           Transform.rotate(
             angle: -turns * 2 * math.pi,
-            child: CustomPaint(size: Size.square(size), painter: _WheelPainter()),
+            child: CustomPaint(size: Size.square(size), painter: _WheelPainter(spaces)),
           ),
           CustomPaint(size: Size(size * 0.12, size * 0.12), painter: _PointerPainter()),
         ],
@@ -491,38 +518,46 @@ class SpinWheel extends StatelessWidget {
 }
 
 /// Winkel in Umdrehungen, bei dem das Feld oben steht.
-double spinTurnsFor(SpinSpace s) => (s.index + 0.5) / SpinSpace.values.length;
+double spinTurnsFor(SpinSpace s, List<SpinSpace> spaces) => (spaces.indexOf(s) + 0.5) / spaces.length;
+
+Color _spaceColor(SpinSpace s, int i) => switch (s) {
+      SpinSpace.colorDrawRed || SpinSpace.drawRed => einsColors[EinsColor.red]!,
+      SpinSpace.colorDrawYellow => einsColors[EinsColor.yellow]!,
+      SpinSpace.colorDrawGreen => einsColors[EinsColor.green]!,
+      SpinSpace.colorDrawBlue || SpinSpace.drawBlue => einsColors[EinsColor.blue]!,
+      _ => const [
+          Color(0xFF8A5A2B),
+          Color(0xFFF07A1A),
+          Color(0xFF1FB5A8),
+          Color(0xFFE0479E),
+          Color(0xFF7B4FC9),
+          Color(0xFF2E9C6A),
+          Color(0xFFD9A441),
+        ][i % 7],
+    };
 
 class _WheelPainter extends CustomPainter {
+  _WheelPainter(this.spaces);
+  final List<SpinSpace> spaces;
+
   @override
   void paint(Canvas canvas, Size size) {
     final o = size.center(Offset.zero);
     final r = size.width / 2;
-    final n = SpinSpace.values.length;
+    final n = spaces.length;
     final sweep = 2 * math.pi / n;
-    final shades = [
-      einsColors[EinsColor.red]!,
-      einsColors[EinsColor.yellow]!,
-      einsColors[EinsColor.green]!,
-      einsColors[EinsColor.blue]!,
-      einsColors[EinsColor.orange]!,
-      einsColors[EinsColor.teal]!,
-      einsColors[EinsColor.pink]!,
-      einsColors[EinsColor.purple]!,
-      const Color(0xFF8A5A2B),
-    ];
     canvas.drawCircle(o, r, Paint()..color = einsWildColor);
     final rect = Rect.fromCircle(center: o, radius: r * 0.94);
     for (var i = 0; i < n; i++) {
       final start = -math.pi / 2 + i * sweep;
-      canvas.drawArc(rect, start, sweep, true, Paint()..color = shades[i]);
+      canvas.drawArc(rect, start, sweep, true, Paint()..color = _spaceColor(spaces[i], i));
       canvas.drawArc(rect, start, sweep, true, _stroke(r * 0.015)..color = _cream);
       canvas.save();
       canvas.translate(o.dx, o.dy);
       canvas.rotate(start + sweep / 2 + math.pi / 2);
       final tp = TextPainter(
         text: TextSpan(
-          text: spinName(SpinSpace.values[i]).replaceFirst(' ', '\n'),
+          text: spinName(spaces[i]).replaceFirst(' ', '\n'),
           style: TextStyle(
             fontFamily: bodyFont,
             fontWeight: FontWeight.w800,
@@ -543,7 +578,7 @@ class _WheelPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_WheelPainter old) => false;
+  bool shouldRepaint(_WheelPainter old) => old.spaces != spaces;
 }
 
 class _PointerPainter extends CustomPainter {

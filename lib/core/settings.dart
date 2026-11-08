@@ -16,6 +16,8 @@ class Settings extends ChangeNotifier {
         _cardScale = (_prefs.getDouble(_scaleKey) ?? 1.0).clamp(minCardScale, maxCardScale),
         _einsStackDraws = _prefs.getBool(_einsStackKey) ?? true,
         _einsCallRequired = _prefs.getBool(_einsCallKey) ?? true,
+        _einsChallenge = _prefs.getBool(_einsChallengeKey) ?? true,
+        _einsExpansion = _prefs.getBool(_einsExpansionKey) ?? false,
         _einsMode = EinsMode.values.firstWhere(
           (v) => v.name == _prefs.getString(_einsModeKey),
           orElse: () => EinsMode.classic,
@@ -28,6 +30,8 @@ class Settings extends ChangeNotifier {
   static const _einsStackKey = 'settings.einsStackDraws';
   static const _einsCallKey = 'settings.einsCallRequired';
   static const _einsModeKey = 'settings.einsMode';
+  static const _einsChallengeKey = 'settings.einsChallenge';
+  static const _einsExpansionKey = 'settings.einsNoMercyExpansion';
   static const minCardScale = 0.8;
   static const maxCardScale = 1.6;
 
@@ -39,6 +43,28 @@ class Settings extends ChangeNotifier {
   bool _einsStackDraws;
   bool _einsCallRequired;
   EinsMode _einsMode;
+  bool _einsChallenge;
+  bool _einsExpansion;
+
+  /// Eins!: Farbwahl-Strafkarten nur ohne passende Farbe, der Nächste darf anzweifeln.
+  bool get einsChallenge => _einsChallenge;
+
+  set einsChallenge(bool value) {
+    if (value == _einsChallenge) return;
+    _einsChallenge = value;
+    _prefs.setBool(_einsChallengeKey, value);
+    notifyListeners();
+  }
+
+  /// Eins! Gnadenlos: mit den Karten und Münzen der Erweiterung.
+  bool get einsExpansion => _einsExpansion;
+
+  set einsExpansion(bool value) {
+    if (value == _einsExpansion) return;
+    _einsExpansion = value;
+    _prefs.setBool(_einsExpansionKey, value);
+    notifyListeners();
+  }
 
   /// Eins!: zuletzt gewählte Spielweise.
   EinsMode get einsMode => _einsMode;

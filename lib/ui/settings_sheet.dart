@@ -133,6 +133,26 @@ class _SettingsSheet extends StatelessWidget {
                   value: app.settings.einsCallRequired,
                   onChanged: (v) => app.settings.einsCallRequired = v,
                 ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Anzweifeln', style: TextStyle(color: p.ink, fontSize: 16)),
+                  subtitle: Text(
+                    'Farbwahl +4, +2 und Ziehen bis zur Farbe nur ohne passende Farbe. Der Nächste darf anzweifeln',
+                    style: TextStyle(color: p.inkSoft, fontSize: 14),
+                  ),
+                  value: app.settings.einsChallenge,
+                  onChanged: (v) => app.settings.einsChallenge = v,
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Gnadenlos mit Erweiterung', style: TextStyle(color: p.ink, fontSize: 16)),
+                  subtitle: Text(
+                    '24 Zusatzkarten und Münzen. Gilt ab der nächsten Runde',
+                    style: TextStyle(color: p.inkSoft, fontSize: 14),
+                  ),
+                  value: app.settings.einsExpansion,
+                  onChanged: (v) => app.settings.einsExpansion = v,
+                ),
               ],
             ),
           ),

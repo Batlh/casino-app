@@ -227,10 +227,13 @@ Future<int?> showChoiceSheet(
   return showModalBottomSheet<int>(
     context: context,
     showDragHandle: true,
+    isScrollControlled: true,
     builder: (context) {
       final p = Palette.of(context);
       return SafeArea(
-        child: Padding(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
+          child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -248,10 +251,11 @@ Future<int?> showChoiceSheet(
                       minimumSize: const Size.fromHeight(48),
                     ),
                     onPressed: () => Navigator.of(context).pop(i),
-                    child: Text(options[i]),
+                    child: Text(options[i], textAlign: TextAlign.center),
                   ),
                 ),
             ],
+          ),
           ),
         ),
       );

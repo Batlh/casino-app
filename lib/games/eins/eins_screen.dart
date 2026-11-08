@@ -28,52 +28,75 @@ List<EinsCard> sortedEins(EinsEngine e, List<EinsCard> cards) {
 List<String> modeRules(EinsMode m) {
   const base = [
     'Lege eine Karte gleicher Farbe, Zahl oder gleichen Symbols. Farbwahl-Karten passen immer.',
-    'Wer nicht legen kann, zieht eine Karte. Passt sie, darfst du sie sofort legen.',
+    'Wer nicht legen kann oder will, zieht eine Karte. Passt sie, darfst du sie sofort legen.',
     'Bei der vorletzten Karte musst du Eins! rufen, sonst gibt es Strafkarten (in den Einstellungen abschaltbar).',
     'Wer zuerst keine Karten mehr hat, gewinnt 50 Münzen pro Gegner.',
   ];
+  const challenge =
+      'Anzweifeln (in den Einstellungen abschaltbar): Farbwahl plus vier darf man nur legen, wenn man die liegende Farbe nicht hat. '
+      'Der Nächste darf anzweifeln. Zu Recht: Der Leger zieht selbst. Zu Unrecht: Der Zweifler zieht zwei mehr.';
   return switch (m) {
     EinsMode.classic => [
         ...base,
         'Aussetzen, Richtungswechsel, Plus zwei, Farbwahl und Farbwahl plus vier.',
         'Plus-Karten dürfen gestapelt werden, wenn das in den Einstellungen an ist.',
+        challenge,
       ],
     EinsMode.flip => [
         ...base,
         'Jede Karte hat eine helle und eine dunkle Seite. Bei den Gegnern und auf dem Stapel siehst du die jeweils andere Seite.',
-        'Die Wendekarte dreht alle Karten um: Hand, Ablage und Stapel. Danach gelten die Farben und Karten der anderen Seite.',
+        'Die Wendekarte dreht alles um: Hand, Stapel und Ablage. Die Ablage wird als Ganzes umgedreht, oben liegt danach die bisher unterste Karte mit ihrer anderen Seite. Ist sie eine Aktionskarte, passiert nichts. Ist sie eine Farbwahl, bestimmt der Wender die Farbe.',
         'Hell: Plus eins, Aussetzen, Richtungswechsel, Farbwahl plus zwei.',
-        'Dunkel: Plus fünf, Alle setzen aus (du bist gleich nochmal dran), Farbwahl bis zur Farbe: Der Nächste zieht, bis die gewählte Farbe kommt.',
+        'Dunkel: Plus fünf, Alle setzen aus (du bist gleich nochmal dran), Farbwahl bis zur Farbe: Der Nächste zieht, bis die gewählte Farbe kommt. Farbwahl-Karten zählen dabei nicht.',
+        'Anzweifeln gilt hier für Farbwahl plus zwei und Farbwahl bis zur Farbe.',
       ],
     EinsMode.noMercy => [
         ...base,
-        'Plus-Karten bis plus zehn. Gestapelt wird immer, mit gleichem oder höherem Wert.',
+        'Plus-Karten bis plus zehn. Gestapelt wird immer, mit gleichem oder höherem Wert, Farbe egal.',
         'Kannst du nicht legen, ziehst du, bis eine Karte passt, und musst sie legen.',
-        'Sieben: Tausche die Hand mit einem Gegner. Null: Alle geben ihre Hand in Spielrichtung weiter.',
-        'Alle abwerfen: Wirf zusätzlich alle Karten dieser Farbe ab.',
-        'Farbroulette: Der Nächste sagt eine Farbe an und zieht, bis sie kommt.',
-        'Wer 25 Karten oder mehr hat, scheidet aus. Wer als Letzter übrig ist, gewinnt auch.',
+        'Sieben: Tausche die Hand mit einem Gegner deiner Wahl. Null: Alle geben ihre Hand in Spielrichtung weiter.',
+        'Alle abwerfen: Wirf zusätzlich alle Karten dieser Farbe ab. Alle setzen aus: Du bist gleich nochmal dran.',
+        'Richtungswechsel plus vier: Erst die Richtung drehen, dann zieht der Nächste. Zu zweit trifft es dich selbst, du darfst aber zurückstapeln.',
+        'Farbroulette: Der Nächste sagt eine Farbe an und zieht, bis sie kommt. Farbwahl-Karten zählen nicht. Die angesagte Farbe gilt danach.',
+        'Wer 25 Karten oder mehr hat, scheidet aus. Seine Karten kommen erst beim nächsten Mischen zurück. Wer als Letzter übrig ist, gewinnt auch.',
+        'Erweiterung (Einstellungen): 10er (nochmal dran), Farbwahl alle abwerfen (eine Farbe deiner Wahl), Richtungswechsel plus acht, Finaler Angriff (der Nächste zieht eine Karte pro Sonderkarte in deiner Hand, ab sieben 25 und alle anderen 5), Plötzlicher Tod (alle füllen auf 24 Karten auf).',
+        'Münzen der Erweiterung, einmal pro Runde: Gnade wirft deine ganze Hand ab, du ziehst sieben neue und eine Strafe verfällt. Sie rettet dich auch automatisch vor dem Ausscheiden. Keine Gnade verdoppelt den Wert einer Plus-Karte, auch beim Stapeln.',
       ],
     EinsMode.extreme => [
         ...base.take(1),
-        'Statt zu ziehen drückst du den Kartenwerfer. Er spuckt keine, ein paar oder viele Karten aus. Danach ist dein Zug vorbei.',
-        'Zweimal werfen: Der Nächste drückt zweimal und setzt aus.',
-        'Feuer: Der Nächste drückt, bis Karten kommen, und setzt aus. Alle werfen: Alle anderen drücken einmal.',
-        'Hände tauschen: Tausche die Hand mit einem Gegner. Alle abwerfen: Wirf alle Karten dieser Farbe ab.',
+        'Statt zu ziehen drückst du den Kartenwerfer. Er spuckt keine, ein paar oder viele Karten aus. Danach ist dein Zug vorbei. Drücken darfst du auch, wenn du legen könntest.',
+        'Zweimal drücken: Der Nächste drückt zweimal und setzt aus.',
+        'Extrem-Treffer: Farbwahl. Du wählst einen beliebigen Gegner, für den zweimal gedrückt wird. Danach geht es normal weiter.',
+        'Alle abwerfen: Wirf alle Karten dieser Farbe ab.',
+        'Zu zweit: Richtungswechsel und Aussetzen lassen dich gleich nochmal legen.',
         'Vergessenes Eins! kostet zweimal drücken.',
         base.last,
       ],
     EinsMode.spin => [
         ...base,
-        'Karten mit Glücksrad lassen den nächsten Spieler drehen statt zu spielen.',
-        'Felder: Fast fertig (nur zwei Karten behalten), Zahl abwerfen, Farbe abwerfen, Zieh bis Rot, Zieh bis Blau, Hände weitergeben, Hand zeigen, Duell (höchste Zahl gewinnt und wirft ab) und Wettrennen (wer zuerst drückt, wirft seine wertvollste Karte ab).',
+        'Wie Spin von 2005. Je Farbe sind die Karten 1 bis 5 einmal mit Wirbel. Wer eine davon legt, lässt den Nächsten am Glücksrad drehen, das ist dessen Zug.',
+        'Fast fertig: Behalte nur zwei Karten deiner Wahl. Zahl abwerfen und Farbe abwerfen: Wirf alle Karten einer Zahl oder Farbe ab. Du wählst, welche abgeworfene Karte oben liegt, sie bestimmt das weitere Spiel.',
+        'Zieh bis Rot und Zieh bis Blau: Ziehen, bis die Farbe oder eine Farbwahl kommt.',
+        'Hände weitergeben: Alle geben ihre Hand nach links. Hand zeigen: Deine Karten liegen offen, bis du wieder dran bist.',
+        'Duell: Alle zeigen ihre höchste Zahl, bei Gleichstand die nächste. Der Gewinner wirft seine Duellkarten ab, danach ist der Spieler nach ihm dran.',
+        'Wettrennen: Wer zuerst drückt, wirft eine Karte seiner Wahl ab.',
+        challenge,
+      ],
+    EinsMode.spinNew => [
+        ...base,
+        'Wie Spin von 2025. Glücksradkarten: je Farbe die 1 bis 5 einmal und vier Farbwahl-Karten. Wer eine legt, dreht selbst.',
+        'Zieh Rot, Gelb, Grün, Blau: Ziehen, bis diese Farbe kommt. Wunschfarbe ziehen: Du wählst die Farbe und ziehst bis zu ihr.',
+        'Farbe abwerfen: Wirf alle Karten einer Farbe deiner Wahl unter die Ablage. Hände tauschen: mit einem Gegner deiner Wahl.',
+        'Zwei Karten: Ab dem Nächsten darf jeder nach einer Zahlenkarte noch eine zweite Karte legen, bis wieder gedreht wird.',
+        challenge,
       ],
     EinsMode.flex => [
         ...base,
-        'Jeder hat eine Kraftkarte, die an oder aus ist. Karten mit goldenem Blitz haben eine Kraftseite.',
-        'Ist deine Kraft an, darfst du die Kraftseite nutzen. Danach ist deine Kraft aus.',
-        'Kraft: Aussetzen lässt alle aussetzen, Richtungswechsel lässt zusätzlich aussetzen, Plus zwei lässt alle anderen eine ziehen, Farbwahl-Karten lassen alle oder einen Gegner deiner Wahl ziehen.',
-        'Zahlen mit weißem Kreispfeil schalten deine eigene Kraft um. Kraftwechsel für alle schaltet alle um. Sind alle aus, gehen alle wieder an.',
+        'Jeder hat eine Kraftkarte, die an oder aus ist. Ist sie an, darfst du die Kraftseite einer Karte nutzen. Danach ist sie aus. Sind alle aus, gehen alle wieder an.',
+        'Zahlen mit farbiger Ecke haben eine zweite Farbe. Mit Kraft darfst du sie in dieser Farbe legen, weiter geht es aber mit der Grundfarbe.',
+        'Karten mit goldenem Blitz: Aussetzen lässt alle aussetzen, Richtungswechsel lässt zusätzlich aussetzen, Plus zwei lässt alle anderen eine ziehen. Farbwahl-Karten lassen alle anderen zwei ziehen oder einen Gegner deiner Wahl zwei oder vier.',
+        'Zahlen mit weißem Kreispfeil schalten deine eigene Kraft um. Kraftwechsel für alle schaltet alle um.',
+        challenge,
       ],
   };
 }
@@ -125,6 +148,7 @@ class _EinsScreenState extends State<EinsScreen> {
   void _setup() {
     final offset = _rng.nextInt(_names.length);
     final settings = _app.settings;
+    final expansion = _mode == EinsMode.noMercy && settings.einsExpansion;
     _e = EinsEngine(
       players: [
         EinsPlayer('Du', human: true),
@@ -134,12 +158,30 @@ class _EinsScreenState extends State<EinsScreen> {
       rng: _rng,
       stackDraws: settings.einsStackDraws,
       callRequired: settings.einsCallRequired,
+      challengeRule: settings.einsChallenge,
+      expansion: expansion,
     )..start(startPlayer: _round % (_opponents + 1));
+    if (expansion) WidgetsBinding.instance.addPostFrameCallback((_) => _askCoin());
     _rewarded = false;
     _called = false;
     _wheelVisible = false;
     _spinning = false;
     _race = null;
+  }
+
+  /// Gnadenlos-Erweiterung: Seite der eigenen Münze zu Rundenbeginn festlegen.
+  Future<void> _askCoin() async {
+    if (!mounted) return;
+    final pick = await showChoiceSheet(
+      context,
+      title: 'Welche Seite deiner Münze?',
+      options: const [
+        'Gnade: einmal die ganze Hand gegen sieben neue tauschen',
+        'Keine Gnade: einmal eine Plus-Karte verdoppeln',
+      ],
+    );
+    if (!mounted || pick == null) return;
+    setState(() => _e.coins[0] = pick == 0 ? EinsCoin.mercy : EinsCoin.noMercy);
   }
 
   void _newRound() {
@@ -227,27 +269,86 @@ class _EinsScreenState extends State<EinsScreen> {
       if (pick == null || !mounted || !_myTurn) return;
       flex = pick == 0;
     }
+    var coin = false;
+    if (_e.coinPossible(c)) {
+      if (_e.coinNeeded(c)) {
+        coin = true;
+      } else {
+        final pick = await showChoiceSheet(
+          context,
+          title: 'Keine-Gnade-Münze einsetzen?',
+          options: ['Ja, +${f.drawValue * 2} statt +${f.drawValue}', 'Nein, normal legen'],
+        );
+        if (pick == null || !mounted || !_myTurn) return;
+        coin = pick == 0;
+      }
+    }
     int? target;
     if (_e.needsTarget(c, flex: flex)) {
-      target = await _askTarget(
-        f.kind == EinsKind.number || f.kind == EinsKind.tradeHands ? 'Mit wem tauschen?' : 'Wer soll ziehen?',
-      );
+      target = await _askTarget(switch (f.kind) {
+        EinsKind.number => 'Mit wem tauschen?',
+        EinsKind.extremeHit => 'Wen triffst du?',
+        _ => 'Wer soll ziehen?',
+      });
       if (target == null || !mounted || !_myTurn) return;
     }
+    EinsColor? discardColor;
+    if (f.kind == EinsKind.wildDiscardAll) {
+      final present = [
+        for (final col in _e.sideColors)
+          if (_e.actor.hand.any((x) => x != c && _e.face(x).color == col)) col,
+      ];
+      if (present.isNotEmpty) {
+        discardColor = await showColorPicker(context, colors: present, title: 'Welche Farbe abwerfen?');
+        if (discardColor == null || !mounted || !_myTurn) return;
+      }
+    }
     EinsColor? chosen;
-    if (f.isWild && _e.actor.hand.length > 1) {
+    final restAfter = _e.actor.hand.length - 1;
+    if (f.isWild && restAfter > 0) {
       chosen = await showColorPicker(
         context,
         colors: _e.sideColors,
         title: f.kind == EinsKind.wildDrawColor ? 'Bis zu welcher Farbe ziehen?' : 'Farbe wählen',
       );
       if (chosen == null || !mounted || !_myTurn) return;
+    } else if (f.kind == EinsKind.flip && (_e.flipNewTop?.isWild ?? false) && restAfter > 0) {
+      chosen = await showColorPicker(
+        context,
+        colors: _e.darkSide ? lightColors : darkColors,
+        title: 'Nach dem Wenden liegt eine Farbwahl oben',
+      );
+      if (chosen == null || !mounted || !_myTurn) return;
     }
-    _e.play(c, chosen: chosen, target: target, flex: flex, called: _called);
+    _e.play(
+      c,
+      chosen: chosen,
+      target: target,
+      flex: flex,
+      discardColor: discardColor,
+      coin: coin,
+      called: _called,
+    );
     _called = false;
     _app.sfx.play(Sound.card);
     setState(() {});
     _after();
+  }
+
+  void _challengeTap() {
+    if (!_myTurn || !_e.canChallenge) return;
+    _e.challenge();
+    _app.sfx.play(Sound.chip);
+    setState(() {});
+    _after();
+  }
+
+  void _mercyTap() {
+    if (!_myTurn) return;
+    if (_e.useMercyCoin()) {
+      _app.sfx.play(Sound.coin);
+      setState(() {});
+    }
   }
 
   void _draw() {
@@ -258,6 +359,12 @@ class _EinsScreenState extends State<EinsScreen> {
     }
     if (_e.mustChooseRoulette) {
       _humanRoulette();
+      return;
+    }
+    if (_e.extraPlay) {
+      _e.endTurn();
+      setState(() {});
+      _after();
       return;
     }
     if (_e.drewThisTurn && _e.pendingDraw == 0 && _e.forcedColorDraw == null) return;
@@ -277,29 +384,146 @@ class _EinsScreenState extends State<EinsScreen> {
   }
 
   Future<void> _humanSpin() async {
-    await _animateSpin();
+    final space = await _animateSpin();
+    if (!mounted || space == null) return;
+    final choice = await _humanSpinChoice(space);
     if (!mounted) return;
+    _e.spin(forced: space, choice: choice);
+    _afterSpin();
     _after();
   }
 
-  /// Dreht das Rad sichtbar und wendet dann das Feld an.
-  Future<void> _animateSpin() async {
-    final space = SpinSpace.values[_rng.nextInt(SpinSpace.values.length)];
+  /// Dreht das Rad sichtbar. Liefert das Feld, angewendet wird es danach.
+  Future<SpinSpace?> _animateSpin() async {
+    final space = _e.randomSpace();
     setState(() {
       _spinning = true;
       _wheelVisible = true;
       _wheelFrom = _wheelTurns;
-      _wheelTurns = _wheelTurns.floorToDouble() + 3 + spinTurnsFor(space);
+      _wheelTurns = _wheelTurns.floorToDouble() + 3 + spinTurnsFor(space, _e.wheel);
     });
     _app.sfx.play(Sound.tick);
     await Future<void>.delayed(const Duration(milliseconds: 1900));
-    if (!mounted) return;
-    _e.spin(forced: space);
+    if (!mounted) return null;
     _app.sfx.play(Sound.coin);
+    return space;
+  }
+
+  void _afterSpin() {
     setState(() => _spinning = false);
-    await Future<void>.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
-    setState(() => _wheelVisible = _e.raceOpen);
+    Future<void>.delayed(const Duration(milliseconds: 900), () {
+      if (mounted) setState(() => _wheelVisible = _e.raceOpen);
+    });
+  }
+
+  /// Entscheidungen am Glücksrad für dich.
+  Future<SpinChoice> _humanSpinChoice(SpinSpace space) async {
+    final hand = _e.actor.hand;
+    Future<int?> pickTop(List<EinsCard> cards) async {
+      final distinct = {for (final x in cards) _e.face(x).spokenName};
+      if (cards.length < 2 || distinct.length < 2) return null;
+      final i = await showChoiceSheet(
+        context,
+        title: 'Welche Karte soll oben liegen?',
+        options: [for (final x in cards) _e.face(x).spokenName],
+      );
+      return i == null ? null : cards[i].id;
+    }
+
+    switch (space) {
+      case SpinSpace.almostDone:
+        if (hand.length <= 2) return const SpinChoice();
+        final keep = await _pickCards('Welche zwei Karten behältst du?', hand, 2);
+        if (keep == null || !mounted) return const SpinChoice();
+        final gone = hand.where((x) => !keep.contains(x.id)).toList();
+        return SpinChoice(keep: keep, topId: await pickTop(gone));
+      case SpinSpace.discardNumber:
+        final counts = <int, int>{};
+        for (final x in hand) {
+          final f = _e.face(x);
+          if (f.isNumber) counts[f.number] = (counts[f.number] ?? 0) + 1;
+        }
+        if (counts.isEmpty) return const SpinChoice();
+        final numbers = counts.keys.toList()..sort();
+        final i = await showChoiceSheet(
+          context,
+          title: 'Welche Zahl abwerfen?',
+          options: [for (final n in numbers) '$n (${counts[n]}×)'],
+        );
+        if (i == null || !mounted) return const SpinChoice();
+        final n = numbers[i];
+        return SpinChoice(
+          number: n,
+          topId: await pickTop(hand.where((x) => _e.face(x).isNumber && _e.face(x).number == n).toList()),
+        );
+      case SpinSpace.discardColor:
+      case SpinSpace.colorDiscard:
+        final present = [
+          for (final col in lightColors)
+            if (hand.any((x) => _e.face(x).color == col)) col,
+        ];
+        if (present.isEmpty) return const SpinChoice();
+        final col = await showColorPicker(context, colors: present, title: 'Welche Farbe abwerfen?');
+        if (col == null || !mounted) return const SpinChoice();
+        if (space == SpinSpace.colorDiscard) return SpinChoice(color: col);
+        return SpinChoice(color: col, topId: await pickTop(hand.where((x) => _e.face(x).color == col).toList()));
+      case SpinSpace.wildColorDraw:
+        final col = await showColorPicker(context, title: 'Bis zu welcher Farbe ziehen?');
+        return SpinChoice(color: col);
+      case SpinSpace.swapHands:
+        return SpinChoice(target: await _askTarget('Mit wem tauschen?'));
+      default:
+        return const SpinChoice();
+    }
+  }
+
+  /// Wählt genau [count] Karten aus der Hand.
+  Future<Set<int>?> _pickCards(String title, List<EinsCard> cards, int count) {
+    final picked = <int>{};
+    return showModalBottomSheet<Set<int>>(
+      context: context,
+      showDragHandle: true,
+      isDismissible: false,
+      enableDrag: false,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheet) => SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    for (final c in sortedEins(_e, cards))
+                      GestureDetector(
+                        onTap: () => setSheet(() {
+                          if (!picked.remove(c.id) && picked.length < count) picked.add(c.id);
+                        }),
+                        child: Opacity(
+                          opacity: picked.isEmpty || picked.contains(c.id) ? 1 : 0.55,
+                          child: _cardView(c, 64, highlighted: picked.contains(c.id)),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ActionButton(
+                  primary: true,
+                  label: 'Behalten (${picked.length}/$count)',
+                  onPressed: picked.length == count ? () => Navigator.of(context).pop(picked) : null,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   /// Wettrennen: Computer reagieren nach zufälliger Zeit.
@@ -324,7 +548,18 @@ class _EinsScreenState extends State<EinsScreen> {
     });
     final w = await race.future;
     if (!mounted) return;
-    _e.resolveRace(w);
+    int? discardId;
+    if (w == 0 && _e.players[0].hand.length > 1) {
+      final hand = sortedEins(_e, _e.players[0].hand);
+      final i = await showChoiceSheet(
+        context,
+        title: 'Gewonnen! Welche Karte abwerfen?',
+        options: [for (final x in hand) _e.face(x).spokenName],
+      );
+      if (!mounted) return;
+      if (i != null) discardId = hand[i].id;
+    }
+    _e.resolveRace(w, discardId: discardId);
     _app.sfx.play(w == 0 ? Sound.win : Sound.card);
     setState(() {
       _race = null;
@@ -360,7 +595,14 @@ class _EinsScreenState extends State<EinsScreen> {
   }
 
   Future<void> _botPlay(EinsChoice choice) async {
-    _e.play(choice.card!, chosen: choice.color, target: choice.target, flex: choice.flex);
+    _e.play(
+      choice.card!,
+      chosen: choice.color,
+      target: choice.target,
+      flex: choice.flex,
+      discardColor: choice.discardColor,
+      coin: choice.coin,
+    );
     _app.sfx.play(Sound.card);
     setState(() {});
   }
@@ -377,8 +619,26 @@ class _EinsScreenState extends State<EinsScreen> {
       await Future<void>.delayed(const Duration(milliseconds: 750));
       if (!mounted) return;
       if (_e.mustSpin) {
-        await _animateSpin();
+        final space = await _animateSpin();
+        if (!mounted) return;
+        if (space != null) _e.spin(forced: space);
+        _afterSpin();
         continue;
+      }
+      if (einsBotMercy(_e) && _e.useMercyCoin()) {
+        _app.sfx.play(Sound.coin);
+        setState(() {});
+        await Future<void>.delayed(const Duration(milliseconds: 600));
+        if (!mounted) return;
+      }
+      if (einsBotChallenges(_e, _rng)) {
+        final me = _e.current;
+        _e.challenge();
+        _app.sfx.play(Sound.chip);
+        setState(() {});
+        if (_e.current != me || _over) continue;
+        await Future<void>.delayed(const Duration(milliseconds: 600));
+        if (!mounted) return;
       }
       if (_e.mustChooseRoulette) {
         _e.resolveRoulette(favoriteColor(_e, _e.actor.hand));
@@ -389,6 +649,17 @@ class _EinsScreenState extends State<EinsScreen> {
       final choice = einsBotChoice(_e, _rng);
       if (choice.card != null) {
         await _botPlay(choice);
+        if (_e.extraPlay && !_over) {
+          await Future<void>.delayed(const Duration(milliseconds: 500));
+          if (!mounted) return;
+          final second = einsBotChoice(_e, _rng);
+          if (second.card != null) {
+            await _botPlay(second);
+          } else {
+            _e.endTurn();
+            setState(() {});
+          }
+        }
         continue;
       }
       _e.draw();
@@ -400,6 +671,10 @@ class _EinsScreenState extends State<EinsScreen> {
         final again = einsBotChoice(_e, _rng);
         if (again.card != null) {
           await _botPlay(again);
+          if (_e.extraPlay) {
+            _e.endTurn();
+            setState(() {});
+          }
         } else {
           _e.pass();
           setState(() {});
@@ -436,6 +711,12 @@ class _EinsScreenState extends State<EinsScreen> {
     if (_e.actor.human) {
       final prefix = _e.lastEvent.isNotEmpty ? '${_e.lastEvent}. ' : '';
       if (_e.mustSpin) return 'Dreh am Glücksrad!';
+      if (_e.canChallenge) {
+        final who = _e.players[_e.challengeOffender!].name;
+        final what = _e.forcedColorDraw != null ? 'Ziehen bis zur Farbe' : '+${_e.pendingDraw}';
+        return '$who legt $what. Annehmen oder anzweifeln?';
+      }
+      if (_e.extraPlay) return 'Du darfst noch eine Karte legen oder bist fertig';
       if (_e.mustChooseRoulette) return '${prefix}Sag eine Farbe an, du ziehst bis sie kommt';
       if (_e.forcedColorDraw != null) return 'Du musst ziehen, bis ${colorName(_e.forcedColorDraw!)} kommt';
       if (_e.pendingDraw > 0) {
@@ -455,6 +736,7 @@ class _EinsScreenState extends State<EinsScreen> {
 
   String get _drawLabel {
     if (_e.mustSpin) return 'Glücksrad drehen';
+    if (_e.extraPlay && _e.actor.human) return 'Fertig';
     if (_e.mustChooseRoulette) return 'Farbe ansagen';
     if (_e.forcedColorDraw != null && _e.actor.human) return 'Bis ${colorName(_e.forcedColorDraw!)} ziehen';
     if (_e.pendingDraw > 0 && _e.actor.human) return '${_e.pendingDraw} Karten ziehen';
@@ -471,6 +753,7 @@ class _EinsScreenState extends State<EinsScreen> {
         builder: (context, _) {
           _e.stackDraws = settings.einsStackDraws;
           _e.callRequired = settings.einsCallRequired;
+          _e.challengeRule = settings.einsChallenge;
           return LayoutBuilder(
             builder: (context, box) => _layout(box, settings.cardScale),
           );
@@ -498,6 +781,11 @@ class _EinsScreenState extends State<EinsScreen> {
     if (_e.out[i]) return 'Raus';
     final p = _e.players[i];
     final count = p.hand.length == 1 ? 'Eins!' : '${p.hand.length} Karten';
+    if (_e.expansion) {
+      final coin = _e.coins[i];
+      if (coin == null) return count;
+      return '${p.hand.length == 1 ? 'Eins!' : p.hand.length} · ${coin == EinsCoin.mercy ? 'Gnade' : 'Keine Gnade'}';
+    }
     if (_mode != EinsMode.flex) return count;
     return '${p.hand.length == 1 ? 'Eins!' : p.hand.length} · ${_e.power[i] ? 'Kraft an' : 'aus'}';
   }
@@ -544,7 +832,7 @@ class _EinsScreenState extends State<EinsScreen> {
     final status = ResultBanner(text: _status, highlight: _e.finished && _e.winner!.human);
     final special = _e.mustSpin || _e.mustChooseRoulette;
     final mustDraw = _e.pendingDraw > 0 || _e.forcedColorDraw != null;
-    final canDraw = _myTurn && (special || mustDraw || !_e.drewThisTurn);
+    final canDraw = _myTurn && (special || mustDraw || _e.extraPlay || !_e.drewThisTurn);
     final buttons = Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -565,8 +853,11 @@ class _EinsScreenState extends State<EinsScreen> {
                   label: _drawLabel,
                   onPressed: canDraw ? _draw : null,
                 ),
-              if (_myTurn && _e.drewThisTurn && _mode != EinsMode.noMercy && !special)
+              if (_myTurn && _e.canChallenge) ActionButton(label: 'Anzweifeln', onPressed: _challengeTap),
+              if (_myTurn && _e.drewThisTurn && _mode != EinsMode.noMercy && !special && !_e.extraPlay)
                 ActionButton(label: 'Behalten', onPressed: _keep),
+              if (_myTurn && _e.expansion && _e.coins[0] == EinsCoin.mercy && !_e.mustSpin)
+                ActionButton(label: 'Gnade-Münze', onPressed: _mercyTap),
               if (canCall)
                 ActionButton(
                   primary: !_called,
@@ -590,7 +881,7 @@ class _EinsScreenState extends State<EinsScreen> {
             tween: Tween(begin: _wheelFrom, end: _wheelTurns),
             duration: const Duration(milliseconds: 1800),
             curve: Curves.easeOutCubic,
-            builder: (context, t, _) => SpinWheel(size: pileW * 2.6, turns: t),
+            builder: (context, t, _) => SpinWheel(size: pileW * 2.6, turns: t, spaces: _e.wheel),
           )
         : _center(pileW);
     final center = FittedBox(fit: BoxFit.scaleDown, child: centerContent);

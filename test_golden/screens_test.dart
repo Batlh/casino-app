@@ -130,6 +130,7 @@ void main() {
       'eins_werfer': EinsScreen(mode: EinsMode.extreme),
       'eins_kraft': EinsScreen(mode: EinsMode.flex),
       'eins_gluecksrad': EinsScreen(mode: EinsMode.spin),
+      'eins_gnadenlos': EinsScreen(mode: EinsMode.noMercy),
       'schwarzedame': HeartsScreen(),
       'viererkette': QuatroScreen(),
     };

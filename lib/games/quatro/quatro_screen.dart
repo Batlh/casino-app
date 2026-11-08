@@ -112,9 +112,14 @@ class _QuatroScreenState extends State<QuatroScreen> {
   }
 
   void _exchange() {
-    if (!_myTurn || _e.canMove) return;
-    _e.exchange(_selected ?? (_e.actor.hand.isEmpty ? null : _e.actor.hand.first));
-    _selected = null;
+    if (!_myTurn) return;
+    if (_e.exchanged != null) {
+      _e.endTurn();
+    } else {
+      if (_e.canMove) return;
+      _e.exchange(_selected ?? (_e.actor.hand.isEmpty ? null : _e.actor.hand.first));
+      _selected = _e.exchanged;
+    }
     setState(() {});
     _after();
   }
@@ -138,11 +143,13 @@ class _QuatroScreenState extends State<QuatroScreen> {
         _e.swapColumns(a, b);
       } else {
         final m = quatroBotChoice(_e, _rng);
-        if (m.tile == null) {
+        if (m.tile != null) {
+          _e.place(m.tile!, m.col);
+        } else if (_e.exchanged != null) {
+          _e.endTurn();
+        } else {
           final hand = _e.actor.hand;
           _e.exchange(hand.isEmpty ? null : hand[_rng.nextInt(hand.length)]);
-        } else {
-          _e.place(m.tile!, m.col);
         }
       }
       _app.sfx.play(Sound.chip);
@@ -178,6 +185,7 @@ class _QuatroScreenState extends State<QuatroScreen> {
         return _swapFirst == null ? 'Wähle zwei Spalten zum Tauschen' : 'Und jetzt die zweite Spalte';
       }
       final prefix = _e.lastEvent.isNotEmpty ? '${_e.lastEvent}. ' : '';
+      if (_e.exchanged != null) return '${prefix}Leg den neuen Stein oder beende den Zug';
       if (!_e.canMove) return '${prefix}Kein Stein passt, tausch einen mit dem Beutel';
       if (_selected == null) return '${prefix}Stein wählen, dann Spalte antippen';
       return 'Spalte antippen';
@@ -209,9 +217,9 @@ class _QuatroScreenState extends State<QuatroScreen> {
             ]
           : [
               ActionButton(
-                primary: _myTurn && !_e.canMove,
-                label: _e.bag.isEmpty ? 'Passen' : 'Stein tauschen',
-                onPressed: _myTurn && !_e.canMove && !_e.swapPending ? _exchange : null,
+                primary: _myTurn && (!_e.canMove || _e.exchanged != null),
+                label: _e.exchanged != null ? 'Zug beenden' : (_e.bag.isEmpty ? 'Passen' : 'Stein tauschen'),
+                onPressed: _myTurn && (!_e.canMove || _e.exchanged != null) && !_e.swapPending ? _exchange : null,
               ),
             ],
     );
@@ -298,13 +306,13 @@ class _QuatroScreenState extends State<QuatroScreen> {
 
   void _showRules() {
     const rules = [
-      'Jeder hat drei Steine. Wähle einen Stein und tippe eine Spalte an, er fällt nach unten.',
-      'Hat das Feld Nachbarn, auch schräg, muss der Stein zu mindestens einem passen: gleiche Farbe oder gleiche Zahl.',
+      '44 Steine in vier Farben mit den Zahlen 0 bis 5. Jeder hat drei Steine. Wähle einen Stein und tippe eine Spalte an, er fällt nach unten.',
+      'Hat das Feld Nachbarn, auch schräg, muss der Stein zu mindestens einem passen: gleiche Farbe oder gleiche Zahl. Auch Aktionssteine haben eine Zahl.',
       'Vier gleiche Farben oder vier gleiche Zahlen in einer Reihe gewinnen, waagrecht, senkrecht oder schräg. Der Sieg bringt 50 Münzen pro Gegner.',
       'Spaltentausch: Danach tauschst du zwei ganze Spalten.',
-      'Schieber: Passt auf jede Spalte mit Steinen. Der unterste Stein geht zurück in den Beutel, der Schieber landet oben.',
+      'Schieber: Darf auch in eine volle Spalte. Der unterste Stein fällt heraus und geht zurück in den Beutel. In einer leeren Spalte bleibt er einfach liegen.',
       'Minus zwei: Der Nächste legt zwei zufällige Steine zurück und spielt seinen Zug mit dem Rest.',
-      'Passt kein Stein, tauschst du einen gegen den Beutel.',
+      'Passt kein Stein, tauschst du einen gegen den Beutel. Passt der neue, darfst du ihn sofort legen.',
     ];
     showModalBottomSheet<void>(
       context: context,
@@ -448,30 +456,37 @@ class TileView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = einsColors[tile.color]!;
-    final Widget face = switch (tile.kind) {
-      TileKind.number => Text(
+    final icon = switch (tile.kind) {
+      TileKind.plain => null,
+      TileKind.swap => Icons.swap_horiz,
+      TileKind.push => Icons.vertical_align_bottom,
+      TileKind.minusTwo => Icons.exposure_neg_2,
+    };
+    final Widget face = Stack(
+      alignment: Alignment.center,
+      children: [
+        Text(
           '${tile.number}',
           style: TextStyle(
             fontFamily: displayFont,
-            fontSize: size * 0.52,
+            fontSize: size * (icon == null ? 0.52 : 0.42),
             height: 1,
             color: Colors.white,
             shadows: const [Shadow(offset: Offset(1, 1), color: Color(0x99000000))],
           ),
         ),
-      TileKind.swap => Icon(Icons.swap_horiz, color: Colors.white, size: size * 0.6),
-      TileKind.push => Icon(Icons.vertical_align_bottom, color: Colors.white, size: size * 0.6),
-      TileKind.minusTwo => Text(
-          '−2',
-          style: TextStyle(
-            fontFamily: displayFont,
-            fontSize: size * 0.42,
-            height: 1,
-            color: Colors.white,
-            shadows: const [Shadow(offset: Offset(1, 1), color: Color(0x99000000))],
+        if (icon != null)
+          Positioned(
+            right: size * 0.04,
+            bottom: size * 0.02,
+            child: Container(
+              padding: EdgeInsets.all(size * 0.02),
+              decoration: const BoxDecoration(color: Color(0xCC2A160E), shape: BoxShape.circle),
+              child: Icon(icon, color: _gold, size: size * 0.28),
+            ),
           ),
-        ),
-    };
+      ],
+    );
     return Semantics(
       label: tile.label,
       excludeSemantics: true,
