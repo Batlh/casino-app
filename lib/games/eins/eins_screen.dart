@@ -73,7 +73,7 @@ List<String> modeRules(EinsMode m) {
         'Jeder hat eine Kraftkarte, die an oder aus ist. Karten mit goldenem Blitz haben eine Kraftseite.',
         'Ist deine Kraft an, darfst du die Kraftseite nutzen. Danach ist deine Kraft aus.',
         'Kraft: Aussetzen lässt alle aussetzen, Richtungswechsel lässt zusätzlich aussetzen, Plus zwei lässt alle anderen eine ziehen, Farbwahl-Karten lassen alle oder einen Gegner deiner Wahl ziehen.',
-        'Zahlen mit weißem Blitz schalten deine eigene Kraft um. Kraftwechsel für alle schaltet alle um. Sind alle aus, gehen alle wieder an.',
+        'Zahlen mit weißem Kreispfeil schalten deine eigene Kraft um. Kraftwechsel für alle schaltet alle um. Sind alle aus, gehen alle wieder an.',
       ],
   };
 }
@@ -103,6 +103,7 @@ class _EinsScreenState extends State<EinsScreen> {
   bool _spinning = false;
   bool _wheelVisible = false;
   double _wheelTurns = 0;
+  double _wheelFrom = 0;
 
   /// Wettrennen: wartet auf den ersten Ruf.
   Completer<int>? _race;
@@ -287,6 +288,7 @@ class _EinsScreenState extends State<EinsScreen> {
     setState(() {
       _spinning = true;
       _wheelVisible = true;
+      _wheelFrom = _wheelTurns;
       _wheelTurns = _wheelTurns.floorToDouble() + 3 + spinTurnsFor(space);
     });
     _app.sfx.play(Sound.tick);
@@ -433,7 +435,7 @@ class _EinsScreenState extends State<EinsScreen> {
     if (_spinning) return '${_e.actor.human ? 'Du drehst' : '${_e.actor.name} dreht'} am Glücksrad';
     if (_e.actor.human) {
       final prefix = _e.lastEvent.isNotEmpty ? '${_e.lastEvent}. ' : '';
-      if (_e.mustSpin) return '${prefix}Dreh am Glücksrad';
+      if (_e.mustSpin) return 'Dreh am Glücksrad!';
       if (_e.mustChooseRoulette) return '${prefix}Sag eine Farbe an, du ziehst bis sie kommt';
       if (_e.forcedColorDraw != null) return 'Du musst ziehen, bis ${colorName(_e.forcedColorDraw!)} kommt';
       if (_e.pendingDraw > 0) {
@@ -495,11 +497,9 @@ class _EinsScreenState extends State<EinsScreen> {
   String _detail(int i) {
     if (_e.out[i]) return 'Raus';
     final p = _e.players[i];
-    final parts = <String>[
-      if (p.hand.length == 1) 'Eins!' else '${p.hand.length} Karten',
-      if (_mode == EinsMode.flex) _e.power[i] ? 'Kraft an' : 'Kraft aus',
-    ];
-    return parts.join(' · ');
+    final count = p.hand.length == 1 ? 'Eins!' : '${p.hand.length} Karten';
+    if (_mode != EinsMode.flex) return count;
+    return '${p.hand.length == 1 ? 'Eins!' : p.hand.length} · ${_e.power[i] ? 'Kraft an' : 'aus'}';
   }
 
   Widget _layout(BoxConstraints box, double scale) {
@@ -507,7 +507,7 @@ class _EinsScreenState extends State<EinsScreen> {
     final w = box.maxWidth;
     final h = box.maxHeight;
     final landscape = w > h * 1.3;
-    final badge = math.min(118.0, (w - 24) / _opponents - 8);
+    final badge = math.min(130.0, (w - 24) / _opponents - 8);
     final handBase = landscape
         ? math.min(h * 0.3 * cardAspect, 110.0)
         : math.min(math.min(w / 5.2, h * 0.17 * cardAspect), 100.0);
@@ -586,7 +586,8 @@ class _EinsScreenState extends State<EinsScreen> {
     );
     final centerContent = _wheelVisible
         ? TweenAnimationBuilder<double>(
-            tween: Tween(end: _wheelTurns),
+            key: ValueKey(_wheelTurns),
+            tween: Tween(begin: _wheelFrom, end: _wheelTurns),
             duration: const Duration(milliseconds: 1800),
             curve: Curves.easeOutCubic,
             builder: (context, t, _) => SpinWheel(size: pileW * 2.6, turns: t),

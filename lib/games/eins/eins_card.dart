@@ -69,7 +69,12 @@ void paintEinsCard(Canvas canvas, Rect rect, EinsFace? face, {bool dark = false}
   // Abzeichen unten
   final badgeAt = rect.bottomLeft + Offset(w * 0.2, -w * 0.2);
   if (face.spin) _spinBadge(canvas, badgeAt, w * 0.11);
-  if (face.flipMark) _boltBadge(canvas, badgeAt, w * 0.11, swap: true);
+  if (face.flipMark) {
+    // Kraftwechsel: weißer Kreispfeil statt Blitz
+    canvas.drawCircle(badgeAt, w * 0.14, Paint()..color = const Color(0xFF2A160E));
+    canvas.drawCircle(badgeAt, w * 0.14, _stroke(w * 0.02));
+    _flip(canvas, badgeAt, w * 0.075);
+  }
   if (face.isFlex) _boltBadge(canvas, badgeAt, w * 0.11);
 }
 
@@ -78,6 +83,11 @@ void _symbol(Canvas c, EinsFace f, Offset o, double w, {required bool big, requi
   const s = 1.0;
   void txt(String t, double size, {Offset shift = Offset.zero}) =>
       _text(c, t, o + shift, w * size * (big ? 1 : 1.25), shadow: shadow);
+  // In der Ecke nur das Wichtigste: Farbrad ohne Aufdruck nur bei reiner Farbwahl
+  void wheel(Offset at, double r, List<EinsColor> cs) {
+    if (big || f.kind == EinsKind.wild || f.kind == EinsKind.wildAllFlip) _wheel(c, at, r, cs);
+  }
+
   switch (f.kind) {
     case EinsKind.number:
       _text(c, '${f.number}', o, w * (big ? 0.62 : 0.7), shadow: shadow, underline: f.number == 6 || f.number == 9);
@@ -111,42 +121,42 @@ void _symbol(Canvas c, EinsFace f, Offset o, double w, {required bool big, requi
     case EinsKind.flexDrawTwo:
       txt('+2', 0.46);
     case EinsKind.wild:
-      _wheel(c, o, w * 0.28 * s, colors);
+      wheel(o, w * 0.28 * s, colors);
     case EinsKind.wildDrawTwo:
     case EinsKind.flexWildTargetDraw:
-      _wheel(c, o, w * 0.28 * s, colors);
+      wheel(o, w * 0.28 * s, colors);
       txt('+2', 0.36);
     case EinsKind.wildDrawFour:
     case EinsKind.flexWildDrawFour:
-      _wheel(c, o, w * 0.28 * s, colors);
+      wheel(o, w * 0.28 * s, colors);
       txt('+4', 0.36);
     case EinsKind.wildDrawSix:
-      _wheel(c, o, w * 0.28 * s, colors);
+      wheel(o, w * 0.28 * s, colors);
       txt('+6', 0.36);
     case EinsKind.wildDrawTen:
-      _wheel(c, o, w * 0.28 * s, colors);
+      wheel(o, w * 0.28 * s, colors);
       txt('+10', 0.3);
     case EinsKind.wildReverseDrawFour:
-      _wheel(c, o, w * 0.28 * s, colors);
+      wheel(o, w * 0.28 * s, colors);
       txt('+4', 0.3, shift: Offset(0, w * 0.1 * s));
       _reverse(c, o - Offset(0, w * 0.1 * s), w * 0.1 * s);
     case EinsKind.wildDrawColor:
-      _wheel(c, o, w * 0.28 * s, colors);
+      wheel(o, w * 0.28 * s, colors);
       txt('+?', 0.36);
     case EinsKind.wildColorRoulette:
-      _wheel(c, o, w * 0.28 * s, colors);
+      wheel(o, w * 0.28 * s, colors);
       txt('?', 0.4);
     case EinsKind.wildHitFire:
-      _wheel(c, o, w * 0.28 * s, colors);
+      wheel(o, w * 0.28 * s, colors);
       _flame(c, o, w * 0.17 * s);
     case EinsKind.wildAllHit:
-      _wheel(c, o, w * 0.28 * s, colors);
+      wheel(o, w * 0.28 * s, colors);
       txt('ALLE', 0.18);
     case EinsKind.flexWildAllDraw:
-      _wheel(c, o, w * 0.28 * s, colors);
+      wheel(o, w * 0.28 * s, colors);
       txt('ALLE', 0.18);
     case EinsKind.wildAllFlip:
-      _wheel(c, o, w * 0.28 * s, colors);
+      wheel(o, w * 0.28 * s, colors);
       _bolt(c, o, w * 0.16 * s, Colors.white);
   }
 }
@@ -291,11 +301,11 @@ void _bolt(Canvas c, Offset o, double r, Color color) {
   c.drawPath(path, _stroke(r * 0.1)..color = const Color(0xFF2A160E));
 }
 
-/// Kraftseite: goldener Blitz. swap: Zahl schaltet die eigene Kraft um.
-void _boltBadge(Canvas c, Offset o, double r, {bool swap = false}) {
+/// Kraftseite: goldener Blitz.
+void _boltBadge(Canvas c, Offset o, double r) {
   c.drawCircle(o, r * 1.25, Paint()..color = const Color(0xFF2A160E));
-  c.drawCircle(o, r * 1.25, _stroke(r * 0.18)..color = swap ? Colors.white : _gold);
-  _bolt(c, o, r * 0.85, swap ? Colors.white : _gold);
+  c.drawCircle(o, r * 1.25, _stroke(r * 0.18)..color = _gold);
+  _bolt(c, o, r * 0.85, _gold);
 }
 
 void _spinBadge(Canvas c, Offset o, double r) {

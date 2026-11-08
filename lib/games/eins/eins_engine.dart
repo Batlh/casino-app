@@ -506,6 +506,8 @@ class EinsEngine {
 
   String _who(EinsPlayer p, String du, String er) => p.human ? 'Du $du' : '${p.name} $er';
   String _name(EinsPlayer p) => p.human ? 'Du' : p.name;
+  String _dat(EinsPlayer p) => p.human ? 'dir' : p.name;
+  static String _cards(int n) => n == 1 ? 'eine Karte' : '$n Karten';
 
   /// Braucht diese Karte einen Zielspieler?
   bool needsTarget(EinsCard c, {bool flex = false}) {
@@ -556,7 +558,7 @@ class EinsEngine {
           final tmp = p.hand;
           p.hand = t.hand;
           t.hand = tmp;
-          lastEvent = '${_who(p, 'tauschst', 'tauscht')} die Hand mit ${_name(t)}';
+          lastEvent = '${_who(p, 'tauschst', 'tauscht')} die Hand mit ${_dat(t)}';
         } else if (mode == EinsMode.noMercy && f.number == 0 && !emptied) {
           _passHands(direction);
           lastEvent = 'Alle geben ihre Hand weiter';
@@ -594,7 +596,7 @@ class EinsEngine {
         lastEvent = 'Richtungswechsel, der Nächste zieht $pendingDraw';
       case EinsKind.wildDrawColor:
         forcedColorDraw = color;
-        lastEvent = '${_name(nextPlayer)} zieht bis ${colorName(color)}';
+        lastEvent = '${_who(nextPlayer, 'ziehst', 'zieht')} bis ${colorName(color)}';
       case EinsKind.wildColorRoulette:
         rouletteVictim = true;
         lastEvent = 'Farbroulette für ${_name(nextPlayer)}';
@@ -614,14 +616,14 @@ class EinsEngine {
         final victim = nextPlayer;
         final got = press(victim) + press(victim);
         steps = 2;
-        lastEvent = '${_name(victim)} ${victim.human ? 'drückst' : 'drückt'} zweimal: $got Karten';
+        lastEvent = '${_name(victim)} ${victim.human ? 'drückst' : 'drückt'} zweimal: ${_cards(got)}';
       case EinsKind.tradeHands:
         if (emptied) break;
         final t = players[targetIndex];
         final tmp = p.hand;
         p.hand = t.hand;
         t.hand = tmp;
-        lastEvent = '${_who(p, 'tauschst', 'tauscht')} die Hand mit ${_name(t)}';
+        lastEvent = '${_who(p, 'tauschst', 'tauscht')} die Hand mit ${_dat(t)}';
       case EinsKind.wildHitFire:
         final victim = nextPlayer;
         var got = 0;
@@ -629,13 +631,13 @@ class EinsEngine {
           got = press(victim);
         }
         steps = 2;
-        lastEvent = 'Feuer: ${_name(victim)} ${victim.human ? 'bekommst' : 'bekommt'} $got Karten';
+        lastEvent = 'Feuer: ${_name(victim)} ${victim.human ? 'bekommst' : 'bekommt'} ${_cards(got)}';
       case EinsKind.wildAllHit:
         var total = 0;
         for (final i in opponentsOfActor) {
           total += press(players[i]);
         }
-        lastEvent = 'Alle anderen drücken: $total Karten';
+        lastEvent = 'Alle anderen drücken: ${_cards(total)}';
       case EinsKind.flexSkip:
         steps = useFlex ? 0 : 2;
         lastEvent = useFlex ? 'Kraft: Alle setzen aus' : '${_name(nextPlayer)} setzt aus';
@@ -668,7 +670,7 @@ class EinsEngine {
         final n = f.drawValue;
         if (useFlex) {
           _give(players[targetIndex], n);
-          lastEvent = 'Kraft: ${_name(players[targetIndex])} zieht $n';
+          lastEvent = 'Kraft: ${_who(players[targetIndex], 'ziehst', 'zieht')} $n';
         } else {
           pendingDraw += n;
           pendingValue = n;
@@ -696,7 +698,7 @@ class EinsEngine {
     if (p.hand.length == 1) {
       if (callRequired && !called) {
         final got = mode == EinsMode.extreme ? press(p) + press(p) : _give(p, 2);
-        lastEvent = _who(p, 'hast vergessen, Eins! zu rufen: $got Karten', 'hat vergessen, Eins! zu rufen: $got Karten');
+        lastEvent = _who(p, 'hast vergessen, Eins! zu rufen: ${_cards(got)}', 'hat vergessen, Eins! zu rufen: ${_cards(got)}');
       } else {
         lastEvent = lastEvent.isEmpty ? '${_name(p)}: Eins!' : '$lastEvent. ${_name(p)}: Eins!';
       }
@@ -704,7 +706,10 @@ class EinsEngine {
     _mercy();
     if (finished) return;
     if (steps == 0 && out[current]) steps = 1;
-    if (spinPending) lastEvent = '${lastEvent.isEmpty ? '' : '$lastEvent. '}${_name(nextPlayer)} dreht am Glücksrad';
+    if (spinPending) {
+      final spinner = nextPlayer.human ? 'Du drehst' : '${nextPlayer.name} dreht';
+      lastEvent = '${lastEvent.isEmpty ? '' : '$lastEvent. '}$spinner am Glücksrad';
+    }
     _advance(steps);
   }
 
@@ -767,7 +772,7 @@ class EinsEngine {
       lastLaunch = got;
       lastEvent = got == 0
           ? _who(p, 'drückst: nichts', 'drückt: nichts')
-          : _who(p, 'drückst: $got Karten', 'drückt: $got Karten');
+          : _who(p, 'drückst: ${_cards(got)}', 'drückt: ${_cards(got)}');
       _advance(1);
       return;
     }
