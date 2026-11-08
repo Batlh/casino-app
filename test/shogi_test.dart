@@ -16,9 +16,9 @@ void main() {
     final moves = g.legalMoves().where((m) => m.from == shogiSquareFromName('5c')).toList();
     expect(moves.map((m) => m.usi), contains('5c5b+'));
     expect(moves.map((m) => m.usi), contains('5c5b'));
-    final g2 = ShogiGame.fromSfen('4k4/4P4/9/9/9/9/9/9/4K4 b - 1');
+    final g2 = ShogiGame.fromSfen('3k5/4P4/9/9/9/9/9/9/4K4 b - 1');
     final up = g2.legalMoves().where((m) => m.from == shogiSquareFromName('5b')).map((m) => m.usi).toList();
-    expect(up, isNot(contains('5b5a')), reason: 'König steht dort, aber die Regel wäre Pflicht');
+    expect(up, ['5b5a+'], reason: 'Auf der letzten Reihe muss der Bauer befördert werden');
   });
 
   test('Einsetzen: Nifu und Bauernmatt sind verboten', () {

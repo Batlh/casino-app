@@ -134,8 +134,8 @@ class ShogiGame {
   int side = sente;
 
   /// Figuren in der Hand, Index ist der Grundtyp 1 bis 7.
-  List<int> handSente = List.filled(8, 0);
-  List<int> handGote = List.filled(8, 0);
+  List<int> handSente = List.filled(9, 0);
+  List<int> handGote = List.filled(9, 0);
   final List<_Undo> _undo = [];
   final Map<String, int> _seen = {};
 
@@ -158,8 +158,8 @@ class ShogiGame {
   void loadSfen(String sfen) {
     final parts = sfen.trim().split(RegExp(r'\s+'));
     board = List.filled(81, 0);
-    handSente = List.filled(8, 0);
-    handGote = List.filled(8, 0);
+    handSente = List.filled(9, 0);
+    handGote = List.filled(9, 0);
     var row = 0;
     var col = 0;
     var plus = false;

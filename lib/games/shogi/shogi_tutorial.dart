@@ -63,7 +63,7 @@ const shogiLessons = [
     'Läufer 角 und Turm 飛',
     'Läufer ziehen beliebig weit schräg, Türme beliebig weit gerade, genau wie im Schach. Schlag den Bauern mit dem Läufer.',
     '4k4/9/9/9/4p4/9/9/1B5R1/4K4 b - 1',
-    solutions: ['8h5e', '8h5e+'],
+    solutions: ['8h5e'],
     done: 'Treffer!',
   ),
   ShogiLesson(
