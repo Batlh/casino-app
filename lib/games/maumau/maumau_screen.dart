@@ -195,7 +195,9 @@ class _MauMauScreenState extends State<MauMauScreen> {
     final handBase = landscape
         ? math.min(h * 0.3 * cardAspect, 110.0)
         : math.min(math.min(w / 5.2, h * 0.17 * cardAspect), 100.0);
-    final handW = (handBase * scale).clamp(30.0, 170.0);
+    // Die Hand darf höchstens gut ein Drittel der Höhe belegen
+    final handMax = h * (landscape ? 0.36 : 0.3) * cardAspect / 1.2;
+    final handW = math.min((handBase * scale).clamp(30.0, 170.0), handMax);
     final pileBase = landscape
         ? math.min(h * 0.26 * cardAspect, 100.0)
         : math.min(math.min(w * 0.2, h * 0.2 * cardAspect), 100.0);
@@ -261,12 +263,15 @@ class _MauMauScreenState extends State<MauMauScreen> {
                 Expanded(child: Center(child: center)),
                 SizedBox(
                   width: math.min(300, w * 0.36),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      FittedBox(fit: BoxFit.scaleDown, child: status),
-                      buttons,
-                    ],
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: SizedBox(
+                      width: math.min(300, w * 0.36),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [status, buttons],
+                      ),
+                    ),
                   ),
                 ),
               ],
