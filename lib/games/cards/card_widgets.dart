@@ -103,8 +103,8 @@ class HandFan extends StatelessWidget {
                   top: (isRaised?.call(cards[i]) ?? false) ? 0 : lift,
                   child: GestureDetector(
                     onTap: onTap == null ? null : () => onTap!(cards[i]),
-                    child: Opacity(
-                      opacity: (isEnabled?.call(cards[i]) ?? true) ? 1 : 0.55,
+                    child: _Dim(
+                      dim: !(isEnabled?.call(cards[i]) ?? true),
                       child: PlayingCardView(
                         width: w,
                         card: cards[i],
@@ -371,8 +371,8 @@ class CardFan<T> extends StatelessWidget {
                   top: (isRaised?.call(items[i]) ?? false) ? 0 : lift,
                   child: GestureDetector(
                     onTap: onTap == null ? null : () => onTap!(items[i]),
-                    child: Opacity(
-                      opacity: (isEnabled?.call(items[i]) ?? true) ? 1 : 0.55,
+                    child: _Dim(
+                      dim: !(isEnabled?.call(items[i]) ?? true),
                       child: cardBuilder(items[i], w, isRaised?.call(items[i]) ?? false),
                     ),
                   ),
@@ -381,6 +381,23 @@ class CardFan<T> extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Nicht spielbare Karten werden abgedunkelt statt durchsichtig, damit
+/// überlappende Karten sauber getrennt bleiben.
+class _Dim extends StatelessWidget {
+  const _Dim({required this.dim, required this.child});
+  final bool dim;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!dim) return child;
+    return ColorFiltered(
+      colorFilter: const ColorFilter.mode(Color(0x73000000), BlendMode.srcATop),
+      child: child,
     );
   }
 }
