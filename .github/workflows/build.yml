@@ -40,6 +40,18 @@ jobs:
           name: bilder
           path: test_golden/goldens/
           if-no-files-found: ignore
+      - name: Bilder unter Releases bereitstellen
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view latest >/dev/null 2>&1 || \
+            gh release create latest --prerelease --title "Aktueller Stand" --notes "Wird bei jedem Build ersetzt."
+          if [ -d test_golden/goldens ]; then
+            (cd test_golden/goldens && zip -q -r "$GITHUB_WORKSPACE/bilder.zip" .)
+            gh release upload latest bilder.zip --clobber
+          fi
       - uses: actions/cache@v4
         with:
           path: ~/gradle-dist
@@ -98,14 +110,12 @@ jobs:
           gh release view latest >/dev/null 2>&1 || \
             gh release create latest --prerelease --title "Aktueller Stand" --notes "Wird bei jedem Build ersetzt."
           gh release upload latest gluckspfennig.apk --clobber
-          if [ -d test_golden/goldens ]; then
-            (cd test_golden/goldens && zip -q -r "$GITHUB_WORKSPACE/bilder.zip" .)
-            gh release upload latest bilder.zip --clobber
-          fi
 
   # Linux läuft bei jedem Push mit, weil sich dieser Build direkt bedienen und prüfen lässt
   linux:
     needs: android
+    # Auch wenn nur die APK scheitert, etwa an einem Downloadfehler
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -132,7 +142,7 @@ jobs:
         run: gh release upload latest out/* --clobber
 
   desktop:
-    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.desktop)
+    if: ${{ !cancelled() && (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.desktop)) }}
     needs: android
     strategy:
       fail-fast: false
