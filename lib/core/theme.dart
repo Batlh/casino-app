@@ -82,6 +82,8 @@ ThemeData buildTheme(Brightness brightness) {
     colorScheme: scheme,
     scaffoldBackgroundColor: p.bg,
     fontFamily: bodyFont,
+    // Schriftzeichen für Shogi und Mahjong
+    fontFamilyFallback: const ['Kanji'],
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: SegmentedButton.styleFrom(
         selectedBackgroundColor: p.accent,

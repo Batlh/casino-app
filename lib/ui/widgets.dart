@@ -228,6 +228,8 @@ class _GameFrameState extends State<GameFrame> {
   Widget build(BuildContext context) {
     final p = Palette.of(context);
     final sfx = AppScope.of(context).sfx;
+    // Auf schmalen Handys rücken die Knöpfe enger zusammen
+    final dense = MediaQuery.sizeOf(context).width < 430 ? VisualDensity.compact : VisualDensity.standard;
     return Scaffold(
       backgroundColor: p.bg,
       body: DecoratedBox(
@@ -247,6 +249,7 @@ class _GameFrameState extends State<GameFrame> {
                 child: Row(
                   children: [
                     IconButton(
+                      visualDensity: dense,
                       tooltip: 'Zurück zur Lobby',
                       icon: Icon(Icons.arrow_back, color: p.ink),
                       onPressed: () => Navigator.of(context).pop(),
@@ -264,6 +267,7 @@ class _GameFrameState extends State<GameFrame> {
                     ),
                     if (widget.guide != null)
                       IconButton(
+                        visualDensity: dense,
                         tooltip: 'So wird gespielt',
                         icon: Icon(Icons.help_outline, color: p.ink),
                         onPressed: () => showGuide(context, widget.guide!),
@@ -271,6 +275,7 @@ class _GameFrameState extends State<GameFrame> {
                     ListenableBuilder(
                       listenable: sfx,
                       builder: (context, _) => IconButton(
+                        visualDensity: dense,
                         tooltip: sfx.enabled ? 'Ton ausschalten' : 'Ton einschalten',
                         icon: Icon(
                           sfx.enabled ? Icons.volume_up : Icons.volume_off,
@@ -280,6 +285,7 @@ class _GameFrameState extends State<GameFrame> {
                       ),
                     ),
                     IconButton(
+                      visualDensity: dense,
                       tooltip: 'Einstellungen',
                       icon: Icon(Icons.settings, color: p.ink),
                       onPressed: () => showSettingsSheet(context),

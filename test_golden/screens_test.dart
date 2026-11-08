@@ -32,6 +32,7 @@ Future<void> loadFonts() async {
       'assets/fonts/BarlowSemiCondensed-Medium.ttf',
       'assets/fonts/BarlowSemiCondensed-Bold.ttf',
     ],
+    'Kanji': ['assets/fonts/NotoSerifJP-Subset.ttf'],
   }.entries) {
     final loader = FontLoader(entry.key);
     for (final path in entry.value) {

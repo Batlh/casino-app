@@ -15,6 +15,10 @@ import 'chess_board.dart';
 import 'chess_engine.dart';
 import 'chess_pieces.dart';
 
+/// Rechnet in einem eigenen Isolate, damit die Oberfläche flüssig bleibt.
+Future<ChessMove?> _think(String fen, ChessLevel level, int seed) =>
+    Isolate.run(() => chessBestMove(fen, level, seed: seed));
+
 class ChessScreen extends StatefulWidget {
   const ChessScreen({super.key});
 
@@ -130,7 +134,7 @@ class _ChessScreenState extends State<ChessScreen> {
     final wait = Future<void>.delayed(_app.settings.botDelay(500));
     ChessMove? m;
     try {
-      m = await Isolate.run(() => chessBestMove(fen, level, seed: seed));
+      m = await _think(fen, level, seed);
     } catch (_) {
       m = chessBestMove(fen, level, seed: seed);
     }
