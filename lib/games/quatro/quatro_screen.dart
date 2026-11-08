@@ -222,6 +222,14 @@ class _QuatroScreenState extends State<QuatroScreen> {
       children: [
         for (var i = 1; i < _e.players.length; i++) _opponentChip(i),
         _bagChip(),
+        ActionChip(
+          avatar: const Icon(Icons.help_outline, size: 18, color: _gold),
+          label: const Text('Regeln'),
+          labelStyle: const TextStyle(color: Color(0xFFF6E7C8), fontWeight: FontWeight.w700),
+          backgroundColor: const Color(0xE62A160E),
+          side: const BorderSide(color: Color(0xFF8A5A2B)),
+          onPressed: _showRules,
+        ),
       ],
     );
     final tileSize = landscape ? math.min(h * 0.16, 76.0) : math.min(math.min(w / 5, h * 0.1), 76.0);
@@ -285,6 +293,46 @@ class _QuatroScreenState extends State<QuatroScreen> {
         Padding(padding: const EdgeInsets.fromLTRB(10, 2, 10, 6), child: buttons),
         Padding(padding: const EdgeInsets.fromLTRB(8, 4, 8, 12), child: hand),
       ],
+    );
+  }
+
+  void _showRules() {
+    const rules = [
+      'Jeder hat drei Steine. Wähle einen Stein und tippe eine Spalte an, er fällt nach unten.',
+      'Hat das Feld Nachbarn, auch schräg, muss der Stein zu mindestens einem passen: gleiche Farbe oder gleiche Zahl.',
+      'Vier gleiche Farben oder vier gleiche Zahlen in einer Reihe gewinnen, waagrecht, senkrecht oder schräg. Der Sieg bringt 50 Münzen pro Gegner.',
+      'Spaltentausch: Danach tauschst du zwei ganze Spalten.',
+      'Schieber: Passt auf jede Spalte mit Steinen. Der unterste Stein geht zurück in den Beutel, der Schieber landet oben.',
+      'Minus zwei: Der Nächste legt zwei zufällige Steine zurück und spielt seinen Zug mit dem Rest.',
+      'Passt kein Stein, tauschst du einen gegen den Beutel.',
+    ];
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        final p = Palette.of(context);
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85, maxWidth: 640),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Viererkette', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 8),
+                  for (final line in rules)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text('•  $line', style: TextStyle(color: p.ink, fontSize: 16, height: 1.3)),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

@@ -24,6 +24,60 @@ List<EinsCard> sortedEins(EinsEngine e, List<EinsCard> cards) {
   return cards.toList()..sort((a, b) => key(a).compareTo(key(b)));
 }
 
+/// Kurze Regeln je Spielweise für das Regelblatt.
+List<String> modeRules(EinsMode m) {
+  const base = [
+    'Lege eine Karte gleicher Farbe, Zahl oder gleichen Symbols. Farbwahl-Karten passen immer.',
+    'Wer nicht legen kann, zieht eine Karte. Passt sie, darfst du sie sofort legen.',
+    'Bei der vorletzten Karte musst du Eins! rufen, sonst gibt es Strafkarten (in den Einstellungen abschaltbar).',
+    'Wer zuerst keine Karten mehr hat, gewinnt 50 Münzen pro Gegner.',
+  ];
+  return switch (m) {
+    EinsMode.classic => [
+        ...base,
+        'Aussetzen, Richtungswechsel, Plus zwei, Farbwahl und Farbwahl plus vier.',
+        'Plus-Karten dürfen gestapelt werden, wenn das in den Einstellungen an ist.',
+      ],
+    EinsMode.flip => [
+        ...base,
+        'Jede Karte hat eine helle und eine dunkle Seite. Bei den Gegnern und auf dem Stapel siehst du die jeweils andere Seite.',
+        'Die Wendekarte dreht alle Karten um: Hand, Ablage und Stapel. Danach gelten die Farben und Karten der anderen Seite.',
+        'Hell: Plus eins, Aussetzen, Richtungswechsel, Farbwahl plus zwei.',
+        'Dunkel: Plus fünf, Alle setzen aus (du bist gleich nochmal dran), Farbwahl bis zur Farbe: Der Nächste zieht, bis die gewählte Farbe kommt.',
+      ],
+    EinsMode.noMercy => [
+        ...base,
+        'Plus-Karten bis plus zehn. Gestapelt wird immer, mit gleichem oder höherem Wert.',
+        'Kannst du nicht legen, ziehst du, bis eine Karte passt, und musst sie legen.',
+        'Sieben: Tausche die Hand mit einem Gegner. Null: Alle geben ihre Hand in Spielrichtung weiter.',
+        'Alle abwerfen: Wirf zusätzlich alle Karten dieser Farbe ab.',
+        'Farbroulette: Der Nächste sagt eine Farbe an und zieht, bis sie kommt.',
+        'Wer 25 Karten oder mehr hat, scheidet aus. Wer als Letzter übrig ist, gewinnt auch.',
+      ],
+    EinsMode.extreme => [
+        ...base.take(1),
+        'Statt zu ziehen drückst du den Kartenwerfer. Er spuckt keine, ein paar oder viele Karten aus. Danach ist dein Zug vorbei.',
+        'Zweimal werfen: Der Nächste drückt zweimal und setzt aus.',
+        'Feuer: Der Nächste drückt, bis Karten kommen, und setzt aus. Alle werfen: Alle anderen drücken einmal.',
+        'Hände tauschen: Tausche die Hand mit einem Gegner. Alle abwerfen: Wirf alle Karten dieser Farbe ab.',
+        'Vergessenes Eins! kostet zweimal drücken.',
+        base.last,
+      ],
+    EinsMode.spin => [
+        ...base,
+        'Karten mit Glücksrad lassen den nächsten Spieler drehen statt zu spielen.',
+        'Felder: Fast fertig (nur zwei Karten behalten), Zahl abwerfen, Farbe abwerfen, Zieh bis Rot, Zieh bis Blau, Hände weitergeben, Hand zeigen, Duell (höchste Zahl gewinnt und wirft ab) und Wettrennen (wer zuerst drückt, wirft seine wertvollste Karte ab).',
+      ],
+    EinsMode.flex => [
+        ...base,
+        'Jeder hat eine Kraftkarte, die an oder aus ist. Karten mit goldenem Blitz haben eine Kraftseite.',
+        'Ist deine Kraft an, darfst du die Kraftseite nutzen. Danach ist deine Kraft aus.',
+        'Kraft: Aussetzen lässt alle aussetzen, Richtungswechsel lässt zusätzlich aussetzen, Plus zwei lässt alle anderen eine ziehen, Farbwahl-Karten lassen alle oder einen Gegner deiner Wahl ziehen.',
+        'Zahlen mit weißem Blitz schalten deine eigene Kraft um. Kraftwechsel für alle schaltet alle um. Sind alle aus, gehen alle wieder an.',
+      ],
+  };
+}
+
 class EinsScreen extends StatefulWidget {
   const EinsScreen({super.key, this.mode});
 
@@ -520,8 +574,6 @@ class _EinsScreenState extends State<EinsScreen> {
                   onPressed: _called ? null : _call,
                 ),
               if (_mode == EinsMode.flex) _powerChip(),
-              if (!_myTurn || _e.playableCards().isEmpty)
-                TextButton(onPressed: _askMode, child: const Text('Spielweise')),
             ],
     );
     final hand = CardFan<EinsCard>(
@@ -699,7 +751,81 @@ class _EinsScreenState extends State<EinsScreen> {
             ],
           ],
         ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _chip(Icons.tune, modeName(_mode), _askMode),
+            const SizedBox(width: 8),
+            _chip(Icons.help_outline, 'Regeln', _showRules),
+          ],
+        ),
       ],
+    );
+  }
+
+  Widget _chip(IconData icon, String text, VoidCallback onTap) => Material(
+        color: const Color(0xE62A160E),
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF8A5A2B), width: 1.5),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18, color: const Color(0xFFFFC95C)),
+                const SizedBox(width: 6),
+                Text(
+                  text,
+                  style: const TextStyle(color: Color(0xFFF6E7C8), fontWeight: FontWeight.w700, fontSize: 15),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  void _showRules() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        final p = Palette.of(context);
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85, maxWidth: 640),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Eins! ${modeName(_mode)}', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 8),
+                  for (final line in modeRules(_mode))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('•  ', style: TextStyle(color: p.accent, fontSize: 16, fontWeight: FontWeight.w700)),
+                          Expanded(child: Text(line, style: TextStyle(color: p.ink, fontSize: 16, height: 1.3))),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
