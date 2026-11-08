@@ -71,7 +71,7 @@ void main() {
     expect(e.players[1].hand.length, 4);
     expect(e.current, 1, reason: 'Zug geht weiter');
     expect(e.drewThisTurn, isFalse);
-    expect(e.canPlay(c(13, Suit.hearts)), isFalse, reason: 'Oben liegt die Sieben');
+    expect(e.canPlay(c(13, Suit.hearts)), isTrue, reason: 'Herz passt auf die Herz Sieben');
     expect(e.canPlay(c(9, Suit.clubs)), isFalse);
   });
 

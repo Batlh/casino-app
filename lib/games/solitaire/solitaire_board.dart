@@ -265,11 +265,38 @@ class SolitaireBar extends StatelessWidget {
 /// Ist die Auslage breiter als der Bildschirm, lässt sie sich seitlich schieben.
 Widget scrollable(Widget board, double boardW, double w, double h, bool scroll) {
   if (!scroll) return board;
-  return Scrollbar(
-    thumbVisibility: true,
-    child: SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SizedBox(width: boardW, height: h, child: board),
-    ),
-  );
+  return _HorizontalScroll(width: boardW, height: h, child: board);
+}
+
+class _HorizontalScroll extends StatefulWidget {
+  const _HorizontalScroll({required this.width, required this.height, required this.child});
+  final double width;
+  final double height;
+  final Widget child;
+
+  @override
+  State<_HorizontalScroll> createState() => _HorizontalScrollState();
+}
+
+class _HorizontalScrollState extends State<_HorizontalScroll> {
+  final _controller = ScrollController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scrollbar(
+      controller: _controller,
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        controller: _controller,
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(width: widget.width, height: widget.height, child: widget.child),
+      ),
+    );
+  }
 }
