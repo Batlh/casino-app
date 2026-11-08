@@ -13,7 +13,7 @@ import '../games/chess/chess_pieces.dart';
 import '../games/chess/chess_screen.dart';
 import '../games/mahjong/riichi_screen.dart';
 import '../games/mahjong/solitaire_screen.dart';
-import '../games/mahjong/tiles.dart';
+import '../games/mahjong/tiles.dart' show paintTile;
 import '../games/shogi/shogi_board.dart';
 import '../games/shogi/shogi_engine.dart';
 import '../games/shogi/shogi_screen.dart';
@@ -568,8 +568,8 @@ class _MahjongArt extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = math.min(size.width / 4.6, size.height / 2.2 * TileView.aspect);
-    final h = w / TileView.aspect;
+    final w = math.min(size.width / 4.6, size.height / 2.2 * 0.76);
+    final h = w / 0.76;
     final cy = size.height * 0.56;
     for (var i = 0; i < tiles.length; i++) {
       final cx = size.width / 2 + (i - 1) * w * 1.15;
