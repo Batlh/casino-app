@@ -40,6 +40,26 @@ jobs:
           name: bilder
           path: test_golden/goldens/
           if-no-files-found: ignore
+      - uses: actions/cache@v4
+        with:
+          path: ~/gradle-dist
+          key: gradle-dist-${{ hashFiles('pubspec.lock') }}
+          restore-keys: gradle-dist-
+      - name: Gradle vorab laden
+        run: |
+          # Gradle selbst laden, mit Wiederholung und Fortsetzen. Der Download im Build bricht sonst manchmal ab.
+          WRAP=android/gradle/wrapper/gradle-wrapper.properties
+          sed -i 's/-all\.zip/-bin.zip/' "$WRAP"
+          URL=$(grep '^distributionUrl=' "$WRAP" | cut -d= -f2- | sed 's/\\:/:/g')
+          mkdir -p ~/gradle-dist
+          FILE=~/gradle-dist/$(basename "$URL")
+          if [ ! -s "$FILE" ]; then
+            curl -fL --retry 8 --retry-delay 15 --retry-all-errors -o "$FILE.part" "$URL"
+            mv "$FILE.part" "$FILE"
+          fi
+          unzip -tq "$FILE"
+          sed -i "s#^distributionUrl=.*#distributionUrl=file\\://$FILE#" "$WRAP"
+          cat "$WRAP"
       - name: APK bauen
         run: |
           # Der Gradle-Download bricht manchmal mit 504 ab, dann neu versuchen
