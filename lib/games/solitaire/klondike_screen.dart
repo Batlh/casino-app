@@ -33,6 +33,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
   bool _won = false;
   bool _auto = false;
   int _hints = 0;
+  bool _lost = false;
   SolitaireHint? _hint;
   final Set<PlayingCard> _paidCards = {};
   final _clock = Stopwatch()..start();
@@ -63,6 +64,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
       _drag = null;
       _hints = 0;
       _hint = null;
+      _lost = false;
       _paidCards.clear();
       _clock
         ..reset()
@@ -92,6 +94,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     setState(() {
       _message = '';
       _hint = null;
+      _checkLost();
     });
   }
 
@@ -140,6 +143,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     setState(() {
       _message = '';
       _hint = null;
+      _checkLost();
     });
     if (_e.isWon) {
       _win();
@@ -183,10 +187,20 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     setState(() {
       _message = '';
       _hint = null;
+      _checkLost();
     });
   }
 
-  String get _status => _message.isNotEmpty
+  /// Prüft nach jedem Zug, ob es noch weitergeht.
+  void _checkLost() {
+    final lost = !_won && klondikeStuck(_e);
+    if (lost && !_lost) _app.sfx.play(Sound.lose);
+    _lost = lost;
+  }
+
+  String get _status => _lost && !_won
+      ? 'Keine Züge mehr möglich. Leider verloren, Rückgängig oder neues Spiel'
+      : _message.isNotEmpty
       ? _message
       : '${_e.moves} Züge, ${formatClock(_clock.elapsed)}';
 
@@ -236,7 +250,8 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
       math.min((w - 8 * g) / 7, h * cardAspect / 3.4),
       130.0,
     );
-    final cw = (fit * _app.settings.cardScale).clamp(24.0, 190.0);
+    final cw = fitCardWidth(_e.tableau, (fit * _app.settings.cardScale).clamp(24.0, 190.0), h, g)
+        .clamp(24.0, 190.0);
     final ch = cw / cardAspect;
     final boardW = 7 * cw + 6 * g;
     final scroll = boardW + 2 * g > w;

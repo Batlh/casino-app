@@ -32,6 +32,7 @@ class _SpiderScreenState extends State<SpiderScreen> {
   String _message = '';
   bool _won = false;
   int _hints = 0;
+  bool _lost = false;
   SolitaireHint? _hint;
   int _paidRuns = 0;
   final _clock = Stopwatch()..start();
@@ -62,6 +63,7 @@ class _SpiderScreenState extends State<SpiderScreen> {
       _drag = null;
       _hints = 0;
       _hint = null;
+      _lost = false;
       _paidRuns = 0;
       _clock
         ..reset()
@@ -116,6 +118,7 @@ class _SpiderScreenState extends State<SpiderScreen> {
     setState(() {
       _message = '';
       _hint = null;
+      _checkLost();
     });
     _afterMove(before);
   }
@@ -139,6 +142,7 @@ class _SpiderScreenState extends State<SpiderScreen> {
     setState(() {
       _message = '';
       _hint = null;
+      _checkLost();
     });
     _afterMove(before);
   }
@@ -169,10 +173,20 @@ class _SpiderScreenState extends State<SpiderScreen> {
     setState(() {
       _message = '';
       _hint = null;
+      _checkLost();
     });
   }
 
-  String get _status => _message.isNotEmpty
+  /// Prüft nach jedem Zug, ob es noch weitergeht.
+  void _checkLost() {
+    final lost = !_won && spiderStuck(_e);
+    if (lost && !_lost) _app.sfx.play(Sound.lose);
+    _lost = lost;
+  }
+
+  String get _status => _lost && !_won
+      ? 'Keine Züge mehr möglich. Leider verloren, Rückgängig oder neues Spiel'
+      : _message.isNotEmpty
       ? _message
       : '${_e.moves} Züge, ${formatClock(_clock.elapsed)}, ${_e.completed.length} von 8 Reihen';
 
@@ -222,7 +236,8 @@ class _SpiderScreenState extends State<SpiderScreen> {
       math.min((w - 11 * g) / 10, h * cardAspect / 4.0),
       110.0,
     );
-    final cw = (fit * _app.settings.cardScale).clamp(24.0, 170.0);
+    final cw = fitCardWidth(_e.tableau, (fit * _app.settings.cardScale).clamp(24.0, 170.0), h, g)
+        .clamp(24.0, 170.0);
     final ch = cw / cardAspect;
     final boardW = 10 * cw + 9 * g;
     final scroll = boardW + 2 * g > w;

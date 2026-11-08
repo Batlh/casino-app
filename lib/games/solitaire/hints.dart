@@ -30,7 +30,7 @@ bool _fitsFoundation(KlondikeEngine e, TableCard c) {
 
 /// Sucht den nützlichsten Zug in der Patience. Ohne sinnvollen Zug kommt das
 /// Ziehen vom Stapel, sonst null.
-SolitaireHint? klondikeHint(KlondikeEngine e) {
+SolitaireHint? klondikeHint(KlondikeEngine e, {bool allowDraw = true}) {
   SolitaireHint? best;
   var bestScore = 0;
   void consider(PileRef from, int index, PileRef to, int score) {
@@ -74,8 +74,82 @@ SolitaireHint? klondikeHint(KlondikeEngine e) {
       consider(from, i, to, score);
     }
   }
-  if (best == null && e.canDraw) return const SolitaireHint.draw();
+  if (best == null && allowDraw && e.canDraw) return const SolitaireHint.draw();
   return best;
+}
+
+/// Karten aus Stapel und Ablage, die durch Ziehen irgendwann oben liegen.
+List<TableCard> klondikeReachable(KlondikeEngine e) {
+  final order = [...e.waste, ...e.stock.reversed];
+  if (e.drawCount == 1) return order;
+  final out = <TableCard>{};
+  if (e.waste.isNotEmpty) out.add(e.waste.last);
+  // Rest der laufenden Runde
+  for (var i = e.waste.length + 2; i < order.length; i += 3) {
+    out.add(order[i]);
+  }
+  if (order.isNotEmpty) out.add(order.last);
+  // Alle folgenden Runden beginnen von vorn
+  for (var i = 2; i < order.length; i += 3) {
+    out.add(order[i]);
+  }
+  return out.toList();
+}
+
+bool _fitsOn(TableCard c, List<TableCard> col) =>
+    col.isEmpty ? c.rank == 13 : col.last.up && col.last.red != c.red && col.last.rank == c.rank + 1;
+
+/// Kein Zug bringt die Patience noch weiter: verloren.
+bool klondikeStuck(KlondikeEngine e) {
+  if (e.isWon) return false;
+  final reach = klondikeReachable(e);
+  for (final c in reach) {
+    if (_fitsFoundation(e, c)) return false;
+    if (e.tableau.any((col) => _fitsOn(c, col))) return false;
+  }
+  for (var t = 0; t < 7; t++) {
+    final col = e.tableau[t];
+    if (col.isNotEmpty && col.last.up && _fitsFoundation(e, col.last)) return false;
+    for (var i = 0; i < col.length; i++) {
+      if (!col[i].up) continue;
+      for (var u = 0; u < 7; u++) {
+        if (u == t || !e.canDrop(PileRef(PileKind.tableau, t), i, PileRef(PileKind.tableau, u))) continue;
+        // Ein König ganz unten wechselt nur die leere Spalte
+        if (i == 0 && col[i].rank == 13) continue;
+        if (i == 0 || !col[i - 1].up) return false;
+        // Teilreihe umziehen hilft nur, wenn die freigelegte Karte etwas aufnehmen kann
+        final exposed = col[i - 1];
+        if (_fitsFoundation(e, exposed)) return false;
+        if (reach.any((c) => c.red != exposed.red && c.rank + 1 == exposed.rank)) return false;
+      }
+    }
+  }
+  return true;
+}
+
+/// Kein sinnvoller Zug und kein Austeilen mehr: verloren.
+bool spiderStuck(SpiderEngine e) {
+  if (e.isWon || e.canDeal) return false;
+  for (var from = 0; from < 10; from++) {
+    final col = e.tableau[from];
+    for (var i = 0; i < col.length; i++) {
+      if (!e.canPick(from, i)) continue;
+      final first = col[i];
+      final sitsOnFit = i > 0 && col[i - 1].up && col[i - 1].rank == first.rank + 1;
+      for (var to = 0; to < 10; to++) {
+        if (!e.canDrop(from, i, to)) continue;
+        final target = e.tableau[to];
+        if (target.isEmpty) {
+          if (i > 0) return false;
+          continue;
+        }
+        final same = target.last.suit == first.suit;
+        if (sitsOnFit && (!same || col[i - 1].suit == first.suit)) continue;
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 /// Sucht den nützlichsten Zug in Spider. Ohne sinnvollen Zug kommt das

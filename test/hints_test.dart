@@ -92,4 +92,47 @@ void main() {
     expect(placeReward(2), 50);
     expect(placeReward(1, factor: 1.5), 38);
   });
+
+  test('Verloren: Spider ohne Züge und ohne Stapel', () {
+    final e = SpiderEngine(rng: Random(1));
+    TableCard c(int r, [Suit s = Suit.spades]) => TableCard(PlayingCard(r == 1 ? 14 : r, s), up: true);
+    e.stock.clear();
+    for (var t = 0; t < 10; t++) {
+      e.tableau[t] = [c(13), c(t % 2 == 0 ? 3 : 7, Suit.hearts)];
+    }
+    expect(spiderStuck(e), isTrue);
+    e.tableau[0].add(c(6));
+    expect(spiderStuck(e), isFalse, reason: 'Pik 6 passt auf Herz 7');
+    expect(spiderStuck(SpiderEngine(rng: Random(2))), isFalse);
+  });
+
+  test('Verloren: Patience ohne Züge, frisches Spiel nie', () {
+    for (var g = 0; g < 50; g++) {
+      expect(klondikeStuck(KlondikeEngine(rng: Random(g))), isFalse);
+    }
+    final e = KlondikeEngine(rng: Random(1));
+    e.stock.clear();
+    e.waste.clear();
+    TableCard c(int r, Suit s, {bool up = true}) => TableCard(PlayingCard(r == 1 ? 14 : r, s), up: up);
+    e.tableau = [
+      [c(5, Suit.spades, up: false), c(9, Suit.hearts)],
+      [c(4, Suit.clubs)],
+      [c(9, Suit.diamonds)],
+      [c(12, Suit.hearts)],
+      [c(7, Suit.hearts)],
+      [c(3, Suit.spades)],
+      [c(11, Suit.hearts)],
+    ];
+    expect(klondikeStuck(e), isTrue);
+    e.waste.add(c(10, Suit.clubs));
+    expect(klondikeStuck(e), isFalse, reason: 'Kreuz 10 passt auf Herz Bube');
+  });
+
+  test('Verloren wird nie gemeldet, solange ein Tipp einen Zug kennt', () {
+    for (var g = 0; g < 100; g++) {
+      final e = KlondikeEngine(rng: Random(g), drawCount: g.isEven ? 1 : 3);
+      playKlondike(e);
+      if (klondikeStuck(e)) expect(klondikeHint(e, allowDraw: false), isNull);
+    }
+  });
 }

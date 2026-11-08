@@ -11,7 +11,12 @@ class Grab {
   final int index;
 }
 
-/// Abstände in einer Spalte. Wird es zu eng, rücken die Karten zusammen.
+/// Kleinste Abstände, bei denen offene Karten noch lesbar bleiben.
+const minUpFactor = 0.22;
+const minDownFactor = 0.05;
+
+/// Abstände in einer Spalte. Wird es zu eng, rücken erst die verdeckten Karten
+/// zusammen, dann die offenen, aber nur so weit, dass Wert und Farbe lesbar bleiben.
 List<double> columnOffsets(
   List<TableCard> cards,
   double cardH,
@@ -20,17 +25,26 @@ List<double> columnOffsets(
   double downFactor = 0.13,
 }) {
   if (cards.isEmpty) return [];
+  var ups = 0;
+  var downs = 0;
+  for (var i = 0; i < cards.length - 1; i++) {
+    cards[i].up ? ups++ : downs++;
+  }
   var du = cardH * upFactor;
   var dd = cardH * downFactor;
-  var need = 0.0;
-  for (var i = 0; i < cards.length - 1; i++) {
-    need += cards[i].up ? du : dd;
-  }
   final room = availH - cardH;
-  if (need > room && need > 0) {
-    final k = (room / need).clamp(0.0, 1.0);
-    du *= k;
-    dd *= k;
+  if (ups * du + downs * dd > room) {
+    // Erst die verdeckten zusammenschieben
+    dd = downs == 0 ? dd : ((room - ups * du) / downs).clamp(cardH * minDownFactor, dd);
+    if (ups * du + downs * dd > room && ups > 0) {
+      du = ((room - downs * dd) / ups).clamp(cardH * minUpFactor, du);
+    }
+    final need = ups * du + downs * dd;
+    if (need > room && need > 0) {
+      final k = (room / need).clamp(0.0, 1.0);
+      du *= k;
+      dd *= k;
+    }
   }
   final out = <double>[];
   var y = 0.0;
@@ -39,6 +53,21 @@ List<double> columnOffsets(
     y += cards[i].up ? du : dd;
   }
   return out;
+}
+
+/// Kartenbreite, bei der auch die längste Spalte lesbar auf den Tisch passt.
+/// Oben liegt eine Kartenreihe, darunter die Spalten; g ist der Rand.
+double fitCardWidth(List<List<TableCard>> columns, double cw, double h, double g) {
+  var most = 0.0;
+  for (final col in columns) {
+    var f = 0.0;
+    for (var i = 0; i < col.length - 1; i++) {
+      f += col[i].up ? minUpFactor : minDownFactor;
+    }
+    if (f > most) most = f;
+  }
+  final maxCh = (h - 4 * g) / (2 + most);
+  return cw.clamp(0.0, maxCh * cardAspect);
 }
 
 /// Ziehbare Karte. Mitgezogen werden alle Karten, die darauf liegen.
