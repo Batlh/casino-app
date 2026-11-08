@@ -61,6 +61,30 @@ void main() {
     expect(e.players[0].hand.length, 7);
   });
 
+  test('Schalter: Nach Strafkarten darf weitergespielt werden', () {
+    final e = game(2)..penaltyEndsTurn = false;
+    e.discard = [c(9, Suit.hearts)];
+    e.players[0].hand = [c(7, Suit.hearts), c(10, Suit.clubs)];
+    e.players[1].hand = [c(9, Suit.clubs), c(13, Suit.hearts)];
+    e.play(c(7, Suit.hearts));
+    e.draw();
+    expect(e.players[1].hand.length, 4);
+    expect(e.current, 1, reason: 'Zug geht weiter');
+    expect(e.drewThisTurn, isFalse);
+    expect(e.canPlay(c(13, Suit.hearts)), isFalse, reason: 'Oben liegt die Sieben');
+    expect(e.canPlay(c(9, Suit.clubs)), isFalse);
+  });
+
+  test('Schalter: Bube auf Bube verboten', () {
+    final e = game(2)..jackOnJack = false;
+    e.discard = [c(11, Suit.hearts)];
+    e.wish = Suit.clubs;
+    expect(e.canPlay(c(11, Suit.spades)), isFalse);
+    expect(e.canPlay(c(9, Suit.clubs)), isTrue);
+    e.jackOnJack = true;
+    expect(e.canPlay(c(11, Suit.spades)), isTrue);
+  });
+
   test('Acht lässt den Nächsten aussetzen', () {
     final e = game(3);
     e.discard = [c(9, Suit.hearts)];
@@ -110,6 +134,8 @@ void main() {
       final e = MauMauEngine(
         players: [for (var i = 0; i < 2 + g % 3; i++) MauPlayer('P$i')],
         rng: rng,
+        penaltyEndsTurn: g % 4 < 2,
+        jackOnJack: g.isEven,
       )..start(startPlayer: g % 2);
       var turns = 0;
       while (!e.finished) {

@@ -182,11 +182,16 @@ class _HeartsScreenState extends State<HeartsScreen> {
     final over = _e.phase == HeartsPhase.handOver || _e.phase == HeartsPhase.gameOver;
     return GameFrame(
       title: 'Schwarze Dame',
-      child: LayoutBuilder(
+      child: ListenableBuilder(
+        listenable: _app.settings,
+        builder: (context, _) => LayoutBuilder(
         builder: (context, box) {
           final w = box.maxWidth;
           final h = box.maxHeight;
-          final handW = math.min(math.min(w / 5.6, h * 0.16 * cardAspect), 96.0);
+          final base = w > h * 1.3
+              ? math.min(h * 0.24 * cardAspect, 100.0)
+              : math.min(math.min(w / 5.6, h * 0.16 * cardAspect), 96.0);
+          final handW = (base * _app.settings.cardScale).clamp(30.0, 170.0);
           return Column(
             children: [
               Expanded(child: _table(over)),
@@ -238,6 +243,7 @@ class _HeartsScreenState extends State<HeartsScreen> {
             ],
           );
         },
+      ),
       ),
     );
   }

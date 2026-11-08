@@ -53,8 +53,11 @@ class CardRunDraggable extends StatelessWidget {
     required this.onDragEnd,
     required this.child,
     this.onTap,
+    this.longPress = false,
   });
 
+  /// Erst nach kurzem Halten ziehen, damit sich die Fläche verschieben lässt.
+  final bool longPress;
   final Grab grab;
   final List<TableCard> run;
   final double width;
@@ -67,12 +70,7 @@ class CardRunDraggable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ch = width / cardAspect;
-    return Draggable<Grab>(
-      data: grab,
-      maxSimultaneousDrags: 1,
-      onDragStarted: onDragStarted,
-      onDragEnd: (_) => onDragEnd(),
-      feedback: Material(
+    final feedback = Material(
         type: MaterialType.transparency,
         child: SizedBox(
           width: width,
@@ -87,9 +85,29 @@ class CardRunDraggable extends StatelessWidget {
             ],
           ),
         ),
-      ),
-      childWhenDragging: Opacity(opacity: 0, child: child),
-      child: GestureDetector(onTap: onTap, child: child),
+      );
+    final tappable = GestureDetector(onTap: onTap, child: child);
+    final hidden = Opacity(opacity: 0, child: child);
+    if (longPress) {
+      return LongPressDraggable<Grab>(
+        data: grab,
+        delay: const Duration(milliseconds: 180),
+        maxSimultaneousDrags: 1,
+        onDragStarted: onDragStarted,
+        onDragEnd: (_) => onDragEnd(),
+        feedback: feedback,
+        childWhenDragging: hidden,
+        child: tappable,
+      );
+    }
+    return Draggable<Grab>(
+      data: grab,
+      maxSimultaneousDrags: 1,
+      onDragStarted: onDragStarted,
+      onDragEnd: (_) => onDragEnd(),
+      feedback: feedback,
+      childWhenDragging: hidden,
+      child: tappable,
     );
   }
 }
@@ -110,7 +128,10 @@ class TableauColumn extends StatelessWidget {
     required this.onDragEnd,
     this.hideFrom,
     this.emptyLabel,
+    this.longPress = false,
   });
+
+  final bool longPress;
 
   final PileRef ref;
   final List<TableCard> cards;
@@ -184,6 +205,7 @@ class TableauColumn extends StatelessWidget {
       onTap: () => onTap(i),
       onDragStarted: () => onDragStart(grab),
       onDragEnd: onDragEnd,
+      longPress: longPress,
       child: view,
     );
   }
@@ -238,4 +260,16 @@ class SolitaireBar extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Ist die Auslage breiter als der Bildschirm, lässt sie sich seitlich schieben.
+Widget scrollable(Widget board, double boardW, double w, double h, bool scroll) {
+  if (!scroll) return board;
+  return Scrollbar(
+    thumbVisibility: true,
+    child: SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: SizedBox(width: boardW, height: h, child: board),
+    ),
+  );
 }

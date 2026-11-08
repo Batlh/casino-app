@@ -88,6 +88,40 @@ void main() {
     });
   });
 
+  for (final scale in [0.8, 1.6]) {
+    sizes.forEach((name, size) {
+      testWidgets('Kartengröße ${(scale * 100).round()} %: $name', (tester) async {
+        SharedPreferences.setMockInitialValues({'settings.cardScale': scale});
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        final prefs = await SharedPreferences.getInstance();
+        for (final screen in const <Widget>[
+          KlondikeScreen(),
+          SpiderScreen(),
+          MauMauScreen(),
+          HeartsScreen(),
+        ]) {
+          await tester.pumpWidget(const SizedBox());
+          await tester.pumpWidget(
+            GluckspfennigApp(
+              wallet: Wallet(prefs),
+              sfx: Sfx(prefs, silent: true),
+              settings: Settings(prefs),
+            ),
+          );
+          await tester.pump();
+          tester
+              .state<NavigatorState>(find.byType(Navigator).first)
+              .push(MaterialPageRoute<void>(builder: (_) => screen));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 400));
+          expect(tester.takeException(), isNull, reason: '$screen');
+        }
+      });
+    });
+  }
+
   testWidgets('Schwarze Dame: weitergeben und spielen ohne Fehler', (tester) async {
     await pumpApp(tester, const Size(393, 852), screen: const HeartsScreen());
     final cards = find.byType(PlayingCardView);

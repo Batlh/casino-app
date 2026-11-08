@@ -639,17 +639,19 @@ class _CardFace extends StatelessWidget {
 extension on _CardFace {
   Widget _buildStrip(String label, Color color) {
     final isFace = card.rank >= 11 && card.rank <= 13;
+    // Schmale Karten bekommen eine größere Schrift, damit sie lesbar bleiben
+    final narrow = width < 48;
     return Stack(
       children: [
         Positioned(
-          left: width * 0.07,
+          left: width * (narrow ? 0.05 : 0.07),
           top: width * 0.02,
           child: Text(
             label,
             style: TextStyle(
               fontFamily: bodyFont,
               fontWeight: FontWeight.w700,
-              fontSize: width * 0.36,
+              fontSize: width * (narrow ? 0.42 : 0.36),
               height: 1.05,
               color: color,
             ),
@@ -658,7 +660,7 @@ extension on _CardFace {
         Positioned(
           right: width * 0.07,
           top: width * 0.08,
-          child: SuitIcon(suit: card.suit, size: width * 0.26, color: color),
+          child: SuitIcon(suit: card.suit, size: width * (narrow ? 0.24 : 0.26), color: color),
         ),
         Align(
           alignment: const Alignment(0, 0.5),

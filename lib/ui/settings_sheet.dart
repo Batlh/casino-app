@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/scope.dart';
+import '../core/settings.dart';
 import '../core/theme.dart';
 import '../games/cards/playing_card.dart';
 
@@ -65,6 +66,50 @@ class _SettingsSheet extends StatelessWidget {
                     selected: {app.settings.cardNames},
                     onSelectionChanged: (s) => app.settings.cardNames = s.first,
                   ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Kartengröße ${(app.settings.cardScale * 100).round()} %',
+                  style: TextStyle(color: p.ink, fontSize: 17),
+                ),
+                Text(
+                  'Gilt für Solitaire, Spider, Mau Mau und Schwarze Dame. Passt Spider nicht mehr auf den Bildschirm, lässt es sich seitlich schieben.',
+                  style: TextStyle(color: p.inkSoft, fontSize: 14),
+                ),
+                Slider(
+                  value: app.settings.cardScale,
+                  min: Settings.minCardScale,
+                  max: Settings.maxCardScale,
+                  divisions: 8,
+                  activeColor: p.accent,
+                  label: '${(app.settings.cardScale * 100).round()} %',
+                  onChanged: (v) => app.settings.cardScale = v,
+                ),
+                const SizedBox(height: 8),
+                Text('Mau Mau', style: TextStyle(color: p.ink, fontSize: 17, fontWeight: FontWeight.w700)),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Nach Strafkarten ist der Zug vorbei',
+                    style: TextStyle(color: p.ink, fontSize: 16),
+                  ),
+                  subtitle: Text(
+                    app.settings.penaltyEndsTurn
+                        ? 'Wer für eine Sieben zieht, darf nicht mehr legen'
+                        : 'Wer für eine Sieben zieht, darf danach normal weiterspielen',
+                    style: TextStyle(color: p.inkSoft, fontSize: 14),
+                  ),
+                  value: app.settings.penaltyEndsTurn,
+                  onChanged: (v) => app.settings.penaltyEndsTurn = v,
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Bube auf Bube erlaubt',
+                    style: TextStyle(color: p.ink, fontSize: 16),
+                  ),
+                  value: app.settings.jackOnJack,
+                  onChanged: (v) => app.settings.jackOnJack = v,
                 ),
               ],
             ),

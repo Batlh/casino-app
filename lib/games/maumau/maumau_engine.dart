@@ -16,13 +16,21 @@ class MauPlayer {
 }
 
 /// Mau Mau. Sieben: Der Nächste zieht zwei, jede weitere Sieben erhöht um zwei.
-/// Acht: Der Nächste setzt aus. Bube: darf auf jede Karte und wünscht eine Farbe.
+/// Acht: Der Nächste setzt aus. Bube: wünscht eine Farbe, auf einen Buben nur mit [jackOnJack].
 class MauMauEngine {
   MauMauEngine({
     required this.players,
     Random? rng,
     this.handSize = 5,
+    this.penaltyEndsTurn = true,
+    this.jackOnJack = true,
   }) : _rng = rng ?? Random.secure();
+
+  /// Wer Strafkarten zieht, ist danach fertig. Sonst darf er normal weiterspielen.
+  bool penaltyEndsTurn;
+
+  /// Ein Bube darf auf einen Buben gelegt werden.
+  bool jackOnJack;
 
   final List<MauPlayer> players;
   final int handSize;
@@ -73,7 +81,7 @@ class MauMauEngine {
     if (finished) return false;
     if (drewThisTurn && c != drawnCard) return false;
     if (pendingDraw > 0) return c.rank == 7;
-    if (c.rank == 11) return true;
+    if (c.rank == 11) return jackOnJack || top.rank != 11;
     if (wish != null) return c.suit == wish;
     return c.suit == top.suit || c.rank == top.rank;
   }
@@ -125,7 +133,7 @@ class MauMauEngine {
         got++;
       }
       lastEvent = p.human ? 'Du ziehst $got' : '${p.name} zieht $got';
-      _advance(1);
+      if (penaltyEndsTurn) _advance(1);
       return;
     }
     if (drewThisTurn) return;

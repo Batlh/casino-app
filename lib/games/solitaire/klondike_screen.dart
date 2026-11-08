@@ -137,7 +137,9 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
   Widget build(BuildContext context) {
     return GameFrame(
       title: 'Solitaire',
-      child: LayoutBuilder(
+      child: ListenableBuilder(
+        listenable: _app.settings,
+        builder: (context, _) => LayoutBuilder(
         builder: (context, box) {
           final side = box.maxWidth > box.maxHeight * 1.5;
           final bar = SolitaireBar(
@@ -163,6 +165,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
           );
         },
       ),
+      ),
     );
   }
 
@@ -170,13 +173,15 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     const g = 6.0;
     final w = box.maxWidth;
     final h = box.maxHeight;
-    final cw = math.min(
+    final fit = math.min(
       math.min((w - 8 * g) / 7, h * cardAspect / 3.4),
       130.0,
     );
+    final cw = (fit * _app.settings.cardScale).clamp(24.0, 190.0);
     final ch = cw / cardAspect;
     final boardW = 7 * cw + 6 * g;
-    final ox = (w - boardW) / 2;
+    final scroll = boardW + 2 * g > w;
+    final ox = scroll ? g : (w - boardW) / 2;
     double x(int col) => ox + col * (cw + g);
     final tabY = g + ch + 2 * g;
     final tabH = h - tabY - g;
@@ -189,7 +194,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     final shown = math.min(_drawCount == 3 ? 3 : 1, waste.length);
     final wasteStep = cw * 0.3;
 
-    return Stack(
+    final board = Stack(
       children: [
         Positioned(
           left: x(0),
@@ -219,12 +224,13 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
                 onTap: () => _tap(ref, index),
                 onDragStarted: () => startDrag(grab),
                 onDragEnd: endDrag,
+                longPress: scroll,
                 child: view,
               );
             }(),
           ),
         for (var f = 0; f < 4; f++)
-          Positioned(left: x(3 + f), top: g, child: _foundation(f, cw, startDrag, endDrag)),
+          Positioned(left: x(3 + f), top: g, child: _foundation(f, cw, startDrag, endDrag, scroll)),
         for (var t = 0; t < 7; t++)
           Positioned(
             left: x(t),
@@ -242,10 +248,12 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
               onAccept: (grab) => _move(grab.from, grab.index, PileRef(PileKind.tableau, t)),
               onDragStart: startDrag,
               onDragEnd: endDrag,
+              longPress: scroll,
             ),
           ),
       ],
     );
+    return scrollable(board, boardW + 2 * g, w, h, scroll);
   }
 
   Widget _foundation(
@@ -253,6 +261,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     double cw,
     void Function(Grab) startDrag,
     VoidCallback endDrag,
+    bool longPress,
   ) {
     final ref = PileRef(PileKind.foundation, f);
     final pile = _e.foundations[f];
@@ -276,6 +285,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
               step: 0,
               onDragStarted: () => startDrag(grab),
               onDragEnd: endDrag,
+              longPress: longPress,
               child: PlayingCardView(
                 width: cw,
                 card: pile.last.card,

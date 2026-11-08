@@ -79,7 +79,7 @@ class HandFan extends StatelessWidget {
       builder: (context, box) {
         final total = box.maxWidth;
         final n = cards.length;
-        var w = maxCardWidth;
+        var w = math.min(maxCardWidth, total);
         var step = w * 1.04;
         if (n > 1) {
           step = math.min(step, (total - w) / (n - 1));

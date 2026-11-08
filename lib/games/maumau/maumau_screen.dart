@@ -169,83 +169,122 @@ class _MauMauScreenState extends State<MauMauScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final me = _e.players.first;
+    final settings = _app.settings;
     return GameFrame(
       title: 'Mau Mau',
-      child: LayoutBuilder(
-        builder: (context, box) {
-          final w = box.maxWidth;
-          final h = box.maxHeight;
-          final badge = math.min(110.0, (w - 24) / _opponents - 8);
-          final handW = math.min(math.min(w / 5.2, h * 0.17 * cardAspect), 100.0);
-          final pileW = math.min(math.min(w * 0.2, h * 0.2 * cardAspect), 100.0);
-          return Column(
-            children: [
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  for (var i = 1; i < _e.players.length; i++)
-                    OpponentBadge(
-                      name: _e.players[i].name,
-                      cardCount: _e.players[i].hand.length,
-                      active: !_e.finished && _e.current == i,
-                      width: badge,
-                      detail: _e.players[i].hand.length == 1
-                          ? 'Mau!'
-                          : _e.players[i].hand.isEmpty
-                              ? 'Mau Mau!'
-                              : '',
-                    ),
-                ],
-              ),
-              Expanded(
-                child: Center(
-                  child: FittedBox(fit: BoxFit.scaleDown, child: _center(pileW)),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: ResultBanner(text: _status, highlight: _e.finished && _e.winner!.human),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 2, 10, 6),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: _e.finished
-                      ? [
-                          ActionButton(primary: true, label: 'Neue Runde', onPressed: _newRound),
-                          ActionButton(label: 'Gegner wählen', onPressed: _askOpponents),
-                        ]
-                      : [
-                          ActionButton(
-                            primary: _myTurn && _e.playableCards().isEmpty,
-                            label: _e.pendingDraw > 0 && _e.actor.human
-                                ? '${_e.pendingDraw} Karten ziehen'
-                                : 'Ziehen',
-                            onPressed: _myTurn && !_e.drewThisTurn ? _draw : null,
-                          ),
-                          if (_myTurn && _e.drewThisTurn)
-                            ActionButton(label: 'Behalten', onPressed: _keep),
-                        ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                child: HandFan(
-                  cards: sortedHand(me.hand),
-                  maxCardWidth: handW,
-                  isEnabled: (c) => !_myTurn || _e.canPlay(c),
-                  isRaised: (c) => _myTurn && _e.canPlay(c),
-                  onTap: _play,
-                ),
-              ),
-            ],
+      child: ListenableBuilder(
+        listenable: settings,
+        builder: (context, _) {
+          // Hausregeln gelten sofort, auch mitten in der Runde
+          _e.penaltyEndsTurn = settings.penaltyEndsTurn;
+          _e.jackOnJack = settings.jackOnJack;
+          return LayoutBuilder(
+            builder: (context, box) => _layout(box, settings.cardScale),
           );
         },
       ),
+    );
+  }
+
+  Widget _layout(BoxConstraints box, double scale) {
+    final me = _e.players.first;
+    final w = box.maxWidth;
+    final h = box.maxHeight;
+    final landscape = w > h * 1.3;
+    final badge = math.min(110.0, (w - 24) / _opponents - 8);
+    final handBase = landscape
+        ? math.min(h * 0.3 * cardAspect, 110.0)
+        : math.min(math.min(w / 5.2, h * 0.17 * cardAspect), 100.0);
+    final handW = (handBase * scale).clamp(30.0, 170.0);
+    final pileBase = landscape
+        ? math.min(h * 0.26 * cardAspect, 100.0)
+        : math.min(math.min(w * 0.2, h * 0.2 * cardAspect), 100.0);
+    final pileW = (pileBase * scale).clamp(30.0, 170.0);
+
+    final opponents = Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        for (var i = 1; i < _e.players.length; i++)
+          OpponentBadge(
+            name: _e.players[i].name,
+            cardCount: _e.players[i].hand.length,
+            active: !_e.finished && _e.current == i,
+            width: badge,
+            detail: _e.players[i].hand.length == 1
+                ? 'Mau!'
+                : _e.players[i].hand.isEmpty
+                    ? 'Mau Mau!'
+                    : '',
+          ),
+      ],
+    );
+    final status = ResultBanner(text: _status, highlight: _e.finished && _e.winner!.human);
+    final buttons = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: _e.finished
+          ? [
+              ActionButton(primary: true, label: 'Neue Runde', onPressed: _newRound),
+              ActionButton(label: 'Gegner wählen', onPressed: _askOpponents),
+            ]
+          : [
+              ActionButton(
+                primary: _myTurn && _e.playableCards().isEmpty,
+                label: _e.pendingDraw > 0 && _e.actor.human
+                    ? '${_e.pendingDraw} Karten ziehen'
+                    : 'Ziehen',
+                onPressed: _myTurn && !_e.drewThisTurn ? _draw : null,
+              ),
+              if (_myTurn && _e.drewThisTurn)
+                ActionButton(label: 'Behalten', onPressed: _keep),
+            ],
+    );
+    final hand = HandFan(
+      cards: sortedHand(me.hand),
+      maxCardWidth: handW,
+      isEnabled: (c) => !_myTurn || _e.canPlay(c),
+      isRaised: (c) => _myTurn && _e.canPlay(c),
+      onTap: _play,
+    );
+    final center = FittedBox(fit: BoxFit.scaleDown, child: _center(pileW));
+
+    if (landscape) {
+      // Querformat: Meldung und Knöpfe neben den Stapeln, damit die Hand Platz hat
+      return Column(
+        children: [
+          const SizedBox(height: 6),
+          opponents,
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(child: Center(child: center)),
+                SizedBox(
+                  width: math.min(300, w * 0.36),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      FittedBox(fit: BoxFit.scaleDown, child: status),
+                      buttons,
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(padding: const EdgeInsets.fromLTRB(8, 0, 8, 6), child: hand),
+        ],
+      );
+    }
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        opponents,
+        Expanded(child: Center(child: center)),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: status),
+        Padding(padding: const EdgeInsets.fromLTRB(10, 2, 10, 6), child: buttons),
+        Padding(padding: const EdgeInsets.fromLTRB(8, 0, 8, 8), child: hand),
+      ],
     );
   }
 

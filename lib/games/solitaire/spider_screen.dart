@@ -133,7 +133,9 @@ class _SpiderScreenState extends State<SpiderScreen> {
   Widget build(BuildContext context) {
     return GameFrame(
       title: 'Spider Solitaire',
-      child: LayoutBuilder(
+      child: ListenableBuilder(
+        listenable: _app.settings,
+        builder: (context, _) => LayoutBuilder(
         builder: (context, box) {
           final side = box.maxWidth > box.maxHeight * 1.5;
           final bar = SolitaireBar(
@@ -159,20 +161,23 @@ class _SpiderScreenState extends State<SpiderScreen> {
           );
         },
       ),
+      ),
     );
   }
 
   Widget _board(BuildContext context, BoxConstraints box) {
-    const g = 4.0;
     final w = box.maxWidth;
     final h = box.maxHeight;
-    final cw = math.min(
+    final g = w < 500 ? 2.0 : 4.0;
+    final fit = math.min(
       math.min((w - 11 * g) / 10, h * cardAspect / 4.0),
       110.0,
     );
+    final cw = (fit * _app.settings.cardScale).clamp(24.0, 170.0);
     final ch = cw / cardAspect;
     final boardW = 10 * cw + 9 * g;
-    final ox = (w - boardW) / 2;
+    final scroll = boardW + 2 * g > w;
+    final ox = scroll ? g : (w - boardW) / 2;
     double x(int col) => ox + col * (cw + g);
     final tabY = g + ch + 2 * g;
     final tabH = h - tabY - g;
@@ -180,7 +185,7 @@ class _SpiderScreenState extends State<SpiderScreen> {
     void startDrag(Grab grab) => setState(() => _drag = grab);
     void endDrag() => setState(() => _drag = null);
 
-    return Stack(
+    final board = Stack(
       children: [
         // Fertige Reihen links oben, je ein König
         for (var i = 0; i < _e.completed.length; i++)
@@ -221,9 +226,11 @@ class _SpiderScreenState extends State<SpiderScreen> {
               onAccept: (grab) => _move(grab.from.index, grab.index, t),
               onDragStart: startDrag,
               onDragEnd: endDrag,
+              longPress: scroll,
             ),
           ),
       ],
     );
+    return scrollable(board, boardW + 2 * g, w, h, scroll);
   }
 }
