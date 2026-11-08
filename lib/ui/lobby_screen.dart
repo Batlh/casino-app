@@ -15,6 +15,7 @@ import '../games/hearts/hearts_screen.dart';
 import '../games/holdem/holdem_screen.dart';
 import '../games/maumau/maumau_screen.dart';
 import '../games/pachinko/pachinko_screen.dart';
+import '../games/quatro/quatro_screen.dart';
 import '../games/roulette/roulette_painters.dart';
 import '../games/roulette/roulette_screen.dart';
 import '../games/slots/kosmos_art.dart';
@@ -125,7 +126,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ),
       _Game(
         'Eins!',
-        'Farbwahl, Plus-Vier und Richtungswechsel',
+        'Klassisch oder in fünf wilden Spielweisen',
         const Color(0xFF2A160E),
         _EinsArt.new,
         () => _open(const EinsScreen()),
@@ -136,6 +137,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF14506E),
         _HeartsArt.new,
         () => _open(const HeartsScreen()),
+      ),
+      _Game(
+        'Viererkette',
+        'Farbige Steine legen, vier in einer Reihe gewinnen',
+        const Color(0xFF3A1467),
+        _QuatroArt.new,
+        () => _open(const QuatroScreen()),
       ),
     ];
 
@@ -379,16 +387,67 @@ class _EinsArt extends CustomPainter {
     final h = w / cardAspect;
     final c = Offset(size.width / 2, size.height * 0.55);
     const cards = [
-      EinsCard(0, EinsKind.number, color: EinsColor.blue, number: 7),
-      EinsCard(1, EinsKind.reverse, color: EinsColor.yellow),
-      EinsCard(2, EinsKind.wildDrawFour),
+      (EinsFace(EinsKind.number, color: EinsColor.blue, number: 7), false),
+      (EinsFace(EinsKind.flip, color: EinsColor.purple), true),
+      (EinsFace(EinsKind.wildDrawFour), false),
     ];
     for (var i = 0; i < cards.length; i++) {
       canvas.save();
       canvas.translate(c.dx + (i - 1) * w * 0.62, c.dy);
       canvas.rotate((i - 1) * 0.2);
-      paintEinsCard(canvas, Rect.fromCenter(center: Offset.zero, width: w, height: h), cards[i]);
+      paintEinsCard(
+        canvas,
+        Rect.fromCenter(center: Offset.zero, width: w, height: h),
+        cards[i].$1,
+        dark: cards[i].$2,
+      );
       canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _QuatroArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const cols = 5;
+    const rows = 3;
+    final cell = math.min(size.width * 0.7 / cols, size.height * 0.75 / rows);
+    final origin = Offset(size.width / 2 - cols * cell / 2, size.height * 0.56 - rows * cell / 2);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(origin.dx - cell * 0.1, origin.dy - cell * 0.1, cols * cell + cell * 0.2, rows * cell + cell * 0.2),
+        Radius.circular(cell * 0.25),
+      ),
+      Paint()..color = const Color(0xFF2A160E),
+    );
+    // Farbe je Feld, -1 leer. Die Diagonale in Gelb ist die Gewinnreihe.
+    const grid = [
+      [-1, -1, 1, -1, -1],
+      [-1, 1, 0, 3, -1],
+      [1, 2, 3, 0, 2],
+    ];
+    const colors = [EinsColor.red, EinsColor.yellow, EinsColor.green, EinsColor.blue];
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        final rect = Rect.fromLTWH(origin.dx + c * cell, origin.dy + r * cell, cell, cell).deflate(cell * 0.08);
+        final v = grid[r][c];
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(rect, Radius.circular(cell * 0.15)),
+          Paint()..color = v < 0 ? const Color(0xFF140A06) : einsColors[colors[v]]!,
+        );
+        if (v >= 0) {
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(rect, Radius.circular(cell * 0.15)),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = cell * 0.05
+              ..color = const Color(0xFFFFF8E7),
+          );
+        }
+      }
     }
   }
 

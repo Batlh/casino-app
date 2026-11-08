@@ -131,10 +131,14 @@ class OpponentBadge extends StatelessWidget {
     this.detail = '',
     this.width = 104,
     this.backBuilder,
+    this.cardBuilder,
   });
 
   /// Eigener Kartenrücken, sonst der Rücken der Spielkarten.
   final Widget Function(double width)? backBuilder;
+
+  /// Eigene Karte je Platz, zum Beispiel die sichtbare Rückseite bei der Kehrseite.
+  final Widget Function(double width, int index)? cardBuilder;
 
   final String name;
   final int cardCount;
@@ -163,7 +167,7 @@ class OpponentBadge extends StatelessWidget {
                   for (var i = 0; i < shown; i++)
                     Positioned(
                       left: i * step,
-                      child: backBuilder?.call(cw) ?? PlayingCardView(width: cw),
+                      child: cardBuilder?.call(cw, i) ?? backBuilder?.call(cw) ?? PlayingCardView(width: cw),
                     ),
                 ],
               ),

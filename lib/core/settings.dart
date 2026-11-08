@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../games/cards/playing_card.dart';
+import '../games/eins/eins_engine.dart';
 
 /// Dauerhaft gespeicherte Einstellungen der App.
 class Settings extends ChangeNotifier {
@@ -14,7 +15,11 @@ class Settings extends ChangeNotifier {
         _jackOnJack = _prefs.getBool(_jackKey) ?? true,
         _cardScale = (_prefs.getDouble(_scaleKey) ?? 1.0).clamp(minCardScale, maxCardScale),
         _einsStackDraws = _prefs.getBool(_einsStackKey) ?? true,
-        _einsCallRequired = _prefs.getBool(_einsCallKey) ?? true;
+        _einsCallRequired = _prefs.getBool(_einsCallKey) ?? true,
+        _einsMode = EinsMode.values.firstWhere(
+          (v) => v.name == _prefs.getString(_einsModeKey),
+          orElse: () => EinsMode.classic,
+        );
 
   static const _cardNamesKey = 'settings.cardNames';
   static const _penaltyKey = 'settings.mauPenaltyEndsTurn';
@@ -22,6 +27,7 @@ class Settings extends ChangeNotifier {
   static const _scaleKey = 'settings.cardScale';
   static const _einsStackKey = 'settings.einsStackDraws';
   static const _einsCallKey = 'settings.einsCallRequired';
+  static const _einsModeKey = 'settings.einsMode';
   static const minCardScale = 0.8;
   static const maxCardScale = 1.6;
 
@@ -32,6 +38,17 @@ class Settings extends ChangeNotifier {
   double _cardScale;
   bool _einsStackDraws;
   bool _einsCallRequired;
+  EinsMode _einsMode;
+
+  /// Eins!: zuletzt gewählte Spielweise.
+  EinsMode get einsMode => _einsMode;
+
+  set einsMode(EinsMode value) {
+    if (value == _einsMode) return;
+    _einsMode = value;
+    _prefs.setString(_einsModeKey, value.name);
+    notifyListeners();
+  }
 
   /// Eins!: Plus-Karten dürfen gestapelt werden.
   bool get einsStackDraws => _einsStackDraws;

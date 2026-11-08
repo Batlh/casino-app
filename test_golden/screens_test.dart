@@ -8,7 +8,9 @@ import 'package:gluckspfennig/core/settings.dart';
 import 'package:gluckspfennig/core/sfx.dart';
 import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/blackjack/blackjack_screen.dart';
+import 'package:gluckspfennig/games/eins/eins_engine.dart';
 import 'package:gluckspfennig/games/eins/eins_screen.dart';
+import 'package:gluckspfennig/games/quatro/quatro_screen.dart';
 import 'package:gluckspfennig/games/hearts/hearts_screen.dart';
 import 'package:gluckspfennig/games/holdem/holdem_screen.dart';
 import 'package:gluckspfennig/games/maumau/maumau_screen.dart';
@@ -124,7 +126,12 @@ void main() {
       'spider': SpiderScreen(),
       'maumau': MauMauScreen(),
       'eins': EinsScreen(),
+      'eins_kehrseite': EinsScreen(mode: EinsMode.flip),
+      'eins_werfer': EinsScreen(mode: EinsMode.extreme),
+      'eins_kraft': EinsScreen(mode: EinsMode.flex),
+      'eins_gluecksrad': EinsScreen(mode: EinsMode.spin),
       'schwarzedame': HeartsScreen(),
+      'viererkette': QuatroScreen(),
     };
     for (final g in games.entries) {
       await shot(tester, '${g.key}_handy', phone, Brightness.dark, screen: g.value);

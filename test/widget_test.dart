@@ -4,7 +4,9 @@ import 'package:gluckspfennig/core/settings.dart';
 import 'package:gluckspfennig/core/sfx.dart';
 import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/blackjack/blackjack_screen.dart';
+import 'package:gluckspfennig/games/eins/eins_engine.dart';
 import 'package:gluckspfennig/games/eins/eins_screen.dart';
+import 'package:gluckspfennig/games/quatro/quatro_screen.dart';
 import 'package:gluckspfennig/games/hearts/hearts_screen.dart';
 import 'package:gluckspfennig/games/holdem/holdem_screen.dart';
 import 'package:gluckspfennig/games/maumau/maumau_screen.dart';
@@ -70,7 +72,11 @@ void main() {
         SpiderScreen(),
         MauMauScreen(),
         EinsScreen(),
+        EinsScreen(mode: EinsMode.flip),
+        EinsScreen(mode: EinsMode.extreme),
+        EinsScreen(mode: EinsMode.flex),
         HeartsScreen(),
+        QuatroScreen(),
       ]) {
         await pumpApp(tester, size, screen: screen);
         expect(tester.takeException(), isNull, reason: '$screen bei $name');
@@ -168,6 +174,43 @@ void main() {
     }
     await tester.pump(const Duration(seconds: 8));
     expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  for (final mode in EinsMode.values) {
+    for (final size in const [Size(393, 852), Size(852, 393)]) {
+      testWidgets('Eins! ${modeName(mode)} ${size.width.round()}: Computer spielen mit', (tester) async {
+        await pumpApp(tester, size, screen: EinsScreen(mode: mode));
+        final label = find.text(mode == EinsMode.extreme ? 'Drücken' : 'Ziehen');
+        if (label.evaluate().isNotEmpty) {
+          await tester.tap(label.first);
+          await tester.pump();
+        }
+        if (find.text('Behalten').evaluate().isNotEmpty) {
+          await tester.tap(find.text('Behalten'));
+          await tester.pump();
+        }
+        for (var i = 0; i < 40; i++) {
+          await tester.pump(const Duration(milliseconds: 500));
+          expect(tester.takeException(), isNull);
+        }
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(seconds: 5));
+      });
+    }
+  }
+
+  testWidgets('Viererkette: Stein legen und Gegner spielen lassen', (tester) async {
+    await pumpApp(tester, const Size(393, 852), screen: const QuatroScreen());
+    for (var c = 0; c < 7; c++) {
+      await tester.tap(find.bySemanticsLabel('Spalte ${c + 1}'), warnIfMissed: false);
+      await tester.pump();
+    }
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(tester.takeException(), isNull);
+    }
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 3));
   });

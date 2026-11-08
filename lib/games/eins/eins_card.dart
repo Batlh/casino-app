@@ -12,26 +12,34 @@ const Map<EinsColor, Color> einsColors = {
   EinsColor.yellow: Color(0xFFF2B12E),
   EinsColor.green: Color(0xFF2E9C6A),
   EinsColor.blue: Color(0xFF2F7FC1),
+  EinsColor.teal: Color(0xFF1FB5A8),
+  EinsColor.orange: Color(0xFFF07A1A),
+  EinsColor.pink: Color(0xFFE0479E),
+  EinsColor.purple: Color(0xFF7B4FC9),
 };
 const Color einsWildColor = Color(0xFF2A160E);
+const Color _cream = Color(0xFFFFF8E7);
+const Color _night = Color(0xFF17101F);
+const Color _gold = Color(0xFFFFC95C);
 
-/// Zeichnet eine Karte in das Rechteck. card null zeigt den Rücken.
-void paintEinsCard(Canvas canvas, Rect rect, EinsCard? card) {
+/// Zeichnet eine Kartenseite. face null zeigt den Rücken.
+/// dark: Seite der dunklen Kehrseite, mit dunklem Rand.
+void paintEinsCard(Canvas canvas, Rect rect, EinsFace? face, {bool dark = false}) {
   final w = rect.width;
   final radius = Radius.circular(w * 0.1);
   final outer = RRect.fromRectAndRadius(rect, radius);
-  canvas.drawRRect(outer, Paint()..color = const Color(0xFFFFF8E7));
+  canvas.drawRRect(outer, Paint()..color = dark ? _night : _cream);
   final inner = RRect.fromRectAndRadius(rect.deflate(w * 0.05), Radius.circular(w * 0.07));
   canvas.save();
   canvas.clipRRect(inner);
 
-  if (card == null) {
+  if (face == null) {
     _back(canvas, inner.outerRect);
     canvas.restore();
     return;
   }
 
-  final base = card.color == null ? einsWildColor : einsColors[card.color]!;
+  final base = face.color == null ? (dark ? const Color(0xFF0E0A14) : einsWildColor) : einsColors[face.color]!;
   canvas.drawRect(inner.outerRect, Paint()..color = base);
   // Regenbogenbögen unten rechts, das Markenzeichen dieser Karten
   final arcCenter = inner.outerRect.bottomRight;
@@ -39,44 +47,107 @@ void paintEinsCard(Canvas canvas, Rect rect, EinsCard? card) {
     canvas.drawCircle(
       arcCenter,
       w * (0.95 - i * 0.18),
-      Paint()..color = Colors.white.withValues(alpha: 0.10 + i * 0.04),
+      Paint()..color = (dark ? Colors.black : Colors.white).withValues(alpha: 0.10 + i * 0.04),
     );
+  }
+  if (dark) {
+    // Sterne für die dunkle Seite
+    final star = Paint()..color = Colors.white.withValues(alpha: 0.35);
+    final r = inner.outerRect;
+    for (final p in const [Offset(0.75, 0.12), Offset(0.2, 0.8), Offset(0.85, 0.55), Offset(0.4, 0.92)]) {
+      canvas.drawCircle(Offset(r.left + r.width * p.dx, r.top + r.height * p.dy), w * 0.018, star);
+    }
   }
   canvas.restore();
 
-  final center = rect.center;
-  final size = w * 0.5;
-  switch (card.kind) {
-    case EinsKind.number:
-      _text(canvas, '${card.number}', center, w * 0.62, underline: card.number == 6 || card.number == 9);
-    case EinsKind.drawTwo:
-      _text(canvas, '+2', center, w * 0.46);
-    case EinsKind.skip:
-      _skip(canvas, center, size * 0.5);
-    case EinsKind.reverse:
-      _reverse(canvas, center, size * 0.5);
-    case EinsKind.wild:
-      _wheel(canvas, center, size * 0.55);
-    case EinsKind.wildDrawFour:
-      _wheel(canvas, center, size * 0.55);
-      _text(canvas, '+4', center, w * 0.36);
-  }
+  final colors = dark ? darkColors : lightColors;
+  _symbol(canvas, face, rect.center, w, big: true, colors: colors);
   // Ecke oben links
   final corner = rect.topLeft + Offset(w * 0.17, w * 0.2);
-  final small = w * 0.2;
-  switch (card.kind) {
+  _symbol(canvas, face, corner, w * 0.34, big: false, colors: colors);
+
+  // Abzeichen unten
+  final badgeAt = rect.bottomLeft + Offset(w * 0.2, -w * 0.2);
+  if (face.spin) _spinBadge(canvas, badgeAt, w * 0.11);
+  if (face.flipMark) _boltBadge(canvas, badgeAt, w * 0.11, swap: true);
+  if (face.isFlex) _boltBadge(canvas, badgeAt, w * 0.11);
+}
+
+void _symbol(Canvas c, EinsFace f, Offset o, double w, {required bool big, required List<EinsColor> colors}) {
+  final shadow = big;
+  const s = 1.0;
+  void txt(String t, double size, {Offset shift = Offset.zero}) =>
+      _text(c, t, o + shift, w * size * (big ? 1 : 1.25), shadow: shadow);
+  switch (f.kind) {
     case EinsKind.number:
-      _text(canvas, '${card.number}', corner, small * 1.2, shadow: false);
+      _text(c, '${f.number}', o, w * (big ? 0.62 : 0.7), shadow: shadow, underline: f.number == 6 || f.number == 9);
+    case EinsKind.drawOne:
+      txt('+1', 0.5);
     case EinsKind.drawTwo:
-      _text(canvas, '+2', corner, small, shadow: false);
-    case EinsKind.wildDrawFour:
-      _text(canvas, '+4', corner, small, shadow: false);
+      txt('+2', 0.46);
+    case EinsKind.drawFour:
+      txt('+4', 0.46);
+    case EinsKind.drawFive:
+      txt('+5', 0.46);
     case EinsKind.skip:
-      _skip(canvas, corner, small * 0.42, stroke: 0.2);
+      _skip(c, o, w * 0.25 * s);
+    case EinsKind.skipEveryone:
+      _skip(c, o, w * 0.25 * s);
+      _skip(c, o, w * 0.36 * s, stroke: 0.12);
     case EinsKind.reverse:
-      _reverse(canvas, corner, small * 0.45);
+      _reverse(c, o, w * 0.25 * s);
+    case EinsKind.flip:
+      _flip(c, o, w * 0.24 * s);
+    case EinsKind.discardAll:
+      _discard(c, o, w * 0.26 * s);
+    case EinsKind.hitTwo:
+      txt('2×', 0.44);
+    case EinsKind.tradeHands:
+      _trade(c, o, w * 0.26 * s);
+    case EinsKind.flexSkip:
+      _skip(c, o, w * 0.25 * s);
+    case EinsKind.flexReverse:
+      _reverse(c, o, w * 0.25 * s);
+    case EinsKind.flexDrawTwo:
+      txt('+2', 0.46);
     case EinsKind.wild:
-      _wheel(canvas, corner, small * 0.45);
+      _wheel(c, o, w * 0.28 * s, colors);
+    case EinsKind.wildDrawTwo:
+    case EinsKind.flexWildTargetDraw:
+      _wheel(c, o, w * 0.28 * s, colors);
+      txt('+2', 0.36);
+    case EinsKind.wildDrawFour:
+    case EinsKind.flexWildDrawFour:
+      _wheel(c, o, w * 0.28 * s, colors);
+      txt('+4', 0.36);
+    case EinsKind.wildDrawSix:
+      _wheel(c, o, w * 0.28 * s, colors);
+      txt('+6', 0.36);
+    case EinsKind.wildDrawTen:
+      _wheel(c, o, w * 0.28 * s, colors);
+      txt('+10', 0.3);
+    case EinsKind.wildReverseDrawFour:
+      _wheel(c, o, w * 0.28 * s, colors);
+      txt('+4', 0.3, shift: Offset(0, w * 0.1 * s));
+      _reverse(c, o - Offset(0, w * 0.1 * s), w * 0.1 * s);
+    case EinsKind.wildDrawColor:
+      _wheel(c, o, w * 0.28 * s, colors);
+      txt('+?', 0.36);
+    case EinsKind.wildColorRoulette:
+      _wheel(c, o, w * 0.28 * s, colors);
+      txt('?', 0.4);
+    case EinsKind.wildHitFire:
+      _wheel(c, o, w * 0.28 * s, colors);
+      _flame(c, o, w * 0.17 * s);
+    case EinsKind.wildAllHit:
+      _wheel(c, o, w * 0.28 * s, colors);
+      txt('ALLE', 0.18);
+    case EinsKind.flexWildAllDraw:
+      _wheel(c, o, w * 0.28 * s, colors);
+      txt('ALLE', 0.18);
+    case EinsKind.wildAllFlip:
+      _wheel(c, o, w * 0.28 * s, colors);
+      _bolt(c, o, w * 0.16 * s, Colors.white);
   }
 }
 
@@ -108,24 +179,24 @@ void _text(
   tp.paint(c, center - Offset(tp.width / 2, tp.height / 2));
 }
 
+Paint _stroke(double width) => Paint()
+  ..style = PaintingStyle.stroke
+  ..strokeWidth = width
+  ..strokeCap = StrokeCap.round
+  ..strokeJoin = StrokeJoin.round
+  ..color = Colors.white;
+
 void _skip(Canvas c, Offset o, double r, {double stroke = 0.28}) {
-  final p = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = r * stroke
-    ..strokeCap = StrokeCap.round
-    ..color = Colors.white;
+  final p = _stroke(r * stroke);
   c.drawCircle(o, r, p);
-  final d = r * 0.7;
-  c.drawLine(o + Offset(-d, d), o + Offset(d, -d), p);
+  if (stroke > 0.2) {
+    final d = r * 0.7;
+    c.drawLine(o + Offset(-d, d), o + Offset(d, -d), p);
+  }
 }
 
 void _reverse(Canvas c, Offset o, double r) {
-  final p = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = r * 0.24
-    ..strokeCap = StrokeCap.round
-    ..strokeJoin = StrokeJoin.round
-    ..color = Colors.white;
+  final p = _stroke(r * 0.24);
   void arrow(double sign) {
     final start = o + Offset(-r * 0.9 * sign, r * 0.25 * sign);
     final end = o + Offset(r * 0.9 * sign, -r * 0.25 * sign);
@@ -145,8 +216,104 @@ void _reverse(Canvas c, Offset o, double r) {
   c.restore();
 }
 
-/// Vierfarbiges Rad für Farbwahl und Plus-Vier.
-void _wheel(Canvas c, Offset o, double r) {
+/// Kreisender Pfeil für Wenden.
+void _flip(Canvas c, Offset o, double r) {
+  final p = _stroke(r * 0.22);
+  final rect = Rect.fromCircle(center: o, radius: r);
+  for (final start in [-math.pi * 0.9, math.pi * 0.1]) {
+    c.drawArc(rect, start, math.pi * 0.7, false, p);
+    final a = start + math.pi * 0.7;
+    final tip = o + Offset(math.cos(a), math.sin(a)) * r;
+    final dir = Offset(-math.sin(a), math.cos(a));
+    final side = Offset(math.cos(a), math.sin(a));
+    c.drawLine(tip, tip - dir * r * 0.45 + side * r * 0.3, p);
+    c.drawLine(tip, tip - dir * r * 0.45 - side * r * 0.3, p);
+  }
+}
+
+/// Drei Karten mit Pfeil nach unten: alle abwerfen.
+void _discard(Canvas c, Offset o, double r) {
+  final fill = Paint()..color = Colors.white.withValues(alpha: 0.25);
+  final p = _stroke(r * 0.12);
+  for (var i = -1; i <= 1; i++) {
+    final rr = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: o + Offset(i * r * 0.45, -r * 0.2 + i.abs() * r * 0.1), width: r * 0.8, height: r * 1.15),
+      Radius.circular(r * 0.12),
+    );
+    c.drawRRect(rr, fill);
+    c.drawRRect(rr, p);
+  }
+  final a = o + Offset(0, r * 0.55);
+  final b = o + Offset(0, r * 1.05);
+  c.drawLine(a, b, p);
+  c.drawLine(b, b + Offset(-r * 0.25, -r * 0.25), p);
+  c.drawLine(b, b + Offset(r * 0.25, -r * 0.25), p);
+}
+
+/// Zwei Karten, die die Plätze tauschen.
+void _trade(Canvas c, Offset o, double r) {
+  final fill = Paint()..color = Colors.white.withValues(alpha: 0.25);
+  final p = _stroke(r * 0.12);
+  for (final dx in [-0.5, 0.5]) {
+    final rr = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: o + Offset(dx * r, dx * r * 0.4), width: r * 0.75, height: r * 1.05),
+      Radius.circular(r * 0.12),
+    );
+    c.drawRRect(rr, fill);
+    c.drawRRect(rr, p);
+  }
+  final rect = Rect.fromCircle(center: o, radius: r * 0.95);
+  c.drawArc(rect, -math.pi * 0.85, math.pi * 0.5, false, p);
+  c.drawArc(rect, math.pi * 0.15, math.pi * 0.5, false, p);
+}
+
+void _flame(Canvas c, Offset o, double r) {
+  final path = Path()
+    ..moveTo(o.dx, o.dy - r * 1.2)
+    ..cubicTo(o.dx + r * 1.1, o.dy - r * 0.2, o.dx + r * 0.9, o.dy + r, o.dx, o.dy + r)
+    ..cubicTo(o.dx - r * 0.9, o.dy + r, o.dx - r * 1.0, o.dy, o.dx - r * 0.2, o.dy - r * 0.5)
+    ..cubicTo(o.dx - r * 0.1, o.dy - r * 0.1, o.dx + r * 0.1, o.dy - r * 0.6, o.dx, o.dy - r * 1.2)
+    ..close();
+  c.drawPath(path, Paint()..color = const Color(0xFFFFE08A));
+  c.drawPath(path, _stroke(r * 0.15)..color = const Color(0xFFD8402B));
+}
+
+void _bolt(Canvas c, Offset o, double r, Color color) {
+  final path = Path()
+    ..moveTo(o.dx + r * 0.25, o.dy - r)
+    ..lineTo(o.dx - r * 0.55, o.dy + r * 0.15)
+    ..lineTo(o.dx - r * 0.05, o.dy + r * 0.15)
+    ..lineTo(o.dx - r * 0.25, o.dy + r)
+    ..lineTo(o.dx + r * 0.55, o.dy - r * 0.15)
+    ..lineTo(o.dx + r * 0.05, o.dy - r * 0.15)
+    ..close();
+  c.drawPath(path, Paint()..color = color);
+  c.drawPath(path, _stroke(r * 0.1)..color = const Color(0xFF2A160E));
+}
+
+/// Kraftseite: goldener Blitz. swap: Zahl schaltet die eigene Kraft um.
+void _boltBadge(Canvas c, Offset o, double r, {bool swap = false}) {
+  c.drawCircle(o, r * 1.25, Paint()..color = const Color(0xFF2A160E));
+  c.drawCircle(o, r * 1.25, _stroke(r * 0.18)..color = swap ? Colors.white : _gold);
+  _bolt(c, o, r * 0.85, swap ? Colors.white : _gold);
+}
+
+void _spinBadge(Canvas c, Offset o, double r) {
+  c.drawCircle(o, r * 1.25, Paint()..color = const Color(0xFF2A160E));
+  for (var i = 0; i < 8; i++) {
+    c.drawArc(
+      Rect.fromCircle(center: o, radius: r),
+      i * math.pi / 4,
+      math.pi / 4,
+      true,
+      Paint()..color = i.isEven ? _gold : const Color(0xFFD8402B),
+    );
+  }
+  c.drawCircle(o, r * 0.25, Paint()..color = Colors.white);
+}
+
+/// Vierfarbiges Rad für Farbwahl-Karten.
+void _wheel(Canvas c, Offset o, double r, List<EinsColor> colors) {
   final rect = Rect.fromCircle(center: o, radius: r);
   for (var i = 0; i < 4; i++) {
     c.drawPath(
@@ -154,17 +321,10 @@ void _wheel(Canvas c, Offset o, double r) {
         ..moveTo(o.dx, o.dy)
         ..arcTo(rect, -math.pi / 2 + i * math.pi / 2, math.pi / 2, false)
         ..close(),
-      Paint()..color = einsColors[EinsColor.values[i]]!,
+      Paint()..color = einsColors[colors[i]]!,
     );
   }
-  c.drawCircle(
-    o,
-    r,
-    Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = r * 0.1
-      ..color = Colors.white,
-  );
+  c.drawCircle(o, r, _stroke(r * 0.1));
 }
 
 void _back(Canvas c, Rect r) {
@@ -177,7 +337,7 @@ void _back(Canvas c, Rect r) {
   for (var i = 0; i < 4; i++) {
     c.drawRect(
       Rect.fromLTWH(-w, (i - 2) * stripe, w * 2, stripe),
-      Paint()..color = einsColors[EinsColor.values[i]]!,
+      Paint()..color = einsColors[lightColors[i]]!,
     );
   }
   c.restore();
@@ -185,49 +345,59 @@ void _back(Canvas c, Rect r) {
 }
 
 class EinsCardView extends StatelessWidget {
-  const EinsCardView({super.key, required this.width, this.card, this.highlighted = false});
+  const EinsCardView({
+    super.key,
+    required this.width,
+    this.face,
+    this.dark = false,
+    this.highlighted = false,
+  });
 
   final double width;
-  final EinsCard? card;
+  final EinsFace? face;
+  final bool dark;
   final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
     final height = width / cardAspect;
     return Semantics(
-      label: card?.spokenName ?? 'Verdeckte Karte',
+      label: face?.spokenName ?? 'Verdeckte Karte',
       excludeSemantics: true,
       child: Container(
         width: width,
         height: height,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(width * 0.1),
-          border: highlighted
-              ? Border.all(color: const Color(0xFFFFC95C), width: 3)
-              : null,
+          border: highlighted ? Border.all(color: _gold, width: 3) : null,
           boxShadow: const [
             BoxShadow(blurRadius: 5, offset: Offset(0, 2), color: Color(0x66000000)),
           ],
         ),
-        child: CustomPaint(painter: _EinsPainter(card)),
+        child: CustomPaint(painter: _EinsPainter(face, dark)),
       ),
     );
   }
 }
 
 class _EinsPainter extends CustomPainter {
-  _EinsPainter(this.card);
-  final EinsCard? card;
+  _EinsPainter(this.face, this.dark);
+  final EinsFace? face;
+  final bool dark;
 
   @override
-  void paint(Canvas canvas, Size size) => paintEinsCard(canvas, Offset.zero & size, card);
+  void paint(Canvas canvas, Size size) => paintEinsCard(canvas, Offset.zero & size, face, dark: dark);
 
   @override
-  bool shouldRepaint(_EinsPainter old) => old.card != card;
+  bool shouldRepaint(_EinsPainter old) => old.face != face || old.dark != dark;
 }
 
-/// Farbwahl für Farbwahl- und Plus-Vier-Karten.
-Future<EinsColor?> showColorPicker(BuildContext context) {
+/// Farbwahl, nur die Farben der aktiven Seite.
+Future<EinsColor?> showColorPicker(
+  BuildContext context, {
+  List<EinsColor> colors = lightColors,
+  String title = 'Farbe wählen',
+}) {
   return showModalBottomSheet<EinsColor>(
     context: context,
     showDragHandle: true,
@@ -239,14 +409,14 @@ Future<EinsColor?> showColorPicker(BuildContext context) {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Farbe wählen', style: Theme.of(context).textTheme.titleLarge),
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
             Wrap(
               spacing: 12,
               runSpacing: 12,
               alignment: WrapAlignment.center,
               children: [
-                for (final c in EinsColor.values)
+                for (final c in colors)
                   Semantics(
                     button: true,
                     label: colorName(c),
@@ -260,7 +430,7 @@ Future<EinsColor?> showColorPicker(BuildContext context) {
                         decoration: BoxDecoration(
                           color: einsColors[c],
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFFFF8E7), width: 3),
+                          border: Border.all(color: _cream, width: 3),
                         ),
                         child: Text(
                           colorName(c),
@@ -280,4 +450,170 @@ Future<EinsColor?> showColorPicker(BuildContext context) {
       ),
     ),
   );
+}
+
+/// Glücksrad mit den neun Feldern, dreht sich auf das Ergebnis.
+class SpinWheel extends StatelessWidget {
+  const SpinWheel({super.key, required this.size, required this.turns});
+
+  final double size;
+
+  /// Umdrehungen, 0 zeigt Feld 0 oben.
+  final double turns;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.topCenter,
+        children: [
+          Transform.rotate(
+            angle: -turns * 2 * math.pi,
+            child: CustomPaint(size: Size.square(size), painter: _WheelPainter()),
+          ),
+          CustomPaint(size: Size(size * 0.12, size * 0.12), painter: _PointerPainter()),
+        ],
+      ),
+    );
+  }
+}
+
+/// Winkel in Umdrehungen, bei dem das Feld oben steht.
+double spinTurnsFor(SpinSpace s) => (s.index + 0.5) / SpinSpace.values.length;
+
+class _WheelPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final o = size.center(Offset.zero);
+    final r = size.width / 2;
+    final n = SpinSpace.values.length;
+    final sweep = 2 * math.pi / n;
+    final shades = [
+      einsColors[EinsColor.red]!,
+      einsColors[EinsColor.yellow]!,
+      einsColors[EinsColor.green]!,
+      einsColors[EinsColor.blue]!,
+      einsColors[EinsColor.orange]!,
+      einsColors[EinsColor.teal]!,
+      einsColors[EinsColor.pink]!,
+      einsColors[EinsColor.purple]!,
+      const Color(0xFF8A5A2B),
+    ];
+    canvas.drawCircle(o, r, Paint()..color = einsWildColor);
+    final rect = Rect.fromCircle(center: o, radius: r * 0.94);
+    for (var i = 0; i < n; i++) {
+      final start = -math.pi / 2 + i * sweep;
+      canvas.drawArc(rect, start, sweep, true, Paint()..color = shades[i]);
+      canvas.drawArc(rect, start, sweep, true, _stroke(r * 0.015)..color = _cream);
+      canvas.save();
+      canvas.translate(o.dx, o.dy);
+      canvas.rotate(start + sweep / 2 + math.pi / 2);
+      final tp = TextPainter(
+        text: TextSpan(
+          text: spinName(SpinSpace.values[i]).replaceFirst(' ', '\n'),
+          style: TextStyle(
+            fontFamily: bodyFont,
+            fontWeight: FontWeight.w800,
+            fontSize: r * 0.085,
+            height: 1.05,
+            color: Colors.white,
+            shadows: const [Shadow(offset: Offset(1, 1), color: Color(0x99000000))],
+          ),
+        ),
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: r * 0.5);
+      tp.paint(canvas, Offset(-tp.width / 2, -r * 0.82));
+      canvas.restore();
+    }
+    canvas.drawCircle(o, r * 0.14, Paint()..color = _gold);
+    canvas.drawCircle(o, r * 0.14, _stroke(r * 0.03)..color = einsWildColor);
+  }
+
+  @override
+  bool shouldRepaint(_WheelPainter old) => false;
+}
+
+class _PointerPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(size.width / 2, size.height)
+      ..lineTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..close();
+    canvas.drawPath(path, Paint()..color = _cream);
+    canvas.drawPath(path, _stroke(size.width * 0.08)..color = einsWildColor);
+  }
+
+  @override
+  bool shouldRepaint(_PointerPainter old) => false;
+}
+
+/// Kartenwerfer: ein Turm mit großem Knopf, ersetzt den Ziehstapel.
+class LauncherView extends StatelessWidget {
+  const LauncherView({super.key, required this.width, this.lastLaunch, this.enabled = true});
+
+  final double width;
+  final int? lastLaunch;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Kartenwerfer drücken',
+      excludeSemantics: true,
+      child: SizedBox(
+        width: width,
+        height: width / cardAspect,
+        child: CustomPaint(painter: _LauncherPainter(enabled, lastLaunch)),
+      ),
+    );
+  }
+}
+
+class _LauncherPainter extends CustomPainter {
+  _LauncherPainter(this.enabled, this.last);
+  final bool enabled;
+  final int? last;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final body = RRect.fromRectAndCorners(
+      Rect.fromLTWH(w * 0.05, h * 0.18, w * 0.9, h * 0.8),
+      topLeft: Radius.circular(w * 0.35),
+      topRight: Radius.circular(w * 0.35),
+      bottomLeft: Radius.circular(w * 0.08),
+      bottomRight: Radius.circular(w * 0.08),
+    );
+    canvas.drawRRect(body, Paint()..color = einsWildColor);
+    canvas.drawRRect(body, _stroke(w * 0.03)..color = _cream);
+    for (var i = 0; i < 4; i++) {
+      canvas.drawRect(
+        Rect.fromLTWH(w * 0.05, h * (0.62 + i * 0.07), w * 0.9, h * 0.035),
+        Paint()..color = einsColors[lightColors[i]]!,
+      );
+    }
+    // Auswurfschlitz
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Rect.fromLTWH(w * 0.2, h * 0.88, w * 0.6, h * 0.05), Radius.circular(w * 0.03)),
+      Paint()..color = Colors.black,
+    );
+    // Knopf
+    final o = Offset(w / 2, h * 0.36);
+    canvas.drawCircle(o + Offset(0, w * 0.04), w * 0.26, Paint()..color = const Color(0xFF7A1C10));
+    canvas.drawCircle(o, w * 0.26, Paint()..color = enabled ? einsColors[EinsColor.red]! : const Color(0xFF8C6A5E));
+    canvas.drawCircle(o - Offset(w * 0.07, w * 0.07), w * 0.07, Paint()..color = Colors.white.withValues(alpha: 0.35));
+    if (last != null) {
+      _text(canvas, last == 0 ? '0' : '+$last', o, w * 0.24);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LauncherPainter old) => old.enabled != enabled || old.last != last;
 }

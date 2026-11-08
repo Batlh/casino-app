@@ -117,7 +117,7 @@ class _SettingsSheet extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   title: Text('Plus-Karten stapeln', style: TextStyle(color: p.ink, fontSize: 16)),
                   subtitle: Text(
-                    'Auf +2 darf +2 oder +4, auf +4 nur +4',
+                    'Gleicher oder höherer Wert. Bei Gnadenlos immer an',
                     style: TextStyle(color: p.inkSoft, fontSize: 14),
                   ),
                   value: app.settings.einsStackDraws,
