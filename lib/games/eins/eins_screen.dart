@@ -829,7 +829,7 @@ class _EinsScreenState extends State<EinsScreen> {
       ],
     );
     final canCall = _myTurn && me.hand.length == 2 && _e.callRequired && _e.playableCards().isNotEmpty;
-    final status = ResultBanner(text: _status, highlight: _e.finished && _e.winner!.human);
+    final status = ResultBanner(text: _status, highlight: _e.finished && _e.winner!.human, maxLines: 2);
     final special = _e.mustSpin || _e.mustChooseRoulette;
     final mustDraw = _e.pendingDraw > 0 || _e.forcedColorDraw != null;
     final canDraw = _myTurn && (special || mustDraw || _e.extraPlay || !_e.drewThisTurn);

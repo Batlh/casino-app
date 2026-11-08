@@ -181,7 +181,9 @@ class QuatroEngine {
           bag.insert(0, lost);
           k++;
         }
-        lastEvent = victim.human ? 'Du legst $k Steine zurück' : '${victim.name} legt $k Steine zurück';
+        final stones = k == 1 ? '1 Stein' : '$k Steine';
+        final from = p.human ? 'Minus zwei' : 'Minus zwei von ${p.name}';
+        lastEvent = victim.human ? '$from: Du legst $stones zurück' : '$from: ${victim.name} legt $stones zurück';
       case TileKind.plain:
         break;
     }

@@ -397,22 +397,24 @@ class ActionButton extends StatelessWidget {
 
 /// Ergebniszeile. Reserviert ihre Höhe, damit der Tisch nicht springt.
 class ResultBanner extends StatelessWidget {
-  const ResultBanner({super.key, required this.text, this.highlight = false});
+  const ResultBanner({super.key, required this.text, this.highlight = false, this.maxLines = 1});
   final String text;
   final bool highlight;
+  final int maxLines;
 
   @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
-    return SizedBox(
-      height: 38,
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: 38, maxHeight: maxLines == 1 ? 38 : double.infinity),
       child: Center(
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
           child: Text(
             text,
             key: ValueKey(text),
-            maxLines: 1,
+            maxLines: maxLines,
+            textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontFamily: highlight ? displayFont : bodyFont,

@@ -126,7 +126,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ),
       _Game(
         'Eins!',
-        'Klassisch oder in fünf wilden Spielweisen',
+        'Klassisch oder in sechs wilden Spielweisen',
         const Color(0xFF2A160E),
         _EinsArt.new,
         () => _open(const EinsScreen()),

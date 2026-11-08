@@ -205,7 +205,7 @@ class _QuatroScreenState extends State<QuatroScreen> {
     final w = box.maxWidth;
     final h = box.maxHeight;
     final landscape = w > h * 1.25;
-    final status = ResultBanner(text: _status, highlight: _e.winner?.human ?? false);
+    final status = ResultBanner(text: _status, highlight: _e.winner?.human ?? false, maxLines: 2);
     final buttons = Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -463,9 +463,11 @@ class TileView extends StatelessWidget {
       TileKind.minusTwo => Icons.exposure_neg_2,
     };
     final Widget face = Stack(
-      alignment: Alignment.center,
+      fit: StackFit.expand,
       children: [
-        Text(
+        Align(
+          alignment: icon == null ? Alignment.center : const Alignment(-0.35, -0.3),
+          child: Text(
           '${tile.number}',
           style: TextStyle(
             fontFamily: displayFont,
@@ -474,6 +476,7 @@ class TileView extends StatelessWidget {
             color: Colors.white,
             shadows: const [Shadow(offset: Offset(1, 1), color: Color(0x99000000))],
           ),
+        ),
         ),
         if (icon != null)
           Positioned(
