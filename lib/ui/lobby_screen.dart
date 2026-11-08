@@ -8,6 +8,9 @@ import '../core/theme.dart';
 import '../core/wallet.dart';
 import '../games/blackjack/blackjack_screen.dart';
 import '../games/cards/playing_card.dart';
+import '../games/chess/chess_engine.dart';
+import '../games/chess/chess_pieces.dart';
+import '../games/chess/chess_screen.dart';
 import '../games/eins/eins_card.dart';
 import '../games/eins/eins_engine.dart';
 import '../games/eins/eins_screen.dart';
@@ -146,6 +149,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
         () => _open(const QuatroScreen()),
       ),
     ];
+    final boardGames = <_Game>[
+      _Game(
+        'Schach',
+        'Gegen den Computer in vier Stufen oder zu zweit',
+        const Color(0xFF3A2116),
+        _ChessArt.new,
+        () => _open(const ChessScreen()),
+      ),
+    ];
 
     return Scaffold(
       backgroundColor: p.bg,
@@ -185,6 +197,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
             ..._section(context, 'Casino', games),
             ..._section(context, 'Kartenspiele', cardGames),
+            ..._section(context, 'Brettspiele', boardGames),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
@@ -468,6 +481,37 @@ class _HeartsArt extends CustomPainter {
       paintSuit(canvas, Rect.fromCenter(center: o, width: hs, height: hs), Suit.hearts, heart.color);
     }
     _miniCard(canvas, c, w, -0.08, 'Q', Suit.spades);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _ChessArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cell = math.min(size.width / 9, size.height / 5.2);
+    final ox = size.width / 2 - cell * 4;
+    final oy = size.height * 0.62;
+    // Schräg gekipptes Brettstück
+    for (var r = 0; r < 3; r++) {
+      for (var f = 0; f < 8; f++) {
+        canvas.drawRect(
+          Rect.fromLTWH(ox + f * cell, oy + r * cell * 0.55, cell, cell * 0.55),
+          Paint()..color = (f + r).isEven ? const Color(0xFFF0DDB8) : const Color(0xFFB27C52),
+        );
+      }
+    }
+    void piece(int p, double x, double s) {
+      canvas.save();
+      canvas.translate(x - s / 2, oy - s * 0.82);
+      ChessPiecePainter(p).paint(canvas, Size.square(s));
+      canvas.restore();
+    }
+
+    piece(-knight, size.width * 0.28, cell * 2.2);
+    piece(king, size.width * 0.5, cell * 2.8);
+    piece(-queen, size.width * 0.72, cell * 2.4);
   }
 
   @override

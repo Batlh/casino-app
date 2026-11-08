@@ -7,6 +7,7 @@ import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../core/wallet.dart';
+import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
 import 'pachinko_board.dart';
 
@@ -134,6 +135,7 @@ class _PachinkoScreenState extends State<PachinkoScreen>
   @override
   Widget build(BuildContext context) {
     return GameFrame(
+      guide: pachinkoGuide,
       title: 'Neon Pachinko',
       background: const BoxDecoration(
         gradient: LinearGradient(

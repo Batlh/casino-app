@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
+import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
 import 'roulette_engine.dart';
 import 'roulette_painters.dart';
@@ -133,6 +134,7 @@ class _RouletteScreenState extends State<RouletteScreen>
   @override
   Widget build(BuildContext context) {
     return GameFrame(
+      guide: rouletteGuide,
       title: 'Roulette',
       child: LayoutBuilder(
         builder: (context, box) {

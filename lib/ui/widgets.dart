@@ -7,6 +7,7 @@ import '../core/sfx.dart';
 import '../core/theme.dart';
 import '../core/wallet.dart';
 import '../games/cards/playing_card.dart';
+import 'guide.dart';
 import 'settings_sheet.dart';
 
 /// Geprägter Pfennig, die Münze der App.
@@ -179,11 +180,15 @@ class GameFrame extends StatefulWidget {
     required this.title,
     required this.child,
     this.background,
+    this.guide,
   });
 
   final String title;
   final Widget child;
   final Decoration? background;
+
+  /// Spielerklärung hinter dem Fragezeichen in der Kopfzeile.
+  final GameGuide? guide;
 
   @override
   State<GameFrame> createState() => _GameFrameState();
@@ -257,6 +262,12 @@ class _GameFrameState extends State<GameFrame> {
                         ),
                       ),
                     ),
+                    if (widget.guide != null)
+                      IconButton(
+                        tooltip: 'So wird gespielt',
+                        icon: Icon(Icons.help_outline, color: p.ink),
+                        onPressed: () => showGuide(context, widget.guide!),
+                      ),
                     ListenableBuilder(
                       listenable: sfx,
                       builder: (context, _) => IconButton(

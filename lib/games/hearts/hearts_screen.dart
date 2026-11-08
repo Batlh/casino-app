@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
+import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
 import '../cards/card_widgets.dart';
 import '../cards/playing_card.dart';
@@ -191,6 +192,7 @@ class _HeartsScreenState extends State<HeartsScreen> {
     final passing = _e.phase == HeartsPhase.passing;
     final over = _e.phase == HeartsPhase.handOver || _e.phase == HeartsPhase.gameOver;
     return GameFrame(
+      guide: heartsGuide,
       title: 'Schwarze Dame',
       child: ListenableBuilder(
         listenable: _app.settings,

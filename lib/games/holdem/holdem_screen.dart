@@ -6,6 +6,7 @@ import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../core/wallet.dart';
+import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
 import 'holdem_engine.dart';
 
@@ -207,6 +208,7 @@ class _HoldemScreenState extends State<HoldemScreen> {
   Widget build(BuildContext context) {
     final e = _engine;
     return GameFrame(
+      guide: holdemGuide,
       title: "Texas Hold'em",
       child: e == null ? _lobby() : _tableView(e),
     );

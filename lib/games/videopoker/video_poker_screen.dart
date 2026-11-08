@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
+import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
 import 'video_poker_engine.dart';
 
@@ -71,6 +72,7 @@ class _VideoPokerScreenState extends State<VideoPokerScreen> {
   @override
   Widget build(BuildContext context) {
     return GameFrame(
+      guide: videoPokerGuide,
       title: 'Video Poker',
       background: const BoxDecoration(
         gradient: LinearGradient(

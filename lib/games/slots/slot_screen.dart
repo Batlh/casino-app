@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
+import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
 import 'slot_engine.dart';
 import 'slot_games.dart';
@@ -169,6 +170,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return GameFrame(
+      guide: slotGuide(widget.game),
       title: widget.game.name,
       background: widget.game.background,
       child: LayoutBuilder(

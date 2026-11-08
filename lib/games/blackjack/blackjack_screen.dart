@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
+import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
 import '../cards/playing_card.dart';
 import 'blackjack_engine.dart';
@@ -113,6 +114,7 @@ class _BlackjackScreenState extends State<BlackjackScreen> {
   @override
   Widget build(BuildContext context) {
     return GameFrame(
+      guide: blackjackGuide,
       title: 'Black Jack',
       child: LayoutBuilder(
         builder: (context, box) {
