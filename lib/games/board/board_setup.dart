@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import '../../ui/widgets.dart';
+import '../../core/scope.dart';
 import '../cards/card_widgets.dart';
 
 /// Wahl vor einer Brettpartie: Computer mit Stufe oder zu zweit, dazu die Farbe.
