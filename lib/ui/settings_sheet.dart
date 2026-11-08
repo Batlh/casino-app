@@ -68,6 +68,24 @@ class _SettingsSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
+                Text('Tempo der Computergegner', style: TextStyle(color: p.ink, fontSize: 17)),
+                Text(
+                  'Wie lange die Gegner überlegen, bevor sie ziehen. Gilt für alle Karten- und Brettspiele.',
+                  style: TextStyle(color: p.inkSoft, fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<BotSpeed>(
+                    showSelectedIcon: false,
+                    segments: [
+                      for (final v in BotSpeed.values) ButtonSegment(value: v, label: Text(v.label)),
+                    ],
+                    selected: {app.settings.botSpeed},
+                    onSelectionChanged: (s) => app.settings.botSpeed = s.first,
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Text(
                   'Kartengröße ${(app.settings.cardScale * 100).round()} %',
                   style: TextStyle(color: p.ink, fontSize: 17),

@@ -152,7 +152,7 @@ class _QuatroScreenState extends State<QuatroScreen> {
     if (_running) return;
     _running = true;
     while (mounted && !_e.finished && !_e.actor.human) {
-      await Future<void>.delayed(const Duration(milliseconds: 800));
+      await Future<void>.delayed(_app.settings.botDelay(800));
       if (!mounted) return;
       if (_e.swapPending) {
         final (a, b) = quatroBotSwap(_e, _rng);

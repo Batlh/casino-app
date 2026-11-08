@@ -112,7 +112,7 @@ class _MauMauScreenState extends State<MauMauScreen> {
     if (_running) return;
     _running = true;
     while (mounted && !_e.finished && !_e.actor.human) {
-      await Future<void>.delayed(const Duration(milliseconds: 750));
+      await Future<void>.delayed(_app.settings.botDelay(750));
       if (!mounted) return;
       final choice = mauBotChoice(_e, _rng);
       if (choice.card != null) {
@@ -125,7 +125,7 @@ class _MauMauScreenState extends State<MauMauScreen> {
       _app.sfx.play(Sound.card);
       setState(() {});
       if (_e.drewThisTurn) {
-        await Future<void>.delayed(const Duration(milliseconds: 500));
+        await Future<void>.delayed(_app.settings.botDelay(500));
         if (!mounted) return;
         final again = mauBotChoice(_e, _rng);
         if (again.card != null) {

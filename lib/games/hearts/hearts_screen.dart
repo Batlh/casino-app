@@ -101,7 +101,7 @@ class _HeartsScreenState extends State<HeartsScreen> {
       _app.wallet.credit(cleanTrickReward);
     }
     setState(() => _showLast = true);
-    await Future<void>.delayed(const Duration(milliseconds: 1100));
+    await Future<void>.delayed(_app.settings.botDelay(1100));
     if (!mounted) return;
     setState(() => _showLast = false);
   }
@@ -110,7 +110,7 @@ class _HeartsScreenState extends State<HeartsScreen> {
     if (_running) return;
     _running = true;
     while (mounted && _e.phase == HeartsPhase.playing && _e.current != 0) {
-      await Future<void>.delayed(const Duration(milliseconds: 600));
+      await Future<void>.delayed(_app.settings.botDelay(600));
       if (!mounted) return;
       final done = _e.play(heartsBotPlay(_e));
       _app.sfx.play(Sound.card);

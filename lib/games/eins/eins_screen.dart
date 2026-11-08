@@ -429,7 +429,7 @@ class _EinsScreenState extends State<EinsScreen> {
       _wheelTurns = _wheelTurns.floorToDouble() + 3 + spinTurnsFor(space, _e.wheel);
     });
     _app.sfx.play(Sound.tick);
-    await Future<void>.delayed(const Duration(milliseconds: 1900));
+    await Future<void>.delayed(_app.settings.botDelay(1900));
     if (!mounted) return null;
     _app.sfx.play(Sound.coin);
     return space;
@@ -437,7 +437,7 @@ class _EinsScreenState extends State<EinsScreen> {
 
   void _afterSpin() {
     setState(() => _spinning = false);
-    Future<void>.delayed(const Duration(milliseconds: 900), () {
+    Future<void>.delayed(_app.settings.botDelay(900), () {
       if (mounted) setState(() => _wheelVisible = _e.raceOpen);
     });
   }
@@ -569,7 +569,7 @@ class _EinsScreenState extends State<EinsScreen> {
         fastest = b;
       }
     }
-    Future<void>.delayed(Duration(milliseconds: best), () {
+    Future<void>.delayed(_app.settings.botDelay(best), () {
       if (!race.isCompleted) race.complete(fastest);
     });
     final w = await race.future;
@@ -591,7 +591,7 @@ class _EinsScreenState extends State<EinsScreen> {
       _race = null;
       _wheelVisible = false;
     });
-    await Future<void>.delayed(const Duration(milliseconds: 700));
+    await Future<void>.delayed(_app.settings.botDelay(700));
   }
 
   void _raceTap() {
@@ -642,7 +642,7 @@ class _EinsScreenState extends State<EinsScreen> {
         continue;
       }
       if (_e.actor.human) break;
-      await Future<void>.delayed(const Duration(milliseconds: 750));
+      await Future<void>.delayed(_app.settings.botDelay(750));
       if (!mounted) return;
       if (_e.mustSpin) {
         final space = await _animateSpin();
@@ -654,7 +654,7 @@ class _EinsScreenState extends State<EinsScreen> {
       if (einsBotMercy(_e) && _e.useMercyCoin()) {
         _app.sfx.play(Sound.coin);
         setState(() {});
-        await Future<void>.delayed(const Duration(milliseconds: 600));
+        await Future<void>.delayed(_app.settings.botDelay(600));
         if (!mounted) return;
       }
       if (einsBotChallenges(_e, _rng)) {
@@ -663,7 +663,7 @@ class _EinsScreenState extends State<EinsScreen> {
         _app.sfx.play(Sound.chip);
         setState(() {});
         if (_e.current != me || _over) continue;
-        await Future<void>.delayed(const Duration(milliseconds: 600));
+        await Future<void>.delayed(_app.settings.botDelay(600));
         if (!mounted) return;
       }
       if (_e.mustChooseRoulette) {
@@ -676,7 +676,7 @@ class _EinsScreenState extends State<EinsScreen> {
       if (choice.card != null) {
         await _botPlay(choice);
         if (_e.extraPlay && !_over) {
-          await Future<void>.delayed(const Duration(milliseconds: 500));
+          await Future<void>.delayed(_app.settings.botDelay(500));
           if (!mounted) return;
           final second = einsBotChoice(_e, _rng);
           if (second.card != null) {
@@ -692,7 +692,7 @@ class _EinsScreenState extends State<EinsScreen> {
       _app.sfx.play(Sound.card);
       setState(() {});
       if (_e.drewThisTurn && !_over) {
-        await Future<void>.delayed(const Duration(milliseconds: 500));
+        await Future<void>.delayed(_app.settings.botDelay(500));
         if (!mounted) return;
         final again = einsBotChoice(_e, _rng);
         if (again.card != null) {

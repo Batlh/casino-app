@@ -175,7 +175,7 @@ void main() {
     await tester.pump(const Duration(seconds: 8));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 6));
   });
 
   for (final mode in EinsMode.values) {

@@ -136,7 +136,7 @@ class _HoldemScreenState extends State<HoldemScreen> {
     _botRunning = true;
     final e = _engine!;
     while (mounted && !e.handOver && !e.actor.isHuman) {
-      await Future<void>.delayed(const Duration(milliseconds: 750));
+      await Future<void>.delayed(_app.settings.botDelay(750));
       if (!mounted) break;
       final street = e.street;
       e.apply(botDecide(e, _rng));

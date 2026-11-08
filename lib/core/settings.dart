@@ -4,6 +4,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../games/cards/playing_card.dart';
 import '../games/eins/eins_engine.dart';
 
+/// Tempo der Computergegner.
+enum BotSpeed {
+  slow('Gemütlich', 2.4),
+  normal('Normal', 1.6),
+  fast('Schnell', 1.0);
+
+  const BotSpeed(this.label, this.factor);
+  final String label;
+  final double factor;
+}
+
 /// Dauerhaft gespeicherte Einstellungen der App.
 class Settings extends ChangeNotifier {
   Settings(this._prefs)
@@ -18,6 +29,10 @@ class Settings extends ChangeNotifier {
         _einsCallRequired = _prefs.getBool(_einsCallKey) ?? true,
         _einsChallenge = _prefs.getBool(_einsChallengeKey) ?? true,
         _einsExpansion = _prefs.getBool(_einsExpansionKey) ?? false,
+        _botSpeed = BotSpeed.values.firstWhere(
+          (v) => v.name == _prefs.getString(_botSpeedKey),
+          orElse: () => BotSpeed.normal,
+        ),
         _einsMode = EinsMode.values.firstWhere(
           (v) => v.name == _prefs.getString(_einsModeKey),
           orElse: () => EinsMode.classic,
@@ -32,6 +47,7 @@ class Settings extends ChangeNotifier {
   static const _einsModeKey = 'settings.einsMode';
   static const _einsChallengeKey = 'settings.einsChallenge';
   static const _einsExpansionKey = 'settings.einsNoMercyExpansion';
+  static const _botSpeedKey = 'settings.botSpeed';
   static const minCardScale = 0.8;
   static const maxCardScale = 1.6;
 
@@ -45,6 +61,20 @@ class Settings extends ChangeNotifier {
   EinsMode _einsMode;
   bool _einsChallenge;
   bool _einsExpansion;
+  BotSpeed _botSpeed;
+
+  /// Wie schnell die Computergegner ziehen.
+  BotSpeed get botSpeed => _botSpeed;
+
+  set botSpeed(BotSpeed value) {
+    if (value == _botSpeed) return;
+    _botSpeed = value;
+    _prefs.setString(_botSpeedKey, value.name);
+    notifyListeners();
+  }
+
+  /// Wartezeit vor einem Computerzug, gestreckt nach dem gewählten Tempo.
+  Duration botDelay(int ms) => Duration(milliseconds: (ms * _botSpeed.factor).round());
 
   /// Eins!: Farbwahl-Strafkarten nur ohne passende Farbe, der Nächste darf anzweifeln.
   bool get einsChallenge => _einsChallenge;
