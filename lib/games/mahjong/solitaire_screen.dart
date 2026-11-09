@@ -6,6 +6,7 @@ import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
+import '../cards/card_widgets.dart';
 import 'solitaire_engine.dart';
 import 'tiles.dart';
 
@@ -14,7 +15,8 @@ const mahjongHintCost = 30;
 const mahjongShuffleCost = 50;
 
 class MahjongSolitaireScreen extends StatefulWidget {
-  const MahjongSolitaireScreen({super.key, this.seed});
+  const MahjongSolitaireScreen({super.key, this.seed, this.layout = SolitaireLayout.turtle});
+  final SolitaireLayout layout;
 
   /// Fester Zufall für Tests und Bilder.
   final int? seed;
@@ -24,7 +26,8 @@ class MahjongSolitaireScreen extends StatefulWidget {
 }
 
 class _MahjongSolitaireScreenState extends State<MahjongSolitaireScreen> {
-  late MahjongSolitaire _e = MahjongSolitaire(rng: widget.seed == null ? null : math.Random(widget.seed));
+  late SolitaireLayout _layout = widget.layout;
+  late MahjongSolitaire _e = MahjongSolitaire(rng: widget.seed == null ? null : math.Random(widget.seed), layout: widget.layout);
   int? _selected;
   (int, int)? _hint;
   int _penalty = 0;
@@ -35,9 +38,21 @@ class _MahjongSolitaireScreenState extends State<MahjongSolitaireScreen> {
   AppScope get _app => AppScope.of(context);
   int get _reward => math.max(0, mahjongSolitaireReward - _penalty);
 
+  Future<void> _chooseLayout() async {
+    final opts = SolitaireLayout.values;
+    final i = await showChoiceSheet(
+      context,
+      title: 'Welche Form?',
+      options: [for (final l in opts) '${solitaireLayoutNames[l]} (${layoutSlots(l).length} Steine)'],
+    );
+    if (i == null || !mounted) return;
+    _layout = opts[i];
+    _newGame();
+  }
+
   void _newGame() {
     setState(() {
-      _e = MahjongSolitaire();
+      _e = MahjongSolitaire(layout: _layout);
       _selected = null;
       _hint = null;
       _penalty = 0;
@@ -162,6 +177,7 @@ class _MahjongSolitaireScreenState extends State<MahjongSolitaireScreen> {
                 onPressed: _won ? null : _shuffle,
               ),
               ActionButton(label: 'Rückgängig', onPressed: _e.canUndo && !_won ? _undo : null),
+              ActionButton(label: 'Form: ${solitaireLayoutNames[_layout]}', onPressed: _chooseLayout),
               ActionButton(primary: _won, label: 'Neues Spiel', onPressed: _newGame),
             ],
           );
@@ -196,7 +212,7 @@ class _MahjongSolitaireScreenState extends State<MahjongSolitaireScreen> {
   }
 
   Widget _board(BoxConstraints b) {
-    final m = _Metrics.fit(b.maxWidth, b.maxHeight);
+    final m = _Metrics.fit(b.maxWidth, b.maxHeight, _e.slots);
     return GestureDetector(
       onTapUp: (d) {
         final i = m.hit(_e, d.localPosition);
@@ -213,13 +229,21 @@ class _MahjongSolitaireScreenState extends State<MahjongSolitaireScreen> {
 class _Metrics {
   _Metrics(this.ux, this.ox, this.oy);
 
-  factory _Metrics.fit(double w, double h) {
-    // Breite: 30 Einheiten, Höhe: 16 Einheiten, dazu Ebenenversatz und Kante
-    final byW = w / (30 + 4 * 0.35 + 0.3);
-    final byH = h / (16 / TileView.aspect + 4 * 0.35 + 0.3);
+  factory _Metrics.fit(double w, double h, List<Slot> slots) {
+    // Größe aus der Form: Breite und Höhe in Einheiten, dazu Ebenenversatz und Kante
+    var maxX = 0;
+    var maxY = 0;
+    for (final s in slots) {
+      maxX = math.max(maxX, s.x + 2);
+      maxY = math.max(maxY, s.y + 2);
+    }
+    final units = maxX.toDouble();
+    final rows = maxY.toDouble();
+    final byW = w / (units + 4 * 0.35 + 0.3);
+    final byH = h / (rows / TileView.aspect + 4 * 0.35 + 0.3);
     final ux = math.min(byW, byH) * 0.97;
-    final bw = ux * (30 + 4 * 0.35 + 0.3);
-    final bh = ux * (16 / TileView.aspect + 4 * 0.35 + 0.3);
+    final bw = ux * (units + 4 * 0.35 + 0.3);
+    final bh = ux * (rows / TileView.aspect + 4 * 0.35 + 0.3);
     return _Metrics(ux, (w - bw) / 2, (h - bh) / 2);
   }
 

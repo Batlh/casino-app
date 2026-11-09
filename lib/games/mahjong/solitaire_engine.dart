@@ -46,6 +46,129 @@ List<Slot> turtleLayout() {
   return out;
 }
 
+enum SolitaireLayout { turtle, pyramid, fortress, dragon, cross }
+
+const solitaireLayoutNames = {
+  SolitaireLayout.turtle: 'Schildkröte',
+  SolitaireLayout.pyramid: 'Pyramide',
+  SolitaireLayout.fortress: 'Festung',
+  SolitaireLayout.dragon: 'Drache',
+  SolitaireLayout.cross: 'Kreuz',
+};
+
+void _rect(List<Slot> out, int x0, int y0, int cols, int rows, int z) {
+  for (var r = 0; r < rows; r++) {
+    for (var c = 0; c < cols; c++) {
+      out.add(Slot(x0 + 2 * c, y0 + 2 * r, z));
+    }
+  }
+}
+
+/// Pyramide: vier quadratische Ebenen, 120 Steine.
+List<Slot> pyramidLayout() {
+  final out = <Slot>[];
+  for (var k = 0; k < 4; k++) {
+    final n = 8 - 2 * k;
+    _rect(out, 2 * k, 2 * k, n, n, k);
+  }
+  return out;
+}
+
+/// Festung: Grundfläche, Mauerring, Ecktürme, 124 Steine.
+List<Slot> fortressLayout() {
+  final out = <Slot>[];
+  _rect(out, 0, 0, 12, 6, 0);
+  for (var c = 0; c < 12; c++) {
+    out.add(Slot(2 * c, 0, 1));
+    out.add(Slot(2 * c, 10, 1));
+  }
+  for (var r = 1; r < 5; r++) {
+    out.add(Slot(0, 2 * r, 1));
+    out.add(Slot(22, 2 * r, 1));
+  }
+  for (final (x, y) in const [(0, 0), (20, 0), (0, 8), (20, 8)]) {
+    _rect(out, x, y, 2, 2, 2);
+    out.add(Slot(x + 1, y + 1, 3));
+  }
+  return out;
+}
+
+/// Drache: langer Körper mit Kopf und Schwanz, 114 Steine.
+List<Slot> dragonLayout() {
+  final out = <Slot>[];
+  for (final y in const [2, 4, 6, 8]) {
+    for (var x = 4; x <= 28; x += 2) {
+      out.add(Slot(x, y, 0));
+    }
+  }
+  for (final y in const [3, 5, 7]) {
+    out
+      ..add(Slot(30, y, 0))
+      ..add(Slot(32, y, 0));
+  }
+  out
+    ..add(const Slot(0, 5, 0))
+    ..add(const Slot(2, 5, 0));
+  for (final y in const [3, 5, 7]) {
+    for (var x = 6; x <= 24; x += 2) {
+      out.add(Slot(x, y, 1));
+    }
+  }
+  for (final y in const [4, 6]) {
+    for (var x = 8; x <= 22; x += 2) {
+      out.add(Slot(x, y, 2));
+    }
+  }
+  for (var x = 10; x <= 20; x += 2) {
+    out.add(Slot(x, 5, 3));
+  }
+  out
+    ..add(const Slot(14, 5, 4))
+    ..add(const Slot(16, 5, 4));
+  return out;
+}
+
+/// Kreuz: zwei gekreuzte Balken in drei Ebenen, 72 Steine.
+List<Slot> crossLayout() {
+  final out = <Slot>[];
+  final used = <String>{};
+  void add(int x, int y, int z) {
+    if (used.add('$x,$y,$z')) out.add(Slot(x, y, z));
+  }
+
+  for (final y in const [6, 8]) {
+    for (var x = 0; x <= 24; x += 2) {
+      add(x, y, 0);
+    }
+  }
+  for (final x in const [10, 12, 14]) {
+    for (var y = 0; y <= 14; y += 2) {
+      add(x, y, 0);
+    }
+  }
+  for (var x = 2; x <= 22; x += 2) {
+    add(x, 7, 1);
+  }
+  for (var y = 1; y <= 13; y += 2) {
+    add(12, y, 1);
+  }
+  for (var x = 6; x <= 18; x += 2) {
+    add(x, 7, 2);
+  }
+  for (final y in const [3, 5, 9, 11]) {
+    add(12, y, 2);
+  }
+  return out;
+}
+
+List<Slot> layoutSlots(SolitaireLayout l) => switch (l) {
+      SolitaireLayout.turtle => turtleLayout(),
+      SolitaireLayout.pyramid => pyramidLayout(),
+      SolitaireLayout.fortress => fortressLayout(),
+      SolitaireLayout.dragon => dragonLayout(),
+      SolitaireLayout.cross => crossLayout(),
+    };
+
 /// Passen zwei Steine zusammen? Blumen untereinander und Jahreszeiten untereinander immer.
 bool tilesMatch(int a, int b) {
   if (a >= firstSeason && b >= firstSeason) return true;
@@ -60,14 +183,34 @@ List<int> solitaireTileSet() => [
     ];
 
 class MahjongSolitaire {
-  MahjongSolitaire({Random? rng}) : _rng = rng ?? Random.secure() {
-    slots = turtleLayout();
+  MahjongSolitaire({Random? rng, this.layout = SolitaireLayout.turtle}) : _rng = rng ?? Random.secure() {
+    slots = layoutSlots(layout);
     present = List.filled(slots.length, true);
     tiles = List.filled(slots.length, 0);
-    _deal(List.generate(slots.length, (i) => i), solitaireTileSet());
+    _deal(List.generate(slots.length, (i) => i), _pool(slots.length));
   }
 
   final Random _rng;
+  final SolitaireLayout layout;
+
+  /// Für kleinere Formen: zufällige passende Paare aus dem vollen Satz.
+  List<int> _pool(int n) {
+    final all = solitaireTileSet();
+    if (n >= all.length) return all;
+    final pairs = <List<int>>[];
+    final byKind = <int, List<int>>{};
+    for (final t in all) {
+      final key = t >= firstSeason ? firstSeason : (t >= firstFlower ? firstFlower : t);
+      byKind.putIfAbsent(key, () => []).add(t);
+    }
+    for (final list in byKind.values) {
+      for (var i = 0; i + 1 < list.length; i += 2) {
+        pairs.add([list[i], list[i + 1]]);
+      }
+    }
+    pairs.shuffle(_rng);
+    return [for (final p in pairs.take(n ~/ 2)) ...p];
+  }
   late final List<Slot> slots;
   late List<bool> present;
   late List<int> tiles;

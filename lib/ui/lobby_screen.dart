@@ -15,6 +15,7 @@ import '../games/mahjong/american/am_guide.dart';
 import '../games/mahjong/classic/mj_rules.dart';
 import '../games/mahjong/classic/mj_variants_screen.dart';
 import '../games/mahjong/riichi_screen.dart';
+import '../games/mahjong/shisen_screen.dart';
 import '../games/mahjong/solitaire_screen.dart';
 import '../games/mahjong/tiles.dart' show paintTile;
 import '../games/shogi/shogi_board.dart';
@@ -218,6 +219,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF1F3F6B),
         () => _MahjongArt(const [46, 10, 46]),
         () => _open(amScreen()),
+      ),
+      _Game(
+        'Shisen-Sho',
+        'Gleiche Steine mit höchstens zwei Knicken verbinden',
+        const Color(0xFF3B2A6B),
+        () => _MahjongArt(const [31, 34, 31]),
+        () => _open(const ShisenScreen()),
       ),
     ];
 

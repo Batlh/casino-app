@@ -16,6 +16,8 @@ import 'package:gluckspfennig/games/mahjong/classic/mj_rules.dart';
 import 'package:gluckspfennig/games/mahjong/classic/mj_screen.dart';
 import 'package:gluckspfennig/games/mahjong/classic/mj_variants_screen.dart';
 import 'package:gluckspfennig/games/mahjong/riichi_screen.dart';
+import 'package:gluckspfennig/games/mahjong/shisen_screen.dart';
+import 'package:gluckspfennig/games/mahjong/solitaire_engine.dart';
 import 'package:gluckspfennig/games/mahjong/solitaire_screen.dart';
 import 'package:gluckspfennig/games/pinball/pinball_screen.dart';
 import 'package:gluckspfennig/games/shogi/shogi_screen.dart';
@@ -170,6 +172,8 @@ void main() {
       'korea': MjScreen(rules: mjRules[MjVariant.korean]!, seed: 5),
       'mahjong_varianten': const MjVariantsScreen(),
       'amerikanisch': const AmScreen(seed: 3),
+      'shisen': const ShisenScreen(seed: 2),
+      'solitaer_drache': const MahjongSolitaireScreen(seed: 4, layout: SolitaireLayout.dragon),
     };
     for (final g in mahjong.entries) {
       await shot(tester, '${g.key}_handy', phone, Brightness.dark, screen: g.value);
