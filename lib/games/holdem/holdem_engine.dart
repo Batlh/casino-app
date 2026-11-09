@@ -59,7 +59,13 @@ class HoldemEngine {
     required this.bigBlind,
     Random? rng,
     this.stackedDeck,
+    this.omaha = false,
   }) : _rng = rng ?? Random.secure();
+
+  /// Omaha: vier Karten auf der Hand, davon genau zwei mit genau drei vom Tisch.
+  final bool omaha;
+
+  HandValue valueOf(List<PlayingCard> hole) => omaha ? bestOmaha(hole, board) : bestHand([...hole, ...board]);
 
   final List<HoldemPlayer> players;
   final int smallBlind;
@@ -121,7 +127,7 @@ class HoldemEngine {
     }
     dealer = _next(dealer < 0 ? players.length - 1 : dealer, (p) => p.inHand);
     final first = _next(dealer, (p) => p.inHand);
-    for (var round = 0; round < 2; round++) {
+    for (var round = 0; round < (omaha ? 4 : 2); round++) {
       var i = first;
       for (var n = 0; n < seated; n++) {
         players[i].hole.add(_draw());
@@ -239,7 +245,7 @@ class HoldemEngine {
     final showdown = live.length > 1;
     if (showdown) {
       for (final p in live) {
-        p.shownValue = bestHand([...p.hole, ...board]);
+        p.shownValue = valueOf(p.hole);
       }
     }
     final levels = players.map((p) => p.totalBet).where((b) => b > 0).toSet().toList()
@@ -352,11 +358,13 @@ double estimateEquity(
   int opponents,
   Random rng, {
   int iterations = 120,
+  bool omaha = false,
 }) {
   final known = {...hole, ...board};
   final rest = freshDeck().where((c) => !known.contains(c)).toList();
   final needBoard = 5 - board.length;
-  final need = needBoard + opponents * 2;
+  final per = omaha ? 4 : 2;
+  final need = needBoard + opponents * per;
   var score = 0.0;
   for (var it = 0; it < iterations; it++) {
     for (var i = 0; i < need; i++) {
@@ -366,12 +374,12 @@ double estimateEquity(
       rest[j] = t;
     }
     final full = [...board, ...rest.sublist(0, needBoard)];
-    final mine = bestHand([...hole, ...full]);
+    final mine = omaha ? bestOmaha(hole, full) : bestHand([...hole, ...full]);
     var best = true;
     var ties = 0;
     for (var o = 0; o < opponents; o++) {
-      final a = needBoard + o * 2;
-      final theirs = bestHand([rest[a], rest[a + 1], ...full]);
+      final a = needBoard + o * per;
+      final theirs = omaha ? bestOmaha(rest.sublist(a, a + 4), full) : bestHand([rest[a], rest[a + 1], ...full]);
       final c = mine.compareTo(theirs);
       if (c < 0) {
         best = false;
@@ -389,7 +397,7 @@ HoldemAction botDecide(HoldemEngine e, Random rng) {
   final p = e.actor;
   final style = p.style ?? BotStyle.hai;
   final opponents = max(1, e.players.where((x) => x.live).length - 1);
-  final equity = estimateEquity(p.hole, e.board, min(opponents, 4), rng) +
+  final equity = estimateEquity(p.hole, e.board, min(opponents, 4), rng, omaha: e.omaha, iterations: e.omaha ? 80 : 120) +
       (rng.nextDouble() - 0.5) * 0.08;
   final toCall = e.toCall;
   final pot = e.pot;
@@ -426,4 +434,22 @@ HoldemAction botDecide(HoldemEngine e, Random rng) {
     return HoldemAction(HoldemActionKind.raise, sizing(0.7));
   }
   return HoldemAction.fold;
+}
+
+/// Beste Omaha-Hand: genau zwei der vier Handkarten und genau drei vom Tisch.
+HandValue bestOmaha(List<PlayingCard> hole, List<PlayingCard> board) {
+  HandValue? best;
+  for (var a = 0; a < hole.length; a++) {
+    for (var b = a + 1; b < hole.length; b++) {
+      for (var x = 0; x < board.length; x++) {
+        for (var y = x + 1; y < board.length; y++) {
+          for (var z = y + 1; z < board.length; z++) {
+            final v = evaluateFive([hole[a], hole[b], board[x], board[y], board[z]]);
+            if (best == null || v.compareTo(best) > 0) best = v;
+          }
+        }
+      }
+    }
+  }
+  return best ?? bestHand([...hole, ...board]);
 }

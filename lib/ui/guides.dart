@@ -56,6 +56,23 @@ const holdemGuide = GameGuide("Texas Hold'em", [
   GuideSection('Tipp', 'Spiel mit schwachen Startkarten lieber nicht mit. Ein Paar, zwei hohe Karten oder Karten gleicher Farbe sind ein guter Anfang.'),
 ]);
 
+const omahaGuide = GameGuide('Omaha', [
+  GuideSection(
+    'Ziel',
+    'Wie Texas Hold\'em, aber jeder bekommt vier verdeckte Karten. Für die Hand zählen immer genau zwei deiner vier Karten '
+        'und genau drei der fünf Karten in der Mitte, nicht mehr und nicht weniger.',
+  ),
+  GuideSection(
+    'Achtung',
+    'Liegen vier Herz in der Mitte und du hast nur ein Herz, hast du keinen Flush: Du brauchst zwei Herz auf der Hand. '
+        'Weil jeder vier Karten hat, sind starke Hände viel häufiger als beim Hold\'em.',
+  ),
+  GuideSection(
+    'Setzen',
+    'Blinds und vier Setzrunden wie beim Hold\'em. Hier wird No-Limit gespielt, in Casinos ist Omaha meist Pot-Limit.',
+  ),
+]);
+
 const pachinkoGuide = GameGuide('Neon Pachinko', [
   GuideSection(
     'Ziel',

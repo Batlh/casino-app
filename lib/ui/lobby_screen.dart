@@ -91,6 +91,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         () => _open(const HoldemScreen()),
       ),
       _Game(
+        'Omaha',
+        'Vier Karten auf der Hand, genau zwei davon zählen',
+        const Color(0xFF5A1A3A),
+        _HoldemArt.new,
+        () => _open(const HoldemScreen(omaha: true)),
+      ),
+      _Game(
         'Neon Pachinko',
         'Kugeln, Tulpen und das Fieber-Tor',
         const Color(0xFF2B0B45),

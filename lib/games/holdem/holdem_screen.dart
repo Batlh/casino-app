@@ -38,7 +38,10 @@ const _botNames = [
 ];
 
 class HoldemScreen extends StatefulWidget {
-  const HoldemScreen({super.key});
+  const HoldemScreen({super.key, this.omaha = false});
+
+  /// Omaha statt Texas Hold'em.
+  final bool omaha;
 
   @override
   State<HoldemScreen> createState() => _HoldemScreenState();
@@ -96,6 +99,7 @@ class _HoldemScreenState extends State<HoldemScreen> {
         players: players,
         smallBlind: _table.smallBlind,
         bigBlind: _table.bigBlind,
+        omaha: widget.omaha,
       );
     });
     _nextHand();
@@ -208,8 +212,8 @@ class _HoldemScreenState extends State<HoldemScreen> {
   Widget build(BuildContext context) {
     final e = _engine;
     return GameFrame(
-      guide: holdemGuide,
-      title: "Texas Hold'em",
+      guide: widget.omaha ? omahaGuide : holdemGuide,
+      title: widget.omaha ? 'Omaha' : "Texas Hold'em",
       child: e == null ? _lobby() : _tableView(e),
     );
   }
@@ -697,13 +701,13 @@ class _Seat extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      for (var i = 0; i < 2; i++)
+                      for (var i = 0; i < p.hole.length; i++)
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 1),
                           child: DealIn(
                             key: ValueKey('$handNumber-s$seat-$i-$reveal'),
                             child: PlayingCardView(
-                              width: cardW,
+                              width: p.hole.length > 2 ? cardW * 0.62 : cardW,
                               card: reveal && !p.folded ? p.hole[i] : null,
                             ),
                           ),
