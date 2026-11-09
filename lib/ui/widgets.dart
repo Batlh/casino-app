@@ -92,12 +92,13 @@ class _BalanceBadgeState extends State<BalanceBadge> {
     final now = _wallet!.balance;
     final delta = now - _last;
     _last = now;
-    if (delta > 0 && mounted) {
-      setState(() {
+    if (!mounted) return;
+    setState(() {
+      if (delta > 0) {
         _gain = delta;
         _gainKey++;
-      });
-    }
+      }
+    });
   }
 
   @override

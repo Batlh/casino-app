@@ -238,17 +238,19 @@ class _PinballScreenState extends State<PinballScreen> with SingleTickerProvider
     final wide = box.maxWidth > box.maxHeight * 0.9;
     final controlsH = wide ? 0.0 : 150.0;
     final sideW = wide ? math.min(300.0, box.maxWidth * 0.36) : 0.0;
-    final h = box.maxHeight - controlsH - 10;
-    final w = box.maxWidth - sideW - 10;
-    final scale = math.min(w / PinballTable.width, h / PinballTable.height);
-    final view = Center(
-      child: SizedBox(
-        width: scale * PinballTable.width,
-        height: scale * PinballTable.height,
-        child: RepaintBoundary(
-          child: CustomPaint(painter: _TablePainter(() => _table, _frame)),
-        ),
-      ),
+    final view = LayoutBuilder(
+      builder: (context, b) {
+        final scale = math.min((b.maxWidth - 10) / PinballTable.width, (b.maxHeight - 6) / PinballTable.height);
+        return Center(
+          child: SizedBox(
+            width: scale * PinballTable.width,
+            height: scale * PinballTable.height,
+            child: RepaintBoundary(
+              child: CustomPaint(painter: _TablePainter(() => _table, _frame)),
+            ),
+          ),
+        );
+      },
     );
     final info = ValueListenableBuilder<int>(
       valueListenable: _frame,
