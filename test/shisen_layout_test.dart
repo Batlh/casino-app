@@ -46,26 +46,24 @@ void main() {
 
     for (final size in [(12, 6), (18, 8)]) {
       test('Brett ${size.$1}x${size.$2} ist lösbar', () {
-        for (var seed = 0; seed < 3; seed++) {
+        for (var seed = 0; seed < 5; seed++) {
           final s = ShisenSho(rng: Random(seed), cols: size.$1, rows: size.$2);
           expect(s.remaining, size.$1 * size.$2);
-          // Gierig lösen: immer das erste verbindbare Paar, bei Sackgasse rückwärts
-          var guard = 0;
-          bool solve() {
-            if (s.won) return true;
-            if (++guard > 20000) return false;
-            for (final (a, b) in s.freePairs().take(4)) {
-              s.remove(a, b);
-              if (solve()) return true;
-              s.undo();
-            }
-            return false;
+          expect(s.solution.length, size.$1 * size.$2 ~/ 2, reason: 'Aufbau ohne Lösung, Seed $seed');
+          for (final (a, b) in s.solution) {
+            expect(s.remove(a, b), isNotNull, reason: 'Seed $seed');
           }
-
-          expect(solve(), isTrue, reason: 'Seed $seed');
+          expect(s.won, isTrue);
         }
       });
     }
+
+    test('Freie Paare stimmen mit dem Weg überein', () {
+      final s = ShisenSho(rng: Random(9), cols: 12, rows: 6);
+      for (final (a, b) in s.freePairs()) {
+        expect(s.path(a, b), isNotNull);
+      }
+    });
 
     test('Mischen behält die Steine', () {
       final s = ShisenSho(rng: Random(3), cols: 12, rows: 6);

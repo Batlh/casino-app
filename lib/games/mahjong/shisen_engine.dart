@@ -18,6 +18,9 @@ class ShisenSho {
 
   /// Stein je Feld, -1 heißt leer.
   late List<int> cells;
+
+  /// Eine Lösung aus dem Aufbau: Paare in der Reihenfolge, in der man sie abräumen kann (leer nach Notfall-Mischen).
+  List<(int, int)> solution = [];
   final List<(int, int, int, int)> _history = [];
 
   int get remaining => cells.where((c) => c >= 0).length;
@@ -67,6 +70,49 @@ class ShisenSho {
     return null;
   }
 
+  /// Alle Felder, die von a aus mit höchstens zwei Knicken erreichbar sind: freie Felder unterwegs
+  /// und belegte Felder, an denen die Linie endet.
+  Set<int> reachable(int a, [List<int>? board]) {
+    board ??= cells;
+    final ax = a % cols, ay = a ~/ cols;
+    const dx = [1, -1, 0, 0];
+    const dy = [0, 0, 1, -1];
+    final out = <int>{};
+    // Kleinste Knickzahl je (Feld mit Rand, Richtung)
+    final w = cols + 2;
+    final best = List.filled(w * (rows + 2) * 4, 9);
+    final queue = Queue<(int, int, int, int)>();
+    for (var d = 0; d < 4; d++) {
+      queue.add((ax, ay, d, 0));
+    }
+    while (queue.isNotEmpty) {
+      final (x, y, d, t) = queue.removeFirst();
+      final nx = x + dx[d], ny = y + dy[d];
+      if (nx < -1 || ny < -1 || nx > cols || ny > rows) continue;
+      final inside = nx >= 0 && ny >= 0 && nx < cols && ny < rows;
+      if (inside) {
+        final i = ny * cols + nx;
+        if (i == a) continue;
+        out.add(i);
+        if (board[i] >= 0) continue;
+      }
+      for (var nd = 0; nd < 4; nd++) {
+        if (dx[nd] == -dx[d] && dy[nd] == -dy[d]) continue;
+        final nt = t + (nd == d ? 0 : 1);
+        if (nt > 2) continue;
+        final key = ((ny + 1) * w + (nx + 1)) * 4 + nd;
+        if (best[key] <= nt) continue;
+        best[key] = nt;
+        if (nd == d) {
+          queue.addFirst((nx, ny, nd, nt));
+        } else {
+          queue.add((nx, ny, nd, nt));
+        }
+      }
+    }
+    return out;
+  }
+
   bool canRemove(int a, int b) =>
       a != b && cells[a] >= 0 && cells[b] >= 0 && tilesMatch(cells[a], cells[b]) && path(a, b) != null;
 
@@ -88,11 +134,10 @@ class ShisenSho {
 
   List<(int, int)> freePairs() {
     final out = <(int, int)>[];
-    final filled = [for (var i = 0; i < cells.length; i++) if (cells[i] >= 0) i];
-    for (var i = 0; i < filled.length; i++) {
-      for (var j = i + 1; j < filled.length; j++) {
-        final a = filled[i], b = filled[j];
-        if (tilesMatch(cells[a], cells[b]) && path(a, b) != null) out.add((a, b));
+    for (var a = 0; a < cells.length; a++) {
+      if (cells[a] < 0) continue;
+      for (final b in reachable(a)) {
+        if (b > a && cells[b] >= 0 && tilesMatch(cells[a], cells[b])) out.add((a, b));
       }
     }
     return out;
@@ -122,9 +167,10 @@ class ShisenSho {
   void _deal([List<int>? positions]) {
     final pos = positions ?? List.generate(cols * rows, (i) => i);
     final pool = positions == null ? _pairs(pos.length ~/ 2) : _regroup([for (final p in pos) cells[p]]);
-    for (var attempt = 0; attempt < 400; attempt++) {
+    for (var attempt = 0; attempt < 60; attempt++) {
       final board = List.filled(cols * rows, -1);
       final empty = [...pos]..shuffle(_rng);
+      final placedPairs = <(int, int)>[];
       var ok = true;
       for (final pair in pool) {
         if (empty.length < 2) break;
@@ -133,11 +179,13 @@ class ShisenSho {
         final front = empty.take(max(2, empty.length ~/ 3)).toList()..shuffle(_rng);
         var placed = false;
         for (final a in front) {
-          final cands = [for (final b in empty) if (b != a && path(a, b, board) != null) b]..shuffle(_rng);
+          final reach = reachable(a, board);
+          final cands = [for (final b in empty) if (b != a && reach.contains(b)) b]..shuffle(_rng);
           if (cands.isEmpty) continue;
           final b = cands.first;
           board[a] = pair[0];
           board[b] = pair[1];
+          placedPairs.add((a, b));
           empty
             ..remove(a)
             ..remove(b);
@@ -153,10 +201,12 @@ class ShisenSho {
         for (final p in pos) {
           cells[p] = board[p];
         }
+        solution = placedPairs.reversed.toList();
         return;
       }
     }
     // Notfall: einfach zufällig verteilen
+    solution = [];
     final tiles = [for (final pr in pool) ...pr]..shuffle(_rng);
     for (var i = 0; i < pos.length; i++) {
       cells[pos[i]] = tiles[i];

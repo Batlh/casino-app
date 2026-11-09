@@ -299,6 +299,11 @@ final mahjongSolitaireGuide = GameGuide(
       'Münzen',
       'Jedes abgeräumte Paar bringt 2 Münzen, ein leeres Brett 300 abzüglich Tipps und Mischen.',
     ),
+    const GuideSection(
+      'Formen',
+      'Mit dem Knopf „Form“ wählst du den Aufbau: Schildkröte (144 Steine), Pyramide, Festung, Drache oder Kreuz. '
+          'Jede Form wird so gemischt, dass sie lösbar ist.',
+    ),
   ],
   tutorial: (_) => QuizTutorialScreen(title: 'Mahjong Solitär lernen', lessons: solitaireLessons),
   tutorialLabel: 'Mahjong Solitär lernen: 3 kurze Übungen',
