@@ -1,3 +1,4 @@
+import '../../core/action_log.dart';
 import 'dart:math';
 
 import 'riichi_hand.dart';
@@ -70,7 +71,7 @@ class HandResult {
   bool get draw => winner == null;
 }
 
-class RiichiGame {
+class RiichiGame with ActionLog {
   RiichiGame({Random? rng, List<String> names = const ['Du', 'Helga', 'Otto', 'Bärbel']})
       : _rng = rng ?? Random.secure(),
         players = [for (var i = 0; i < 4; i++) RPlayer(names[i], human: i == 0)];
@@ -241,13 +242,17 @@ class RiichiGame {
 
   // ---------- Aktionen am Zug ----------
 
-  void tsumo(int p) {
+  void tsumo(int p) => record(['t', p], () => _tsumoImpl(p));
+
+  void _tsumoImpl(int p) {
     if (!canTsumo(p)) return;
     final s = winScore(p, drawn!, tsumo: true)!;
     _settleWin(p, null, s, drawn!);
   }
 
-  void kan(int p, int t) {
+  void kan(int p, int t) => record(['k', p, t], () => _kanImpl(p, t));
+
+  void _kanImpl(int p, int t) {
     if (!kanOptions(p).contains(t)) return;
     final pl = players[p];
     final pon = pl.melds.where((m) => m.kind == MeldKind.pon && m.first == t);
@@ -267,7 +272,9 @@ class RiichiGame {
     _draw(p, rinshan: true);
   }
 
-  void discard(int p, int tile, {bool riichi = false}) {
+  void discard(int p, int tile, {bool riichi = false}) => record(['d', p, tile, riichi], () => _discardImpl(p, tile, riichi: riichi));
+
+  void _discardImpl(int p, int tile, {bool riichi = false}) {
     if (!canDiscard(p, tile)) return;
     final pl = players[p];
     if (riichi && !riichiDiscards(p).contains(tile)) riichi = false;
@@ -338,7 +345,9 @@ class RiichiGame {
   }
 
   /// Wertet alle Antworten aus. Fehlende Spieler gelten als „passen“.
-  void resolveClaims(Map<int, ClaimOption> choices) {
+  void resolveClaims(Map<int, ClaimOption> choices) => record(['c', [for (final e in choices.entries) [e.key, e.value.type.index, ...e.value.tiles]]], () => _resolveClaimsImpl(choices));
+
+  void _resolveClaimsImpl(Map<int, ClaimOption> choices) {
     if (phase != RPhase.claim) return;
     final t = lastDiscard!;
     final from = lastDiscarder;
@@ -488,7 +497,9 @@ class RiichiGame {
   }
 
   /// Nach der Abrechnung: nächste Hand oder Spielende.
-  void nextHand() {
+  void nextHand() => record(['n'], () => _nextHandImpl());
+
+  void _nextHandImpl() {
     if (phase != RPhase.handOver) return;
     if (_gameEnds) {
       // Übrige Riichi-Stöcke gehen an den Ersten
@@ -534,5 +545,25 @@ class RiichiGame {
       c[t]++;
     }
     return c;
+  }
+}
+
+/// Spielt einen gespeicherten Zug nach.
+void riichiApply(RiichiGame g, List<dynamic> a) {
+  int i(int k) => a[k] as int;
+  switch (a[0] as String) {
+    case 't':
+      g.tsumo(i(1));
+    case 'k':
+      g.kan(i(1), i(2));
+    case 'd':
+      g.discard(i(1), i(2), riichi: a[3] as bool);
+    case 'c':
+      g.resolveClaims({
+        for (final e in a[1] as List)
+          (e as List)[0] as int: ClaimOption(ClaimType.values[e[1] as int], [for (final t in e.sublist(2)) t as int]),
+      });
+    case 'n':
+      g.nextHand();
   }
 }

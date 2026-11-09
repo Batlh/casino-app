@@ -59,7 +59,7 @@ void main() {
       while (g.phase != AmPhase.gameOver && steps < 20000) {
         switch (g.phase) {
           case AmPhase.charleston:
-            g.submitPass(0, g.botPass(0));
+            g.submitPass(0, g.botPass(0, rng));
           case AmPhase.discard:
             final p = g.current;
             switch (amBotTurn(g, p, rng)) {

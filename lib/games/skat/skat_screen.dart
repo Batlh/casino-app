@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/scope.dart';
+import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
@@ -75,14 +76,68 @@ class _SkatScreenState extends State<SkatScreen> {
   bool _schneider = false;
   bool _schwarz = false;
 
+  /// Für Spielstände; auch beim Schließen noch erreichbar.
+  late final Settings _store;
+
   AppScope get _app => AppScope.of(context);
 
   @override
   void initState() {
     super.initState();
+    _store = AppScope.of(context).settings;
     _rng = widget.seed == null ? math.Random.secure() : math.Random(widget.seed);
-    _g = SkatGame(rng: _rng)..start();
+    _seed = widget.seed ?? math.Random.secure().nextInt(1 << 31);
+    _g = _restore() ?? _make();
     WidgetsBinding.instance.addPostFrameCallback((_) => _pump());
+  }
+
+  late int _seed;
+  static const _saveId = 'skat';
+  bool get _saving => widget.seed == null;
+
+  SkatGame _make() => SkatGame(rng: math.Random(_seed))..start();
+
+  /// Gespeicherte Partie nachspielen.
+  SkatGame? _restore() {
+    if (!_saving) return null;
+    final d = _app.settings.loadGame(_saveId);
+    if (d == null) return null;
+    try {
+      _seed = d['seed'] as int;
+      final g = _make();
+      for (final a in d['log'] as List) {
+        skatApply(g, a as List);
+      }
+      _earned = d['earned'] as int;
+      _paid = g.phase == SkatPhase.dealOver && d['paid'] == g.actionLog.length;
+      return g;
+    } catch (_) {
+      _app.settings.clearGame(_saveId);
+      _seed = math.Random.secure().nextInt(1 << 31);
+      return null;
+    }
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _persist();
+  }
+
+  @override
+  void dispose() {
+    _persist();
+    super.dispose();
+  }
+
+  void _persist() {
+    if (!_saving) return;
+    final s = _store;
+    if (_g.phase == SkatPhase.matchOver || _g.actionLog.isEmpty) {
+      s.clearGame(_saveId);
+      return;
+    }
+    s.saveGame(_saveId, {'seed': _seed, 'log': _g.actionLog, 'earned': _earned, 'paid': _paid ? _g.actionLog.length : -1});
   }
 
   bool get _humanBid => _g.phase == SkatPhase.bidding && _g.bidTurn == 0;
@@ -235,8 +290,9 @@ class _SkatScreenState extends State<SkatScreen> {
   }
 
   void _newMatch() {
+    _seed = math.Random.secure().nextInt(1 << 31);
     setState(() {
-      _g = SkatGame(rng: _rng)..start();
+      _g = _make();
       _paid = false;
       _paidMatch = false;
       _earned = 0;

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/scope.dart';
+import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
@@ -35,8 +36,60 @@ class _MahjongSolitaireScreenState extends State<MahjongSolitaireScreen> {
   bool _won = false;
   String _message = '';
 
+  /// Für Spielstände; auch beim Schließen noch erreichbar.
+  late final Settings _store;
+
   AppScope get _app => AppScope.of(context);
   int get _reward => math.max(0, mahjongSolitaireReward - _penalty);
+
+  static const _saveId = 'mahjongSolitaire';
+  bool get _saving => widget.seed == null;
+
+  @override
+  void initState() {
+    super.initState();
+    _store = AppScope.of(context).settings;
+    if (!_saving) return;
+    final d = _app.settings.loadGame(_saveId);
+    if (d == null) return;
+    try {
+      _layout = SolitaireLayout.values.byName(d['layout'] as String);
+      final e = MahjongSolitaire(layout: _layout);
+      final tiles = [for (final t in d['tiles'] as List) t as int];
+      final present = [for (final p in d['present'] as List) p as bool];
+      if (tiles.length != e.slots.length || present.length != e.slots.length) throw const FormatException();
+      e
+        ..tiles = tiles
+        ..present = present;
+      _e = e;
+      _penalty = d['penalty'] as int;
+      _message = 'Spielstand geladen';
+    } catch (_) {
+      _app.settings.clearGame(_saveId);
+    }
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _persist();
+  }
+
+  @override
+  void dispose() {
+    _persist();
+    super.dispose();
+  }
+
+  void _persist() {
+    if (!_saving) return;
+    final s = _store;
+    if (_won || _e.present.every((p) => p)) {
+      s.clearGame(_saveId);
+      return;
+    }
+    s.saveGame(_saveId, {'layout': _layout.name, 'tiles': _e.tiles, 'present': _e.present, 'penalty': _penalty});
+  }
 
   Future<void> _chooseLayout() async {
     final opts = SolitaireLayout.values;

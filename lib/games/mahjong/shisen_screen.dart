@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/scope.dart';
+import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../ui/guide.dart';
 import '../../ui/widgets.dart';
@@ -92,8 +93,52 @@ class _ShisenScreenState extends State<ShisenScreen> {
   bool _won = false;
   String _message = '';
 
+  /// Für Spielstände; auch beim Schließen noch erreichbar.
+  late final Settings _store;
+
   AppScope get _app => AppScope.of(context);
   int get _baseReward => shisenSizes[_size]!.$3;
+
+  static const _saveId = 'shisen';
+  bool get _saving => widget.seed == null;
+
+  @override
+  void initState() {
+    super.initState();
+    _store = AppScope.of(context).settings;
+    if (!_saving) return;
+    final d = _app.settings.loadGame(_saveId);
+    if (d == null) return;
+    try {
+      final size = d['size'] as String;
+      if (!shisenSizes.containsKey(size)) throw const FormatException();
+      final cells = [for (final c in d['cells'] as List) c as int];
+      final dims = shisenSizes[size]!;
+      if (cells.length != dims.$1 * dims.$2) throw const FormatException();
+      _size = size;
+      _e = _make()..cells = cells;
+      _penalty = d['penalty'] as int;
+      _message = 'Spielstand geladen';
+    } catch (_) {
+      _app.settings.clearGame(_saveId);
+    }
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _persist();
+  }
+
+  void _persist() {
+    if (!_saving) return;
+    final s = _store;
+    if (_won || _e.remaining == _e.cols * _e.rows) {
+      s.clearGame(_saveId);
+      return;
+    }
+    s.saveGame(_saveId, {'size': _size, 'cells': _e.cells, 'penalty': _penalty});
+  }
   int get _reward => math.max(0, _baseReward - _penalty);
 
   ShisenSho _make([int? seed]) {
@@ -104,6 +149,7 @@ class _ShisenScreenState extends State<ShisenScreen> {
   @override
   void dispose() {
     _lineTimer?.cancel();
+    _persist();
     super.dispose();
   }
 

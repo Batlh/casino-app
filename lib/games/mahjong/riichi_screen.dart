@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/scope.dart';
+import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guides.dart';
@@ -37,20 +38,75 @@ class _RiichiScreenState extends State<RiichiScreen> {
   int _earned = 0;
   Map<int, ClaimOption> _pending = {};
 
+  /// Für Spielstände; auch beim Schließen noch erreichbar.
+  late final Settings _store;
+
   AppScope get _app => AppScope.of(context);
   RPlayer get _me => _g.players[0];
+
+  late int _seed;
+  static const _saveId = 'riichi';
+  bool get _saving => widget.seed == null;
+
+  RiichiGame _make() => RiichiGame(rng: math.Random(_seed))..start();
 
   @override
   void initState() {
     super.initState();
+    _store = AppScope.of(context).settings;
     _rng = widget.seed == null ? math.Random.secure() : math.Random(widget.seed);
-    _g = RiichiGame(rng: _rng)..start();
+    _seed = widget.seed ?? math.Random.secure().nextInt(1 << 31);
+    _g = _restore() ?? _make();
     WidgetsBinding.instance.addPostFrameCallback((_) => _pump());
   }
 
+  /// Gespeicherte Partie nachspielen.
+  RiichiGame? _restore() {
+    if (!_saving) return null;
+    final d = _app.settings.loadGame(_saveId);
+    if (d == null) return null;
+    try {
+      _seed = d['seed'] as int;
+      final g = _make();
+      for (final a in d['log'] as List) {
+        riichiApply(g, a as List);
+      }
+      _earned = d['earned'] as int;
+      _handPaid = g.phase == RPhase.handOver && d['paid'] == g.actionLog.length;
+      return g;
+    } catch (_) {
+      _app.settings.clearGame(_saveId);
+      _seed = math.Random.secure().nextInt(1 << 31);
+      return null;
+    }
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _persist();
+  }
+
+  @override
+  void dispose() {
+    _persist();
+    super.dispose();
+  }
+
+  void _persist() {
+    if (!_saving) return;
+    final s = _store;
+    if (_g.phase == RPhase.gameOver || _g.actionLog.isEmpty) {
+      s.clearGame(_saveId);
+      return;
+    }
+    s.saveGame(_saveId, {'seed': _seed, 'log': _g.actionLog, 'earned': _earned, 'paid': _handPaid ? _g.actionLog.length : -1});
+  }
+
   void _newGame() {
+    _seed = math.Random.secure().nextInt(1 << 31);
     setState(() {
-      _g = RiichiGame(rng: _rng)..start();
+      _g = _make();
       _selected = null;
       _riichiMode = false;
       _rewarded = false;

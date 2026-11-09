@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/scope.dart';
+import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
@@ -61,14 +62,68 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
   bool _paidGame = false;
   int _earned = 0;
 
+  /// Für Spielstände; auch beim Schließen noch erreichbar.
+  late final Settings _store;
+
   AppScope get _app => AppScope.of(context);
 
   @override
   void initState() {
     super.initState();
+    _store = AppScope.of(context).settings;
     _rng = widget.seed == null ? math.Random.secure() : math.Random(widget.seed);
-    _g = AhGame(rng: _rng)..start();
+    _seed = widget.seed ?? math.Random.secure().nextInt(1 << 31);
+    _g = _restore() ?? _make();
     WidgetsBinding.instance.addPostFrameCallback((_) => _pump());
+  }
+
+  late int _seed;
+  static const _saveId = 'arschloch';
+  bool get _saving => widget.seed == null;
+
+  AhGame _make() => AhGame(rng: math.Random(_seed))..start();
+
+  /// Gespeicherte Partie nachspielen.
+  AhGame? _restore() {
+    if (!_saving) return null;
+    final d = _app.settings.loadGame(_saveId);
+    if (d == null) return null;
+    try {
+      _seed = d['seed'] as int;
+      final g = _make();
+      for (final a in d['log'] as List) {
+        ahApply(g, a as List);
+      }
+      _earned = d['earned'] as int;
+      _paidRound = g.phase == AhPhase.roundOver && d['paid'] == g.actionLog.length;
+      return g;
+    } catch (_) {
+      _app.settings.clearGame(_saveId);
+      _seed = math.Random.secure().nextInt(1 << 31);
+      return null;
+    }
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _persist();
+  }
+
+  @override
+  void dispose() {
+    _persist();
+    super.dispose();
+  }
+
+  void _persist() {
+    if (!_saving) return;
+    final s = _store;
+    if (_g.phase == AhPhase.gameOver || _g.actionLog.isEmpty) {
+      s.clearGame(_saveId);
+      return;
+    }
+    s.saveGame(_saveId, {'seed': _seed, 'log': _g.actionLog, 'earned': _earned, 'paid': _paidRound ? _g.actionLog.length : -1});
   }
 
   bool get _myTurn => !_running && _g.phase == AhPhase.play && _g.current == 0;
@@ -169,8 +224,9 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
   }
 
   void _newGame() {
+    _seed = math.Random.secure().nextInt(1 << 31);
     setState(() {
-      _g = AhGame(rng: _rng)..start();
+      _g = _make();
       _paidRound = false;
       _paidGame = false;
       _earned = 0;

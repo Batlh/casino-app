@@ -1,3 +1,4 @@
+import '../../../core/action_log.dart';
 import 'dart:math';
 
 import '../tiles.dart';
@@ -46,7 +47,7 @@ class AmResult {
 const charlestonNames = ['nach rechts', 'über den Tisch', 'nach links'];
 const _charlestonDirs = [1, 2, 3];
 
-class AmGame {
+class AmGame with ActionLog {
   AmGame({Random? rng, List<String> names = const ['Du', 'Betty', 'Ruth', 'Sylvia']})
       : _rng = rng ?? Random.secure(),
         players = [for (var i = 0; i < 4; i++) AmPlayer(names[i], human: i == 0)];
@@ -114,7 +115,8 @@ class AmGame {
   // ---------- Charleston ----------
 
   /// Drei Steine, die der Computer am wenigsten braucht. Joker gibt niemand weg.
-  List<int> botPass(int p) {
+  /// [rng] nur für Vorschläge an den Menschen, damit das Spiel selbst gleich bleibt.
+  List<int> botPass(int p, [Random? rng]) {
     final pl = players[p];
     final target = amTargets(pl.hand, pl.exposed, limit: 1);
     final useless = target.isEmpty ? <int>[] : amUseless(pl.hand, target.first.$1, pl.exposed);
@@ -124,7 +126,7 @@ class AmGame {
       rest.remove(t);
     }
     rest.removeWhere((t) => t == jokerKind);
-    rest.shuffle(_rng);
+    rest.shuffle(rng ?? _rng);
     while (out.length < 3 && rest.isNotEmpty) {
       out.add(rest.removeLast());
     }
@@ -137,7 +139,9 @@ class AmGame {
     return tiles.every(h.remove);
   }
 
-  void submitPass(int p, List<int> tiles) {
+  void submitPass(int p, List<int> tiles) => record(['x', p, [...tiles]], () => _submitPassImpl(p, tiles));
+
+  void _submitPassImpl(int p, List<int> tiles) {
     if (phase != AmPhase.charleston || !validPass(p, tiles)) return;
     players[p].pass = [...tiles];
     if (players.any((q) => q.pass.length != 3)) return;
@@ -203,7 +207,9 @@ class AmGame {
     return out;
   }
 
-  void swapJoker(int p, int owner, int index) {
+  void swapJoker(int p, int owner, int index) => record(['j', p, owner, index], () => _swapJokerImpl(p, owner, index));
+
+  void _swapJokerImpl(int p, int owner, int index) {
     if (!jokerSwaps(p).contains((owner, index))) return;
     final e = players[owner].exposed[index];
     final pl = players[p];
@@ -215,13 +221,17 @@ class AmGame {
     lastEvent = '${_who(p)} ${p == 0 ? 'holst' : 'holt'} einen Joker';
   }
 
-  void mahjong(int p) {
+  void mahjong(int p) => record(['m', p], () => _mahjongImpl(p));
+
+  void _mahjongImpl(int p) {
     final c = winningHand(p);
     if (!canMahjong(p) || c == null) return;
     _settle(p, null, c);
   }
 
-  void discard(int p, int t) {
+  void discard(int p, int t) => record(['d', p, t], () => _discardImpl(p, t));
+
+  void _discardImpl(int p, int t) {
     if (!canDiscard(p, t)) return;
     final pl = players[p];
     pl.hand.remove(t);
@@ -272,7 +282,9 @@ class AmGame {
     }
   }
 
-  void resolveClaims(Map<int, AmClaim> choices) {
+  void resolveClaims(Map<int, AmClaim> choices) => record(['c', [for (final e in choices.entries) [e.key, e.value.mahjong ? 1 : 0, e.value.count]]], () => _resolveClaimsImpl(choices));
+
+  void _resolveClaimsImpl(Map<int, AmClaim> choices) {
     if (phase != AmPhase.claim) return;
     final t = lastDiscard!;
     for (var k = 1; k <= 3; k++) {
@@ -369,7 +381,9 @@ class AmGame {
 
   bool get gameWillEnd => handsPlayed >= hands;
 
-  void nextHand() {
+  void nextHand() => record(['n'], () => _nextHandImpl());
+
+  void _nextHandImpl() {
     if (phase != AmPhase.handOver) return;
     if (gameWillEnd) {
       phase = AmPhase.gameOver;
@@ -456,4 +470,30 @@ AmClaim amBotClaim(AmGame g, int q, List<AmClaim> options) {
     if (!c.hand.concealed && c.groups.any((gr) => gr.$1 == k && gr.$2 == o.count) && before.first.$2 <= 6) return o;
   }
   return const AmClaim.pass();
+}
+
+/// Spielt einen gespeicherten Zug nach.
+void amApply(AmGame g, List<dynamic> a) {
+  int i(int k) => a[k] as int;
+  switch (a[0] as String) {
+    case 'x':
+      g.submitPass(i(1), [for (final t in a[2] as List) t as int]);
+    case 'j':
+      g.swapJoker(i(1), i(2), i(3));
+    case 'm':
+      g.mahjong(i(1));
+    case 'd':
+      g.discard(i(1), i(2));
+    case 'c':
+      g.resolveClaims({
+        for (final e in a[1] as List)
+          (e as List)[0] as int: e[1] == 1
+              ? const AmClaim.mahjong()
+              : (e[2] as int) > 0
+                  ? AmClaim.expose(e[2] as int)
+                  : const AmClaim.pass(),
+      });
+    case 'n':
+      g.nextHand();
+  }
 }

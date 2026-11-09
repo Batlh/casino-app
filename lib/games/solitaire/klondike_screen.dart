@@ -3,7 +3,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/saves.dart';
 import '../../core/scope.dart';
+import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
@@ -38,22 +40,78 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
   SolitaireHint? _hint;
   final Set<PlayingCard> _paidCards = {};
   final _clock = Stopwatch()..start();
+  Duration _clockBase = Duration.zero;
   Timer? _timer;
 
+  /// Für Spielstände; auch beim Schließen noch erreichbar.
+  late final Settings _store;
+
   AppScope get _app => AppScope.of(context);
+  Duration get _elapsed => _clockBase + _clock.elapsed;
+
+  static const _saveId = 'klondike';
 
   @override
   void initState() {
     super.initState();
+    _store = AppScope.of(context).settings;
+    _restore();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted && !_won) setState(() {});
+      _persist();
     });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _persist();
     super.dispose();
+  }
+
+  /// Spielstand sichern, nach einem Sieg löschen.
+  void _persist() {
+    final s = _store;
+    if (_won) {
+      s.clearGame(_saveId);
+      return;
+    }
+    if (_e.moves == 0) {
+      s.clearGame(_saveId);
+      return;
+    }
+    s.saveGame(_saveId, {
+      'draw': _drawCount,
+      'stock': tableCodes(_e.stock),
+      'waste': tableCodes(_e.waste),
+      'found': [for (final f in _e.foundations) tableCodes(f)],
+      'tab': [for (final t in _e.tableau) tableCodes(t)],
+      'moves': _e.moves,
+      'hints': _hints,
+      'paid': cardCodes(_paidCards),
+      'secs': _elapsed.inSeconds,
+    });
+  }
+
+  void _restore() {
+    final d = _app.settings.loadGame(_saveId);
+    if (d == null) return;
+    try {
+      _drawCount = d['draw'] as int;
+      _e = KlondikeEngine(drawCount: _drawCount)
+        ..stock = tableFromCodes(d['stock'] as List)
+        ..waste = tableFromCodes(d['waste'] as List)
+        ..foundations = [for (final f in d['found'] as List) tableFromCodes(f as List)]
+        ..tableau = [for (final t in d['tab'] as List) tableFromCodes(t as List)]
+        ..moves = d['moves'] as int;
+      _hints = d['hints'] as int;
+      _paidCards.addAll(cardsFromCodes(d['paid'] as List));
+      _clockBase = Duration(seconds: d['secs'] as int);
+      _message = 'Spielstand geladen';
+    } catch (_) {
+      _app.settings.clearGame(_saveId);
+      _e = KlondikeEngine(drawCount: _drawCount);
+    }
   }
 
   void _newGame(int draw) {
@@ -67,6 +125,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
       _hint = null;
       _lost = false;
       _paidCards.clear();
+      _clockBase = Duration.zero;
       _clock
         ..reset()
         ..start();
@@ -177,6 +236,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     final tips = _hints == 0 ? '' : ' (${_hints == 1 ? 'ein Tipp' : '$_hints Tipps'} abgezogen)';
     setState(() {
       _won = true;
+      _app.settings.clearGame(_saveId);
       _hint = null;
       _message = 'Gewonnen! +${formatCoins(reward)} Münzen$tips';
     });
@@ -203,7 +263,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
       ? 'Keine Züge mehr möglich. Leider verloren, Rückgängig oder neues Spiel'
       : _message.isNotEmpty
       ? _message
-      : '${_e.moves} Züge, ${formatClock(_clock.elapsed)}';
+      : '${_e.moves} Züge, ${formatClock(_elapsed)}';
 
   @override
   Widget build(BuildContext context) {

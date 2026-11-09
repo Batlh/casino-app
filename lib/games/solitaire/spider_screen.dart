@@ -3,7 +3,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/saves.dart';
 import '../../core/scope.dart';
+import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
@@ -37,22 +39,75 @@ class _SpiderScreenState extends State<SpiderScreen> {
   SolitaireHint? _hint;
   int _paidRuns = 0;
   final _clock = Stopwatch()..start();
+  Duration _clockBase = Duration.zero;
   Timer? _timer;
 
+  /// Für Spielstände; auch beim Schließen noch erreichbar.
+  late final Settings _store;
+
   AppScope get _app => AppScope.of(context);
+  Duration get _elapsed => _clockBase + _clock.elapsed;
+
+  static const _saveId = 'spider';
 
   @override
   void initState() {
     super.initState();
+    _store = AppScope.of(context).settings;
+    _restore();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted && !_won) setState(() {});
+      _persist();
     });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _persist();
     super.dispose();
+  }
+
+  void _persist() {
+    final s = _store;
+    if (_won) {
+      s.clearGame(_saveId);
+      return;
+    }
+    if (_e.moves == 0) {
+      s.clearGame(_saveId);
+      return;
+    }
+    s.saveGame(_saveId, {
+      'suits': _suits,
+      'stock': tableCodes(_e.stock),
+      'tab': [for (final t in _e.tableau) tableCodes(t)],
+      'done': [for (final c in _e.completed) c.name],
+      'moves': _e.moves,
+      'hints': _hints,
+      'paid': _paidRuns,
+      'secs': _elapsed.inSeconds,
+    });
+  }
+
+  void _restore() {
+    final d = _app.settings.loadGame(_saveId);
+    if (d == null) return;
+    try {
+      _suits = d['suits'] as int;
+      _e = SpiderEngine(suits: _suits)
+        ..stock = tableFromCodes(d['stock'] as List)
+        ..tableau = [for (final t in d['tab'] as List) tableFromCodes(t as List)]
+        ..completed = [for (final n in d['done'] as List) Suit.values.byName(n as String)]
+        ..moves = d['moves'] as int;
+      _hints = d['hints'] as int;
+      _paidRuns = d['paid'] as int;
+      _clockBase = Duration(seconds: d['secs'] as int);
+      _message = 'Spielstand geladen';
+    } catch (_) {
+      _app.settings.clearGame(_saveId);
+      _e = SpiderEngine(suits: _suits);
+    }
   }
 
   void _newGame(int suits) {
@@ -66,6 +121,7 @@ class _SpiderScreenState extends State<SpiderScreen> {
       _hint = null;
       _lost = false;
       _paidRuns = 0;
+      _clockBase = Duration.zero;
       _clock
         ..reset()
         ..start();
@@ -162,6 +218,7 @@ class _SpiderScreenState extends State<SpiderScreen> {
       final tips = _hints == 0 ? '' : ' (${_hints == 1 ? 'ein Tipp' : '$_hints Tipps'} abgezogen)';
       setState(() {
         _won = true;
+        _app.settings.clearGame(_saveId);
         _hint = null;
         _message = 'Gewonnen! +${formatCoins(reward)} Münzen$tips';
       });
@@ -189,7 +246,7 @@ class _SpiderScreenState extends State<SpiderScreen> {
       ? 'Keine Züge mehr möglich. Leider verloren, Rückgängig oder neues Spiel'
       : _message.isNotEmpty
       ? _message
-      : '${_e.moves} Züge, ${formatClock(_clock.elapsed)}, ${_e.completed.length} von 8 Reihen';
+      : '${_e.moves} Züge, ${formatClock(_elapsed)}, ${_e.completed.length} von 8 Reihen';
 
   @override
   Widget build(BuildContext context) {

@@ -1,3 +1,4 @@
+import '../../../core/action_log.dart';
 import 'dart:math';
 
 import '../riichi_hand.dart';
@@ -89,7 +90,7 @@ class MjHandResult {
   bool get draw => wins.isEmpty;
 }
 
-class MjGame {
+class MjGame with ActionLog {
   MjGame(this.rules, {Random? rng, List<String>? names})
       : _rng = rng ?? Random.secure(),
         players = [
@@ -246,7 +247,9 @@ class MjGame {
   bool validExchange(List<int> tiles) =>
       tiles.length == 3 && tiles.every((t) => t < 27) && tiles.map(suitOf).toSet().length == 1;
 
-  void submitExchange(int p, List<int> tiles) {
+  void submitExchange(int p, List<int> tiles) => record(['x', p, [...tiles]], () => _submitExchangeImpl(p, tiles));
+
+  void _submitExchangeImpl(int p, List<int> tiles) {
     if (phase != MjPhase.exchange || !validExchange(tiles)) return;
     final pl = players[p];
     final h = [...pl.hand];
@@ -297,7 +300,9 @@ class MjGame {
     }
   }
 
-  void chooseVoid(int p, int suit) {
+  void chooseVoid(int p, int suit) => record(['v', p, suit], () => _chooseVoidImpl(p, suit));
+
+  void _chooseVoidImpl(int p, int suit) {
     if (phase != MjPhase.voidChoice) return;
     players[p].voidSuit = suit;
     if (players.any((q) => q.voidSuit == null)) return;
@@ -418,7 +423,9 @@ class MjGame {
 
   // ---------- Aktionen am Zug ----------
 
-  void tsumo(int p) {
+  void tsumo(int p) => record(['t', p], () => _tsumoImpl(p));
+
+  void _tsumoImpl(int p) {
     if (!canTsumo(p)) return;
     final s = winScore(p, drawn!, tsumo: true)!;
     final t = drawn!;
@@ -427,7 +434,9 @@ class MjGame {
     _afterWins([p], p);
   }
 
-  void kan(int p, int t) {
+  void kan(int p, int t) => record(['k', p, t], () => _kanImpl(p, t));
+
+  void _kanImpl(int p, int t) {
     if (!kanOptions(p).contains(t)) return;
     final pl = players[p];
     final pon = pl.melds.where((m) => m.kind == MeldKind.pon && m.first == t);
@@ -489,7 +498,9 @@ class MjGame {
     }
   }
 
-  void discard(int p, int tile) {
+  void discard(int p, int tile) => record(['d', p, tile], () => _discardImpl(p, tile));
+
+  void _discardImpl(int p, int tile) {
     if (!canDiscard(p, tile)) return;
     final pl = players[p];
     pl.hand.remove(tile);
@@ -555,7 +566,9 @@ class MjGame {
     _draw(nextActive(lastDiscarder));
   }
 
-  void resolveClaims(Map<int, MjOption> choices) {
+  void resolveClaims(Map<int, MjOption> choices) => record(['c', [for (final e in choices.entries) [e.key, e.value.type.index, ...e.value.tiles]]], () => _resolveClaimsImpl(choices));
+
+  void _resolveClaimsImpl(Map<int, MjOption> choices) {
     if (phase != MjPhase.claim) return;
     final t = lastDiscard!;
     final from = lastDiscarder;
@@ -752,7 +765,9 @@ class MjGame {
         (rules.startPoints > 0 && players.any((p) => p.points < 0));
   }
 
-  void nextHand() {
+  void nextHand() => record(['n'], () => _nextHandImpl());
+
+  void _nextHandImpl() {
     if (phase != MjPhase.handOver) return;
     if (_gameEnds) {
       phase = MjPhase.gameOver;
@@ -787,5 +802,29 @@ class MjGame {
       if (t < tileKinds) c[t]++;
     }
     return c;
+  }
+}
+
+/// Spielt einen gespeicherten Zug nach.
+void mjApply(MjGame g, List<dynamic> a) {
+  int i(int k) => a[k] as int;
+  switch (a[0] as String) {
+    case 'x':
+      g.submitExchange(i(1), [for (final t in a[2] as List) t as int]);
+    case 'v':
+      g.chooseVoid(i(1), i(2));
+    case 't':
+      g.tsumo(i(1));
+    case 'k':
+      g.kan(i(1), i(2));
+    case 'd':
+      g.discard(i(1), i(2));
+    case 'c':
+      g.resolveClaims({
+        for (final e in a[1] as List)
+          (e as List)[0] as int: MjOption(MjClaimType.values[e[1] as int], [for (final t in e.sublist(2)) t as int]),
+      });
+    case 'n':
+      g.nextHand();
   }
 }

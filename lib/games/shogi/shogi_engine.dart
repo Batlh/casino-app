@@ -142,6 +142,7 @@ class ShogiGame {
   List<int> hand(int c) => c == sente ? handSente : handGote;
   ShogiMove? get lastMove => _undo.isEmpty ? null : _undo.last.move;
   bool get canUndo => _undo.isNotEmpty;
+  List<ShogiMove> get moves => [for (final u in _undo) u.move];
   int get plies => _undo.length;
 
   ShogiGame copy() {

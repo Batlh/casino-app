@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/scope.dart';
+import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guides.dart';
@@ -44,6 +45,9 @@ class _ShogiScreenState extends State<ShogiScreen> {
   bool _turnBoard = false;
   int _token = 0;
 
+  /// Für Spielstände; auch beim Schließen noch erreichbar.
+  late final Settings _store;
+
   AppScope get _app => AppScope.of(context);
   ShogiLevel? get _level => _setup.level == null ? null : ShogiLevel.values[_setup.level!];
   int get _humanColor => _setup.humanFirst ? sente : gote;
@@ -52,10 +56,57 @@ class _ShogiScreenState extends State<ShogiScreen> {
   bool get _humanTurn => !_over && !_thinking && (_level == null || _g.side == _humanColor);
   bool get _flipped => _level != null ? _humanColor == gote : (_turnBoard && _g.side == gote);
 
+  static const _saveId = 'shogi';
+
   @override
   void initState() {
     super.initState();
+    _store = AppScope.of(context).settings;
+    _restore();
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeComputer());
+  }
+
+  /// Stellt die gespeicherte Partie wieder her, indem alle Züge nachgespielt werden.
+  void _restore() {
+    final d = _app.settings.loadGame(_saveId);
+    if (d == null) return;
+    try {
+      final level = d['level'] as int?;
+      _setup = BoardSetup(level: level, humanFirst: d['first'] as bool);
+      final g = ShogiGame();
+      for (final n in d['moves'] as List) {
+        final m = g.legalMoves().firstWhere((x) => x.usi == n);
+        g.make(m);
+      }
+      _g = g;
+    } catch (_) {
+      _app.settings.clearGame(_saveId);
+    }
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _persist();
+  }
+
+  @override
+  void dispose() {
+    _persist();
+    super.dispose();
+  }
+
+  void _persist() {
+    final s = _store;
+    if (_over || _g.moves.isEmpty) {
+      s.clearGame(_saveId);
+      return;
+    }
+    s.saveGame(_saveId, {
+      'level': _setup.level,
+      'first': _setup.humanFirst,
+      'moves': [for (final m in _g.moves) m.usi],
+    });
   }
 
   Future<void> _newGame() async {

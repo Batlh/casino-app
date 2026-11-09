@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -54,6 +56,34 @@ class Settings extends ChangeNotifier {
   static const maxCardScale = 1.6;
 
   final SharedPreferences _prefs;
+
+  // ---------- Spielstände ----------
+
+  /// Gespeicherter Spielstand eines Spiels, oder null.
+  Map<String, dynamic>? loadGame(String id) {
+    final raw = _prefs.getString('save.$id');
+    if (raw == null) return null;
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  final Map<String, String> _lastSaved = {};
+
+  /// Speichert den Spielstand, wenn er sich geändert hat.
+  void saveGame(String id, Map<String, dynamic> data) {
+    final raw = jsonEncode(data);
+    if (_lastSaved[id] == raw) return;
+    _lastSaved[id] = raw;
+    _prefs.setString('save.$id', raw);
+  }
+
+  void clearGame(String id) {
+    _lastSaved.remove(id);
+    _prefs.remove('save.$id');
+  }
   CardNames _cardNames;
   bool _penaltyEndsTurn;
   bool _jackOnJack;

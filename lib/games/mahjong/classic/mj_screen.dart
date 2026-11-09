@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/scope.dart';
+import '../../../core/settings.dart';
 import '../../../core/sfx.dart';
 import '../../../core/theme.dart';
 import '../../../ui/guide.dart';
@@ -58,21 +59,77 @@ class _MjScreenState extends State<MjScreen> {
   String _waitKey = '';
   List<int> _waitCache = [];
 
+  /// Für Spielstände; auch beim Schließen noch erreichbar.
+  late final Settings _store;
+
   AppScope get _app => AppScope.of(context);
   MjPlayer get _me => _g.players[0];
   MjRules get _r => widget.rules;
 
+  /// Startwert für die Mauer; die Computer würfeln getrennt davon.
+  late int _seed;
+  String get _saveId => 'mj.${_r.variant.name}';
+  bool get _saving => widget.seed == null;
+
+  MjGame _make() => MjGame(_r, rng: math.Random(_seed))..start();
+
   @override
   void initState() {
     super.initState();
+    _store = AppScope.of(context).settings;
     _rng = widget.seed == null ? math.Random.secure() : math.Random(widget.seed);
-    _g = MjGame(_r, rng: _rng)..start();
+    _seed = widget.seed ?? math.Random.secure().nextInt(1 << 31);
+    _g = _restore() ?? _make();
     WidgetsBinding.instance.addPostFrameCallback((_) => _pump());
   }
 
+  /// Gespeicherte Partie nachspielen.
+  MjGame? _restore() {
+    if (!_saving) return null;
+    final d = _app.settings.loadGame(_saveId);
+    if (d == null) return null;
+    try {
+      _seed = d['seed'] as int;
+      final g = _make();
+      for (final a in d['log'] as List) {
+        mjApply(g, a as List);
+      }
+      _earned = d['earned'] as int;
+      _handPaid = g.phase == MjPhase.handOver && d['paid'] == g.actionLog.length;
+      return g;
+    } catch (_) {
+      _app.settings.clearGame(_saveId);
+      _seed = math.Random.secure().nextInt(1 << 31);
+      return null;
+    }
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _persist();
+  }
+
+  @override
+  void dispose() {
+    _persist();
+    super.dispose();
+  }
+
+  void _persist() {
+    if (!_saving) return;
+    final s = _store;
+    if (_g.phase == MjPhase.gameOver || _g.actionLog.isEmpty) {
+      s.clearGame(_saveId);
+      return;
+    }
+    s.saveGame(_saveId, {'seed': _seed, 'log': _g.actionLog, 'earned': _earned, 'paid': _handPaid ? _g.actionLog.length : -1});
+  }
+
   void _newGame() {
+    _seed = math.Random.secure().nextInt(1 << 31);
     setState(() {
-      _g = MjGame(_r, rng: _rng)..start();
+      _g = _make();
       _selected = null;
       _exchangePick.clear();
       _rewarded = false;

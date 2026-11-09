@@ -1,3 +1,5 @@
+import '../../core/action_log.dart';
+import '../../core/saves.dart';
 import 'dart:math';
 
 import '../cards/playing_card.dart';
@@ -135,7 +137,7 @@ class SkatResult {
   final List<String> lines;
 }
 
-class SkatGame {
+class SkatGame with ActionLog {
   SkatGame({Random? rng, this.deals = 12, List<String> names = const ['Du', 'Horst', 'Inge']})
       : _rng = rng ?? Random.secure(),
         players = [for (var i = 0; i < 3; i++) SkatPlayer(names[i], human: i == 0)];
@@ -219,7 +221,9 @@ class SkatGame {
   int get askedValue => _waitingListener ? bid : nextBid(bid == 0 ? 17 : bid);
 
   /// Sagen (als Sager) oder halten (als Hörer).
-  void bidYes(int p) {
+  void bidYes(int p) => record(['y', p], () => _bidYesImpl(p));
+
+  void _bidYesImpl(int p) {
     if (phase != SkatPhase.bidding || p != bidTurn) return;
     if (_waitingListener) {
       lastEvent = '${_who(p)}: Ja';
@@ -236,7 +240,9 @@ class SkatGame {
     }
   }
 
-  void bidPass(int p) {
+  void bidPass(int p) => record(['b', p], () => _bidPassImpl(p));
+
+  void _bidPassImpl(int p) {
     if (phase != SkatPhase.bidding || p != bidTurn) return;
     passed.add(p);
     lastEvent = '${_who(p)}: Passe';
@@ -278,7 +284,9 @@ class SkatGame {
 
   // ---------- Skat, Drücken, Ansagen ----------
 
-  void takeSkat() {
+  void takeSkat() => record(['s'], () => _takeSkatImpl());
+
+  void _takeSkatImpl() {
     if (phase != SkatPhase.skatChoice) return;
     players[declarer].hand = sortSkat([...players[declarer].hand, ...skat], null);
     skat = [];
@@ -286,13 +294,17 @@ class SkatGame {
     phase = SkatPhase.discard;
   }
 
-  void playHand() {
+  void playHand() => record(['h'], () => _playHandImpl());
+
+  void _playHandImpl() {
     if (phase != SkatPhase.skatChoice) return;
     hand = true;
     phase = SkatPhase.declare;
   }
 
-  void discard(List<PlayingCard> two) {
+  void discard(List<PlayingCard> two) => record(['d', for (final c in two) cardCode(c)], () => _discardImpl(two));
+
+  void _discardImpl(List<PlayingCard> two) {
     if (phase != SkatPhase.discard || two.length != 2 || two[0] == two[1]) return;
     final h = players[declarer].hand;
     if (!two.every(h.contains)) return;
@@ -304,7 +316,9 @@ class SkatGame {
   }
 
   /// Ansagen nur bei Handspielen, Schwarz setzt Schneider voraus.
-  void declare(SkatType t, {bool schneider = false, bool schwarz = false}) {
+  void declare(SkatType t, {bool schneider = false, bool schwarz = false}) => record(['a', t.index, schneider, schwarz], () => _declareImpl(t, schneider: schneider, schwarz: schwarz));
+
+  void _declareImpl(SkatType t, {bool schneider = false, bool schwarz = false}) {
     if (phase != SkatPhase.declare) return;
     type = t;
     schneiderAnnounced = hand && t != SkatType.nullGame && (schneider || schwarz);
@@ -337,7 +351,9 @@ class SkatGame {
     return follow.isEmpty ? [...h] : follow;
   }
 
-  void play(int p, PlayingCard c) {
+  void play(int p, PlayingCard c) => record(['p', p, cardCode(c)], () => _playImpl(p, c));
+
+  void _playImpl(int p, PlayingCard c) {
     if (phase != SkatPhase.playing || p != current || !legalCards(p).contains(c)) return;
     players[p].hand.remove(c);
     if (trick.isEmpty) trickStarter = p;
@@ -436,7 +452,9 @@ class SkatGame {
   /// Die zwölf Karten des Alleinspielers am Anfang (Hand plus Skat).
   List<PlayingCard> _declarerCards = [];
 
-  void nextDeal() {
+  void nextDeal() => record(['n'], () => _nextDealImpl());
+
+  void _nextDealImpl() {
     if (phase == SkatPhase.dealOver) newDeal();
   }
 
@@ -457,4 +475,26 @@ List<PlayingCard> sortSkat(List<PlayingCard> cards, SkatType? t) {
   }
 
   return [...cards]..sort((a, b) => key(a) - key(b));
+}
+
+/// Spielt einen gespeicherten Zug nach.
+void skatApply(SkatGame g, List<dynamic> a) {
+  switch (a[0] as String) {
+    case 'y':
+      g.bidYes(a[1] as int);
+    case 'b':
+      g.bidPass(a[1] as int);
+    case 's':
+      g.takeSkat();
+    case 'h':
+      g.playHand();
+    case 'd':
+      g.discard([for (final x in a.sublist(1)) cardFromCode(x as String)]);
+    case 'a':
+      g.declare(SkatType.values[a[1] as int], schneider: a[2] as bool, schwarz: a[3] as bool);
+    case 'p':
+      g.play(a[1] as int, cardFromCode(a[2] as String));
+    case 'n':
+      g.nextDeal();
+  }
 }

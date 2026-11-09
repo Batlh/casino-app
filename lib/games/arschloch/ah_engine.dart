@@ -1,3 +1,5 @@
+import '../../core/action_log.dart';
+import '../../core/saves.dart';
 import 'dart:math';
 
 import '../cards/playing_card.dart';
@@ -21,7 +23,7 @@ class AhPlayer {
 
 enum AhPhase { exchange, play, roundOver, gameOver }
 
-class AhGame {
+class AhGame with ActionLog {
   AhGame({Random? rng, this.rounds = 6, List<String> names = const ['Du', 'Kalle', 'Uschi', 'Bernd']})
       : _rng = rng ?? Random.secure(),
         players = [for (var i = 0; i < 4; i++) AhPlayer(names[i], human: i == 0)];
@@ -102,7 +104,9 @@ class AhGame {
   /// Wie viele Karten Spieler 0 zurückgeben muss.
   int get humanGives => exchanges.where((e) => e.$2 == 0).fold(0, (a, e) => a + e.$3);
 
-  void humanGiveBack(List<PlayingCard> cards) {
+  void humanGiveBack(List<PlayingCard> cards) => record(['g', for (final c in cards) cardCode(c)], () => _humanGiveBackImpl(cards));
+
+  void _humanGiveBackImpl(List<PlayingCard> cards) {
     if (phase != AhPhase.exchange || cards.length != humanGives || !cards.every(players[0].hand.contains)) return;
     final e = exchanges.firstWhere((e) => e.$2 == 0);
     _move(0, e.$1, cards);
@@ -127,7 +131,9 @@ class AhGame {
 
   bool get leading => top.isEmpty;
 
-  void play(int p, List<PlayingCard> cards) {
+  void play(int p, List<PlayingCard> cards) => record(['p', p, for (final c in cards) cardCode(c)], () => _playImpl(p, cards));
+
+  void _playImpl(int p, List<PlayingCard> cards) {
     if (!canPlay(p, cards)) return;
     for (final c in cards) {
       players[p].hand.remove(c);
@@ -149,7 +155,9 @@ class AhGame {
     _advance();
   }
 
-  void pass(int p) {
+  void pass(int p) => record(['x', p], () => _passImpl(p));
+
+  void _passImpl(int p) {
     if (phase != AhPhase.play || current != p || top.isEmpty) return;
     _passes++;
     lastEvent = p == 0 ? 'Du passt' : '${players[p].name} passt';
@@ -187,7 +195,9 @@ class AhGame {
     phase = round >= rounds ? AhPhase.gameOver : AhPhase.roundOver;
   }
 
-  void nextRound() {
+  void nextRound() => record(['n'], () => _nextRoundImpl());
+
+  void _nextRoundImpl() {
     if (phase == AhPhase.roundOver) newRound();
   }
 
@@ -234,4 +244,18 @@ List<PlayingCard>? ahBotMove(AhGame g, int p) {
     return group.take(need).toList();
   }
   return null;
+}
+
+/// Spielt einen gespeicherten Zug nach.
+void ahApply(AhGame g, List<dynamic> a) {
+  switch (a[0] as String) {
+    case 'g':
+      g.humanGiveBack([for (final x in a.sublist(1)) cardFromCode(x as String)]);
+    case 'p':
+      g.play(a[1] as int, [for (final x in a.sublist(2)) cardFromCode(x as String)]);
+    case 'x':
+      g.pass(a[1] as int);
+    case 'n':
+      g.nextRound();
+  }
 }

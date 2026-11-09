@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/scope.dart';
+import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guides.dart';
@@ -37,6 +38,9 @@ class _ChessScreenState extends State<ChessScreen> {
   bool _turnBoard = false;
   int _token = 0;
 
+  /// Für Spielstände; auch beim Schließen noch erreichbar.
+  late final Settings _store;
+
   AppScope get _app => AppScope.of(context);
   ChessLevel? get _level => _setup.level == null ? null : ChessLevel.values[_setup.level!];
   int get _humanColor => _setup.humanFirst ? white : black;
@@ -46,10 +50,57 @@ class _ChessScreenState extends State<ChessScreen> {
   /// Schwarz unten: gegen den Computer mit Schwarz, zu zweit wahlweise mitdrehen.
   bool get _flipped => _level != null ? _humanColor == black : (_turnBoard && _g.side == black);
 
+  static const _saveId = 'chess';
+
   @override
   void initState() {
     super.initState();
+    _store = AppScope.of(context).settings;
+    _restore();
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeComputer());
+  }
+
+  /// Stellt die gespeicherte Partie wieder her, indem alle Züge nachgespielt werden.
+  void _restore() {
+    final d = _app.settings.loadGame(_saveId);
+    if (d == null) return;
+    try {
+      final level = d['level'] as int?;
+      _setup = BoardSetup(level: level, humanFirst: d['first'] as bool);
+      final g = ChessGame();
+      for (final n in d['moves'] as List) {
+        final m = g.legalMoves().firstWhere((x) => x.uci == n);
+        g.make(m);
+      }
+      _g = g;
+    } catch (_) {
+      _app.settings.clearGame(_saveId);
+    }
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _persist();
+  }
+
+  @override
+  void dispose() {
+    _persist();
+    super.dispose();
+  }
+
+  void _persist() {
+    final s = _store;
+    if (_over || _g.moves.isEmpty) {
+      s.clearGame(_saveId);
+      return;
+    }
+    s.saveGame(_saveId, {
+      'level': _setup.level,
+      'first': _setup.humanFirst,
+      'moves': [for (final m in _g.moves) m.uci],
+    });
   }
 
   Future<void> _newGame() async {

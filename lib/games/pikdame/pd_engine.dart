@@ -1,3 +1,4 @@
+import '../../core/action_log.dart';
 import 'dart:math';
 
 import '../cards/playing_card.dart';
@@ -162,7 +163,7 @@ class PdRoundResult {
   final String text;
 }
 
-class PdGame {
+class PdGame with ActionLog {
   PdGame(this.options, {Random? rng, List<String> names = const ['Du', 'Oma Erna', 'Opa Karl', 'Tante Gisela']})
       : _rng = rng ?? Random.secure(),
         players = [for (var i = 0; i < options.players; i++) PdPlayer(names[i], human: i == 0)];
@@ -246,6 +247,19 @@ class PdGame {
   }
 
   int value(PdCard c) => pdValue(c, options);
+
+  /// Karte über ihre Nummer finden (für gespeicherte Spielstände).
+  PdCard cardById(int id) {
+    for (final pl in players) {
+      for (final c in pl.hand) {
+        if (c.id == id) return c;
+      }
+    }
+    for (final c in [...pile, ...stack, for (final m in melds) ...m.cards]) {
+      if (c.id == id) return c;
+    }
+    throw StateError('Karte $id fehlt');
+  }
   int handPoints(int p) => players[p].hand.fold(0, (a, c) => a + value(c));
   int meldPoints(int p) => melds.where((m) => m.owner == p).fold(0, (a, m) => a + m.points(options));
   List<PdMeld> meldsOf(int p) => melds.where((m) => m.owner == p).toList();
@@ -254,7 +268,9 @@ class PdGame {
 
   // ---------- Ziehen ----------
 
-  void drawStack(int p) {
+  void drawStack(int p) => record(['s', p], () => _drawStackImpl(p));
+
+  void _drawStackImpl(int p) {
     if (phase != PdPhase.draw || current != p) return;
     // Ist der Stapel leer, wird die Ablage ohne die oberste Karte gemischt und neuer Stapel.
     // Nach dem dritten Mal endet die Runde, damit sie nicht ewig dauert.
@@ -277,7 +293,9 @@ class PdGame {
   /// Erster Zug: die offene Karte ohne Bedingung nehmen.
   bool canTakeOpen(int p) => phase == PdPhase.draw && current == p && firstTurn && pile.length == 1;
 
-  void takeOpen(int p) {
+  void takeOpen(int p) => record(['o', p], () => _takeOpenImpl(p));
+
+  void _takeOpenImpl(int p) {
     if (!canTakeOpen(p)) return;
     players[p].hand.add(pile.removeLast());
     firstTurn = false;
@@ -291,7 +309,9 @@ class PdGame {
     return pdBuildMeld([...with_, pile.last], p, maxJokers: options.maxJokers) != null;
   }
 
-  void takePile(int p, List<PdCard> with_) {
+  void takePile(int p, List<PdCard> with_) => record(['p', p, [for (final c in with_) c.id]], () => _takePileImpl(p, with_));
+
+  void _takePileImpl(int p, List<PdCard> with_) {
     if (!canTakePile(p, with_)) return;
     _snap = _Snapshot.of(this);
     _turnMelds.clear();
@@ -320,7 +340,9 @@ class PdGame {
   bool canMeld(int p, List<PdCard> cards) =>
       phase == PdPhase.play && current == p && cards.every(players[p].hand.contains) && _leavesCard(p, cards.length) && pdBuildMeld(cards, p, maxJokers: options.maxJokers) != null;
 
-  void meld(int p, List<PdCard> cards) {
+  void meld(int p, List<PdCard> cards) => record(['m', p, [for (final c in cards) c.id]], () => _meldImpl(p, cards));
+
+  void _meldImpl(int p, List<PdCard> cards) {
     if (!canMeld(p, cards)) return;
     final m = pdBuildMeld(cards, p, maxJokers: options.maxJokers)!;
     for (final c in cards) {
@@ -341,7 +363,9 @@ class PdGame {
     return pdExtend(m, c, maxJokers: options.maxJokers) != null;
   }
 
-  void extend(int p, int meldIndex, PdCard c) {
+  void extend(int p, int meldIndex, PdCard c) => record(['e', p, meldIndex, c.id], () => _extendImpl(p, meldIndex, c));
+
+  void _extendImpl(int p, int meldIndex, PdCard c) {
     if (!canExtend(p, meldIndex, c)) return;
     final old = melds[meldIndex];
     final m = pdExtend(old, c, maxJokers: options.maxJokers)!;
@@ -360,7 +384,9 @@ class PdGame {
       (players[p].hasMelded || _turnMelds.contains(melds[meldIndex])) &&
       pdCanSwapJoker(melds[meldIndex], c);
 
-  void swapJoker(int p, int meldIndex, PdCard c) {
+  void swapJoker(int p, int meldIndex, PdCard c) => record(['j', p, meldIndex, c.id], () => _swapJokerImpl(p, meldIndex, c));
+
+  void _swapJokerImpl(int p, int meldIndex, PdCard c) {
     if (!canSwapJoker(p, meldIndex, c)) return;
     final m = melds[meldIndex];
     final i = pdSwapIndex(m, c);
@@ -390,7 +416,9 @@ class PdGame {
   bool get canUndoTurn => _snap != null && (phase == PdPhase.play) && (_turnMelds.isNotEmpty || mustUse != null || _snap!.fromPile);
 
   /// Nimmt alle Auslagen dieses Zuges zurück. Nach dem Ablagestapel liegt er wieder da.
-  void undoTurn() {
+  void undoTurn() => record(['u'], () => _undoTurnImpl());
+
+  void _undoTurnImpl() {
     if (!canUndoTurn) return;
     _snap!.restore(this);
     _turnMelds.clear();
@@ -399,7 +427,9 @@ class PdGame {
     if (!_snap!.fromPile) _snap = _Snapshot.of(this);
   }
 
-  void discard(int p, PdCard c) {
+  void discard(int p, PdCard c) => record(['d', p, c.id], () => _discardImpl(p, c));
+
+  void _discardImpl(int p, PdCard c) {
     if (phase != PdPhase.play || current != p || !players[p].hand.contains(c) || discardBlocker(p) != null) return;
     final pl = players[p];
     pl.hand.remove(c);
@@ -441,7 +471,9 @@ class PdGame {
     phase = players.any((pl) => pl.score >= options.target) ? PdPhase.gameOver : PdPhase.roundOver;
   }
 
-  void nextRound() {
+  void nextRound() => record(['n'], () => _nextRoundImpl());
+
+  void _nextRoundImpl() {
     if (phase != PdPhase.roundOver) return;
     dealer = (dealer + 1) % n;
     newRound();
@@ -630,4 +662,31 @@ void pdBotTurn(PdGame g, int p, Random rng) {
   });
   final pick = hand.firstWhere((c) => !c.joker, orElse: () => hand.first);
   g.discard(p, pick);
+}
+
+/// Spielt einen gespeicherten Zug nach.
+void pdApply(PdGame g, List<dynamic> a) {
+  int i(int k) => a[k] as int;
+  PdCard c(int k) => g.cardById(i(k));
+  List<PdCard> cs(int k) => [for (final id in a[k] as List) g.cardById(id as int)];
+  switch (a[0] as String) {
+    case 's':
+      g.drawStack(i(1));
+    case 'o':
+      g.takeOpen(i(1));
+    case 'p':
+      g.takePile(i(1), cs(2));
+    case 'm':
+      g.meld(i(1), cs(2));
+    case 'e':
+      g.extend(i(1), i(2), c(3));
+    case 'j':
+      g.swapJoker(i(1), i(2), c(3));
+    case 'u':
+      g.undoTurn();
+    case 'd':
+      g.discard(i(1), c(2));
+    case 'n':
+      g.nextRound();
+  }
 }

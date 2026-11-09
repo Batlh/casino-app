@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/scope.dart';
+import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
@@ -130,17 +131,95 @@ class _PikDameScreenState extends State<PikDameScreen> {
   int _maxJokers = 1;
   bool _first50 = true;
 
+  /// Für Spielstände; auch beim Schließen noch erreichbar.
+  late final Settings _store;
+
   AppScope get _app => AppScope.of(context);
+
+  late int _seed;
+  static const _saveId = 'pikdame';
+  bool get _saving => widget.seed == null;
 
   @override
   void initState() {
     super.initState();
+    _store = AppScope.of(context).settings;
     _rng = widget.seed == null ? math.Random.secure() : math.Random(widget.seed);
-    if (widget.options != null) _start(widget.options!);
+    _seed = widget.seed ?? math.Random.secure().nextInt(1 << 31);
+    if (widget.options != null) {
+      _start(widget.options!);
+    } else {
+      _restore();
+    }
+  }
+
+  /// Gespeicherte Partie nachspielen.
+  void _restore() {
+    if (!_saving) return;
+    final d = _app.settings.loadGame(_saveId);
+    if (d == null) return;
+    try {
+      final o = PdOptions(
+        players: d['players'] as int,
+        target: d['target'] as int,
+        joker15: d['joker15'] as bool,
+        maxJokers: d['maxJokers'] as int,
+        firstMeld50: d['first50'] as bool,
+      );
+      _seed = d['seed'] as int;
+      final game = PdGame(o, rng: math.Random(_seed))..start();
+      for (final a in d['log'] as List) {
+        pdApply(game, a as List);
+      }
+      _g = game;
+      _earned = d['earned'] as int;
+      _paidRound = game.phase == PdPhase.roundOver && d['paid'] == game.actionLog.length;
+      _msg = 'Spielstand geladen';
+      WidgetsBinding.instance.addPostFrameCallback((_) => _pump());
+    } catch (_) {
+      _app.settings.clearGame(_saveId);
+      _g = null;
+    }
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _persist();
+  }
+
+  @override
+  void dispose() {
+    _persist();
+    super.dispose();
+  }
+
+  void _persist() {
+    if (!_saving) return;
+    final s = _store;
+    final game = _g;
+    if (game == null) return;
+    if (game.phase == PdPhase.gameOver || game.actionLog.isEmpty) {
+      s.clearGame(_saveId);
+      return;
+    }
+    final o = game.options;
+    s.saveGame(_saveId, {
+      'seed': _seed,
+      'players': o.players,
+      'target': o.target,
+      'joker15': o.joker15,
+      'maxJokers': o.maxJokers,
+      'first50': o.firstMeld50,
+      'log': game.actionLog,
+      'earned': _earned,
+      'paid': _paidRound ? game.actionLog.length : -1,
+    });
   }
 
   void _start(PdOptions o) {
-    _g = PdGame(o, rng: _rng)..start();
+    if (_saving) _seed = math.Random.secure().nextInt(1 << 31);
+    _g = PdGame(o, rng: math.Random(_seed))..start();
     _sel.clear();
     _paidRound = false;
     _paidGame = false;

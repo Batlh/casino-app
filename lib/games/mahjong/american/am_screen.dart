@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/scope.dart';
+import '../../../core/settings.dart';
 import '../../../core/sfx.dart';
 import '../../../core/theme.dart';
 import '../../../ui/guide.dart';
@@ -126,19 +127,75 @@ class _AmScreenState extends State<AmScreen> {
   String _nearKey = '';
   List<(AmConcrete, int)> _near = [];
 
+  /// Für Spielstände; auch beim Schließen noch erreichbar.
+  late final Settings _store;
+
   AppScope get _app => AppScope.of(context);
   AmPlayer get _me => _g.players[0];
 
   @override
   void initState() {
     super.initState();
+    _store = AppScope.of(context).settings;
     _rng = widget.seed == null ? math.Random.secure() : math.Random(widget.seed);
-    _g = AmGame(rng: _rng)..start();
+    _seed = widget.seed ?? math.Random.secure().nextInt(1 << 31);
+    _g = _restore() ?? _make();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _pump());
+  }
+
+  late int _seed;
+  static const _saveId = 'american';
+  bool get _saving => widget.seed == null;
+
+  AmGame _make() => AmGame(rng: math.Random(_seed))..start();
+
+  /// Gespeicherte Partie nachspielen.
+  AmGame? _restore() {
+    if (!_saving) return null;
+    final d = _app.settings.loadGame(_saveId);
+    if (d == null) return null;
+    try {
+      _seed = d['seed'] as int;
+      final g = _make();
+      for (final a in d['log'] as List) {
+        amApply(g, a as List);
+      }
+      _earned = d['earned'] as int;
+      _handPaid = g.phase == AmPhase.handOver && d['paid'] == g.actionLog.length;
+      return g;
+    } catch (_) {
+      _app.settings.clearGame(_saveId);
+      _seed = math.Random.secure().nextInt(1 << 31);
+      return null;
+    }
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _persist();
+  }
+
+  @override
+  void dispose() {
+    _persist();
+    super.dispose();
+  }
+
+  void _persist() {
+    if (!_saving) return;
+    final s = _store;
+    if (_g.phase == AmPhase.gameOver || _g.actionLog.isEmpty) {
+      s.clearGame(_saveId);
+      return;
+    }
+    s.saveGame(_saveId, {'seed': _seed, 'log': _g.actionLog, 'earned': _earned, 'paid': _handPaid ? _g.actionLog.length : -1});
   }
 
   void _newGame() {
+    _seed = math.Random.secure().nextInt(1 << 31);
     setState(() {
-      _g = AmGame(rng: _rng)..start();
+      _g = _make();
       _selected = null;
       _pick.clear();
       _rewarded = false;
@@ -286,7 +343,7 @@ class _AmScreenState extends State<AmScreen> {
   void _suggest() {
     final hand = [..._me.hand]..sort();
     final used = <int>{};
-    for (final t in _g.botPass(0)) {
+    for (final t in _g.botPass(0, _rng)) {
       for (var i = 0; i < hand.length; i++) {
         if (hand[i] == t && !used.contains(i)) {
           used.add(i);
