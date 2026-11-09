@@ -27,7 +27,10 @@ import 'package:gluckspfennig/games/shogi/shogi_tutorial.dart';
 import 'package:gluckspfennig/ui/guide.dart';
 import 'package:gluckspfennig/ui/guides.dart';
 import 'package:gluckspfennig/games/arschloch/ah_screen.dart';
+import 'package:gluckspfennig/games/baccarat/baccarat_screen.dart';
 import 'package:gluckspfennig/games/blackjack/blackjack_screen.dart';
+import 'package:gluckspfennig/games/keno/keno_screen.dart';
+import 'package:gluckspfennig/games/sicbo/sicbo_screen.dart';
 import 'package:gluckspfennig/games/eins/eins_engine.dart';
 import 'package:gluckspfennig/games/eins/eins_screen.dart';
 import 'package:gluckspfennig/games/quatro/quatro_screen.dart';
@@ -179,6 +182,9 @@ void main() {
       'shisen': const ShisenScreen(seed: 2),
       'pikdame_start': const PikDameScreen(seed: 1),
       'arschloch': const ArschlochScreen(seed: 2),
+      'baccarat': const BaccaratScreen(),
+      'sicbo': const SicBoScreen(seed: 1),
+      'keno': const KenoScreen(seed: 1),
       'skat': const SkatScreen(seed: 3),
       'pikdame': const PikDameScreen(seed: 1, options: PdOptions()),
       'solitaer_drache': const MahjongSolitaireScreen(seed: 4, layout: SolitaireLayout.dragon),

@@ -7,11 +7,13 @@ import '../core/sfx.dart';
 import '../core/theme.dart';
 import '../core/wallet.dart';
 import '../games/arschloch/ah_screen.dart';
+import '../games/baccarat/baccarat_screen.dart';
 import '../games/blackjack/blackjack_screen.dart';
 import '../games/cards/playing_card.dart';
 import '../games/chess/chess_engine.dart';
 import '../games/chess/chess_pieces.dart';
 import '../games/chess/chess_screen.dart';
+import '../games/keno/keno_screen.dart';
 import '../games/mahjong/american/am_guide.dart';
 import '../games/mahjong/classic/mj_rules.dart';
 import '../games/mahjong/classic/mj_variants_screen.dart';
@@ -34,6 +36,7 @@ import '../games/pinball/pinball_screen.dart';
 import '../games/quatro/quatro_screen.dart';
 import '../games/roulette/roulette_painters.dart';
 import '../games/roulette/roulette_screen.dart';
+import '../games/sicbo/sicbo_screen.dart';
 import '../games/skat/skat_screen.dart';
 import '../games/slots/kosmos_art.dart';
 import '../games/slots/slot_games.dart';
@@ -96,6 +99,27 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF5A1A3A),
         _HoldemArt.new,
         () => _open(const HoldemScreen(omaha: true)),
+      ),
+      _Game(
+        'Baccarat',
+        'Spieler oder Bank: wer kommt näher an die 9?',
+        const Color(0xFF14504A),
+        _BaccaratArt.new,
+        () => _open(const BaccaratScreen()),
+      ),
+      _Game(
+        'Sic Bo',
+        'Drei Würfel, Klein oder Groß, Drillinge zahlen 150',
+        const Color(0xFF6B1F1F),
+        _SicBoArt.new,
+        () => _open(const SicBoScreen()),
+      ),
+      _Game(
+        'Keno',
+        'Bis zu zehn Zahlen wählen, 20 werden gezogen',
+        const Color(0xFF1F3A6B),
+        _KenoArt.new,
+        () => _open(const KenoScreen()),
       ),
       _Game(
         'Neon Pachinko',
@@ -611,6 +635,60 @@ class _SkatArt extends CustomPainter {
     const suits = [Suit.diamonds, Suit.hearts, Suit.spades, Suit.clubs];
     for (var i = 0; i < 4; i++) {
       _miniCard(canvas, c + Offset((i - 1.5) * w * 0.42, (i - 1.5).abs() * 4), w, (i - 1.5) * 0.12, 'J', suits[i]);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _BaccaratArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = math.min(size.width * 0.26, size.height * 0.58 * cardAspect);
+    final c = Offset(size.width / 2, size.height * 0.56);
+    _miniCard(canvas, c + Offset(-w * 0.45, 4), w, -0.15, '9', Suit.diamonds);
+    _miniCard(canvas, c + Offset(w * 0.45, 4), w, 0.15, '8', Suit.clubs);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _SicBoArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final d = math.min(size.width * 0.22, size.height * 0.4);
+    final c = Offset(size.width / 2, size.height * 0.58);
+    for (var i = 0; i < 3; i++) {
+      final o = c + Offset((i - 1) * d * 1.15, i == 1 ? -d * 0.25 : 0);
+      final r = RRect.fromRectAndRadius(Rect.fromCenter(center: o, width: d, height: d), Radius.circular(d * 0.18));
+      canvas.drawRRect(r, Paint()..color = const Color(0xFFFFFBF2));
+      for (var k = 0; k <= i; k++) {
+        final p = o + Offset((k - i / 2) * d * 0.26, (k - i / 2) * d * 0.26);
+        canvas.drawCircle(p, d * 0.09, Paint()..color = i == 0 ? const Color(0xFFC62828) : const Color(0xFF241410));
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _KenoArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = math.min(size.width / 14, size.height / 7);
+    final rng = math.Random(7);
+    const colors = [Color(0xFFFFC95C), Color(0xFFC62828), Color(0xFF2E7D32), Color(0xFF1F4E9A)];
+    for (var i = 0; i < 9; i++) {
+      final o = Offset(size.width * (0.18 + 0.32 * (i % 3)), size.height * (0.34 + 0.2 * (i ~/ 3)));
+      canvas.drawCircle(o, r, Paint()..color = colors[rng.nextInt(4)]);
+      final tp = TextPainter(
+        text: TextSpan(text: '${1 + rng.nextInt(80)}', style: TextStyle(color: Colors.white, fontSize: r * 0.9, fontWeight: FontWeight.w800)),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, o - Offset(tp.width / 2, tp.height / 2));
     }
   }
 
