@@ -82,6 +82,9 @@ class PinballTable {
   bool leftPressed = false;
   bool rightPressed = false;
   double _saveLeft = 0;
+
+  /// Die Ballrettung greift nur einmal pro Kugel.
+  bool _saveUsed = false;
   double _still = 0;
   double _laneCooldown = 0;
 
@@ -103,14 +106,12 @@ class PinballTable {
   void _build() {
     final ground = _world.createBody(BodyDef());
 
-    // Außenrand mit Bogen oben, der den Ball aus der Bahn nach links lenkt
-    final outer = <Pt>[const Pt(0, 13.2), const Pt(0, 4)];
-    const cx = width / 2;
-    const rx = width / 2;
-    const ry = 4.0;
-    for (var i = 1; i < 40; i++) {
-      final a = pi + pi * i / 40;
-      outer.add(Pt(cx + rx * cos(a), 4 + ry * sin(a)));
+    // Außenrand: oben rechts ein Bogen, der den Ball aus der Bahn nach links lenkt,
+    // oben links eine Schräge, die ihn zurück ins Feld wirft
+    final outer = <Pt>[const Pt(0, 13.2), const Pt(0, 2.4), const Pt(2.2, 0), const Pt(5, 0)];
+    for (var i = 1; i < 30; i++) {
+      final a = -pi / 2 + pi / 2 * i / 30;
+      outer.add(Pt(5 + 4.95 * cos(a), 4 + 4 * sin(a)));
     }
     outer.add(const Pt(width, 4));
     outer.add(const Pt(width, 18.2));
@@ -134,7 +135,7 @@ class PinballTable {
     }
 
     // Pilze
-    for (final p in const [Pt(3.0, 4.8), Pt(6.2, 4.8), Pt(4.6, 6.8)]) {
+    for (final p in const [Pt(3.0, 4.8), Pt(6.2, 4.8), Pt(4.6, 6.8), Pt(1.3, 8.6), Pt(7.9, 8.6)]) {
       bumpers.add(Bumper(p.x, p.y));
       final shape = CircleShape()
         ..radius = 0.5
@@ -224,7 +225,7 @@ class PinballTable {
     ballInLane = false;
     charging = false;
     charge = 0;
-    _saveLeft = saveSeconds;
+    _saveLeft = _saveUsed ? 0 : saveSeconds;
     events.add(const PinballEvent(PinballEventKind.launch));
   }
 
@@ -324,12 +325,15 @@ class PinballTable {
       _world.destroyBody(b);
       _ball = null;
       if (_saveLeft > 0) {
+        _saveLeft = 0;
+        _saveUsed = true;
         events.add(const PinballEvent(PinballEventKind.saved));
         _newBall();
         return;
       }
       ballsLeft--;
       multiplier = 1;
+      _saveUsed = false;
       events.add(const PinballEvent(PinballEventKind.drain));
       if (ballsLeft <= 0) {
         gameOver = true;

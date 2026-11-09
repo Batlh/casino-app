@@ -352,7 +352,7 @@ const pinballGuide = GameGuide('Neon Flipper', [
   GuideSection(
     'Ziel',
     'Halte die Kugel mit den beiden Flippern im Spiel und sammle Punkte. Ein Spiel hat drei Kugeln und kostet 20 Münzen; '
-        'am Ende gibt es eine Münze je 250 Punkte.',
+        'am Ende gibt es eine Münze je 100 Punkte.',
   ),
   GuideSection(
     'Steuerung am PC',
@@ -369,6 +369,6 @@ const pinballGuide = GameGuide('Neon Flipper', [
     'Punkte',
     'Pilze 100, Schleudern über den Flippern 10, jede obere Gasse 50. Leuchten alle drei Gassen, gibt es 1.000 Punkte '
         'und der Multiplikator steigt, bis ×5. Er gilt für alle Punkte und fällt mit jeder verlorenen Kugel zurück auf ×1. '
-        'In den ersten 6 Sekunden nach dem Abschuss rettet die Ballrettung eine verlorene Kugel.',
+        'In den ersten 6 Sekunden nach dem Abschuss rettet die Ballrettung einmal pro Kugel eine verlorene Kugel.',
   ),
 ]);

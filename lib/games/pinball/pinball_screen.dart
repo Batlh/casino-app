@@ -12,7 +12,7 @@ import 'pinball_table.dart';
 
 /// Ein Spiel mit drei Kugeln kostet so viel, ausgezahlt wird nach Punkten.
 const pinballGameCost = 20;
-const pinballPointsPerCoin = 250;
+const pinballPointsPerCoin = 100;
 
 int pinballPayout(int score) => score ~/ pinballPointsPerCoin;
 

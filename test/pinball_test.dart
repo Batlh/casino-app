@@ -67,6 +67,8 @@ void main() {
       final rng = Random(seed);
       final t = PinballTable(rng: rng);
       var seconds = 0.0;
+      var hold = 0.0;
+      var left = true;
       while (!t.gameOver && seconds < 240) {
         if (t.ballInLane) {
           t.charge = 0.4 + rng.nextDouble() * 0.6;
@@ -74,9 +76,14 @@ void main() {
         }
         run(t, 0.1, each: (_) {
           final b = t.ball;
-          // Flippern, wenn die Kugel nah ist
-          t.leftPressed = b != null && b.y > 13.8 && b.x < 4.6;
-          t.rightPressed = b != null && b.y > 13.8 && b.x >= 4.6;
+          // Kurz antippen, wenn die Kugel von oben auf die Flipper fällt
+          if (b != null && b.y > 14.2 && b.x > 2.2 && b.x < 7.0 && hold <= 0) {
+            hold = 0.14;
+            left = b.x < 4.6;
+          }
+          hold -= 1 / 120;
+          t.leftPressed = hold > 0 && left;
+          t.rightPressed = hold > 0 && !left;
           if (b != null) {
             expect(b.x, inInclusiveRange(-0.5, PinballTable.width + 0.5));
             expect(b.y, greaterThan(-0.5));
