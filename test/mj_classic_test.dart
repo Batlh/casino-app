@@ -40,7 +40,7 @@ MjScore? score(MjVariant v, String closed, int win, {bool tsumo = false, List<Me
 int total(MjGame g) {
   var n = g.wall.length;
   for (final p in g.players) {
-    n += p.hand.length + p.bonus.length + p.wonTiles.length;
+    n += p.hand.length + p.bonus.length + p.wonTiles.length - p.sharedWins;
     n += p.discards.where((d) => !d.called).length;
     for (final m in p.melds) {
       n += m.tiles.length;

@@ -10,6 +10,9 @@ import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/chess/chess_screen.dart';
 import 'package:gluckspfennig/games/chess/chess_tutorial.dart';
 import 'package:gluckspfennig/games/mahjong/mahjong_tutorial.dart';
+import 'package:gluckspfennig/games/mahjong/classic/mj_rules.dart';
+import 'package:gluckspfennig/games/mahjong/classic/mj_screen.dart';
+import 'package:gluckspfennig/games/mahjong/classic/mj_variants_screen.dart';
 import 'package:gluckspfennig/games/mahjong/riichi_screen.dart';
 import 'package:gluckspfennig/games/mahjong/solitaire_screen.dart';
 import 'package:gluckspfennig/games/pinball/pinball_screen.dart';
@@ -158,7 +161,24 @@ void main() {
       await shot(tester, '${g.key}_desktop', desktop, Brightness.dark, screen: g.value);
     }
 
+    final mahjong = <String, Widget>{
+      'sichuan': MjScreen(rules: mjRules[MjVariant.sichuanRiver]!, seed: 2),
+      'hongkong': MjScreen(rules: mjRules[MjVariant.hongKong]!, seed: 3),
+      'taiwan': MjScreen(rules: mjRules[MjVariant.taiwan]!, seed: 4),
+      'korea': MjScreen(rules: mjRules[MjVariant.korean]!, seed: 5),
+      'mahjong_varianten': const MjVariantsScreen(),
+    };
+    for (final g in mahjong.entries) {
+      await shot(tester, '${g.key}_handy', phone, Brightness.dark, screen: g.value);
+      await shot(tester, '${g.key}_quer', landscape, Brightness.light, screen: g.value);
+      await shot(tester, '${g.key}_desktop', desktop, Brightness.dark, screen: g.value);
+    }
+
     final extra = <String, Widget>{
+      'erklaerung_sichuan': GuideScreen(guide: mjGuideFor(MjVariant.sichuanRiver)),
+      'erklaerung_mcr': GuideScreen(guide: mjGuideFor(MjVariant.mcr)),
+      'sichuan_lernen': mjTutorialFor(MjVariant.sichuanRiver),
+      'singapur_lernen': mjTutorialFor(MjVariant.singapore),
       'erklaerung_schach': GuideScreen(guide: chessGuide),
       'erklaerung_shogi': GuideScreen(guide: shogiGuide),
       'erklaerung_riichi': GuideScreen(guide: riichiGuide),

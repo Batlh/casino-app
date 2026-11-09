@@ -36,6 +36,9 @@ class MjPlayer {
   /// Gewinnsteine dieser Hand (Blutfluss kann mehrmals gewinnen).
   List<int> wonTiles = [];
 
+  /// Wie viele davon nur geteilt waren: mehrere gewinnen auf denselben Abwurf.
+  int sharedWins = 0;
+
   /// Gewählte Steine zum Tauschen.
   List<int> exchange = [];
 
@@ -155,6 +158,7 @@ class MjGame {
         ..out = false
         ..locked = false
         ..wonTiles = []
+        ..sharedWins = 0
         ..exchange = [];
     }
     for (var k = 0; k < rules.handSize; k++) {
@@ -562,6 +566,7 @@ class MjGame {
       if (choices[q]?.type != MjClaimType.win || !(claims[q]?.any((o) => o.type == MjClaimType.win) ?? false)) continue;
       final s = winScore(q, t, tsumo: false, robKong: robbing);
       if (s == null) continue;
+      if (winners.isNotEmpty) players[q].sharedWins++;
       winners.add(q);
       _win(q, from, s, t);
       if (!rules.multiRon) break;

@@ -11,6 +11,8 @@ import '../games/cards/playing_card.dart';
 import '../games/chess/chess_engine.dart';
 import '../games/chess/chess_pieces.dart';
 import '../games/chess/chess_screen.dart';
+import '../games/mahjong/classic/mj_rules.dart';
+import '../games/mahjong/classic/mj_variants_screen.dart';
 import '../games/mahjong/riichi_screen.dart';
 import '../games/mahjong/solitaire_screen.dart';
 import '../games/mahjong/tiles.dart' show paintTile;
@@ -178,6 +180,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
         _ShogiArt.new,
         () => _open(const ShogiScreen()),
       ),
+    ];
+
+    final mahjongGames = <_Game>[
       _Game(
         'Mahjong Solitär',
         'Paare vom Turm abräumen, ein leeres Brett bringt 300',
@@ -191,6 +196,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF7A1F12),
         () => _MahjongArt(const [33, 27, 32]),
         () => _open(const RiichiScreen()),
+      ),
+      _Game(
+        'Sichuan Mahjong',
+        'Blutkampf und Blutfluss wie Mahjong Inferno',
+        const Color(0xFF8E1B2C),
+        () => _MahjongArt(const [4, 13, 22]),
+        () => _open(const MjVariantsScreen(only: [MjVariant.sichuanRiver, MjVariant.sichuanBattle])),
+      ),
+      _Game(
+        'Mahjong-Varianten',
+        'Hongkong, Taiwan, MCR, Singapur, Korea und mehr',
+        const Color(0xFF5B1530),
+        () => _MahjongArt(const [34, 42, 46]),
+        () => _open(const MjVariantsScreen()),
       ),
     ];
 
@@ -233,6 +252,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ..._section(context, 'Casino', games),
             ..._section(context, 'Kartenspiele', cardGames),
             ..._section(context, 'Brettspiele', boardGames),
+            ..._section(context, 'Mahjong', mahjongGames),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
