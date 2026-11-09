@@ -26,6 +26,7 @@ import 'package:gluckspfennig/games/shogi/shogi_screen.dart';
 import 'package:gluckspfennig/games/shogi/shogi_tutorial.dart';
 import 'package:gluckspfennig/ui/guide.dart';
 import 'package:gluckspfennig/ui/guides.dart';
+import 'package:gluckspfennig/games/arschloch/ah_screen.dart';
 import 'package:gluckspfennig/games/blackjack/blackjack_screen.dart';
 import 'package:gluckspfennig/games/eins/eins_engine.dart';
 import 'package:gluckspfennig/games/eins/eins_screen.dart';
@@ -176,6 +177,7 @@ void main() {
       'amerikanisch': const AmScreen(seed: 3),
       'shisen': const ShisenScreen(seed: 2),
       'pikdame_start': const PikDameScreen(seed: 1),
+      'arschloch': const ArschlochScreen(seed: 2),
       'pikdame': const PikDameScreen(seed: 1, options: PdOptions()),
       'solitaer_drache': const MahjongSolitaireScreen(seed: 4, layout: SolitaireLayout.dragon),
     };
@@ -191,6 +193,7 @@ void main() {
       'sichuan_lernen': mjTutorialFor(MjVariant.sichuanRiver),
       'erklaerung_amerikanisch': GuideScreen(guide: amGuide),
       'erklaerung_pikdame': GuideScreen(guide: pikDameGuide),
+      'erklaerung_arschloch': const GuideScreen(guide: arschlochGuide),
       'erklaerung_shisen': GuideScreen(guide: shisenGuide),
       'singapur_lernen': mjTutorialFor(MjVariant.singapore),
       'erklaerung_schach': GuideScreen(guide: chessGuide),

@@ -6,6 +6,7 @@ import '../core/scope.dart';
 import '../core/sfx.dart';
 import '../core/theme.dart';
 import '../core/wallet.dart';
+import '../games/arschloch/ah_screen.dart';
 import '../games/blackjack/blackjack_screen.dart';
 import '../games/cards/playing_card.dart';
 import '../games/chess/chess_engine.dart';
@@ -166,6 +167,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF1E5631),
         _PikDameArt.new,
         () => _open(const PikDameScreen()),
+      ),
+      _Game(
+        'Arschloch',
+        'Karten loswerden: König oder Arschloch?',
+        const Color(0xFF6B3A1F),
+        _ArschlochArt.new,
+        () => _open(const ArschlochScreen()),
       ),
       _Game(
         'Viererkette',
@@ -560,6 +568,20 @@ class _HeartsArt extends CustomPainter {
       paintSuit(canvas, Rect.fromCenter(center: o, width: hs, height: hs), Suit.hearts, heart.color);
     }
     _miniCard(canvas, c, w, -0.08, 'Q', Suit.spades);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _ArschlochArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = math.min(size.width * 0.24, size.height * 0.56 * cardAspect);
+    final c = Offset(size.width / 2, size.height * 0.56);
+    for (var i = 0; i < 4; i++) {
+      _miniCard(canvas, c + Offset((i - 1.5) * w * 0.42, (i - 1.5).abs() * 4), w, (i - 1.5) * 0.12, 'A', Suit.values[i]);
+    }
   }
 
   @override
