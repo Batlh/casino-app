@@ -28,6 +28,7 @@ import '../games/hearts/hearts_screen.dart';
 import '../games/holdem/holdem_screen.dart';
 import '../games/maumau/maumau_screen.dart';
 import '../games/pachinko/pachinko_screen.dart';
+import '../games/pikdame/pd_screen.dart';
 import '../games/pinball/pinball_screen.dart';
 import '../games/quatro/quatro_screen.dart';
 import '../games/roulette/roulette_painters.dart';
@@ -158,6 +159,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF14506E),
         _HeartsArt.new,
         () => _open(const HeartsScreen()),
+      ),
+      _Game(
+        'Pik Dame',
+        'Omas Rommé mit Jokern, die Pik Dame zählt 100',
+        const Color(0xFF1E5631),
+        _PikDameArt.new,
+        () => _open(const PikDameScreen()),
       ),
       _Game(
         'Viererkette',
@@ -552,6 +560,20 @@ class _HeartsArt extends CustomPainter {
       paintSuit(canvas, Rect.fromCenter(center: o, width: hs, height: hs), Suit.hearts, heart.color);
     }
     _miniCard(canvas, c, w, -0.08, 'Q', Suit.spades);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _PikDameArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = math.min(size.width * 0.26, size.height * 0.58 * cardAspect);
+    final c = Offset(size.width / 2, size.height * 0.56);
+    _miniCard(canvas, c + Offset(-w * 0.7, 6), w, -0.28, '7', Suit.hearts);
+    _miniCard(canvas, c + const Offset(0, -2), w, 0, '8', Suit.hearts);
+    _miniCard(canvas, c + Offset(w * 0.7, 6), w, 0.28, 'Q', Suit.spades);
   }
 
   @override

@@ -163,59 +163,54 @@ class ShisenSho {
     return pairs.take(count).toList();
   }
 
-  /// Rückwärts aufbauen: Jedes Paar wird so gelegt, dass es beim Abräumen verbunden ist. Dann ist das Brett lösbar.
+  /// Zufällig legen und mit einem schnellen Löser prüfen, bis eine lösbare Lage gefunden ist.
   void _deal([List<int>? positions]) {
     final pos = positions ?? List.generate(cols * rows, (i) => i);
     final pool = positions == null ? _pairs(pos.length ~/ 2) : _regroup([for (final p in pos) cells[p]]);
-    for (var attempt = 0; attempt < 60; attempt++) {
+    final tiles = [for (final pr in pool) ...pr];
+    for (var attempt = 0; attempt < 40; attempt++) {
+      tiles.shuffle(_rng);
       final board = List.filled(cols * rows, -1);
-      final empty = [...pos]..shuffle(_rng);
-      final placedPairs = <(int, int)>[];
-      var ok = true;
-      for (final pair in pool) {
-        if (empty.length < 2) break;
-        // Innere Felder zuerst füllen, die Ränder bleiben für den Schluss
-        empty.sort((p, q) => _edgeDist(q) - _edgeDist(p));
-        final front = empty.take(max(2, empty.length ~/ 3)).toList()..shuffle(_rng);
-        var placed = false;
-        for (final a in front) {
-          final reach = reachable(a, board);
-          final cands = [for (final b in empty) if (b != a && reach.contains(b)) b]..shuffle(_rng);
-          if (cands.isEmpty) continue;
-          final b = cands.first;
-          board[a] = pair[0];
-          board[b] = pair[1];
-          placedPairs.add((a, b));
-          empty
-            ..remove(a)
-            ..remove(b);
-          placed = true;
-          break;
-        }
-        if (!placed) {
-          ok = false;
-          break;
-        }
+      for (var i = 0; i < pos.length; i++) {
+        board[pos[i]] = tiles[i];
       }
-      if (ok) {
-        for (final p in pos) {
-          cells[p] = board[p];
+      for (var run = 0; run < 3; run++) {
+        final sol = _solve([...board]);
+        if (sol != null) {
+          cells = board;
+          solution = sol;
+          return;
         }
-        solution = placedPairs.reversed.toList();
-        return;
       }
     }
-    // Notfall: einfach zufällig verteilen
+    // Notfall: die letzte Lage nehmen, Mischen hilft dann weiter
     solution = [];
-    final tiles = [for (final pr in pool) ...pr]..shuffle(_rng);
     for (var i = 0; i < pos.length; i++) {
       cells[pos[i]] = tiles[i];
     }
   }
 
-  int _edgeDist(int i) {
-    final x = i % cols, y = i ~/ cols;
-    return min(min(x, cols - 1 - x), min(y, rows - 1 - y));
+  /// Gieriger Löser mit Zufall: nimmt immer ein zufälliges verbindbares Paar.
+  List<(int, int)>? _solve(List<int> board) {
+    final out = <(int, int)>[];
+    var left = board.where((c) => c >= 0).length;
+    while (left > 0) {
+      final order = [for (var i = 0; i < board.length; i++) if (board[i] >= 0) i]..shuffle(_rng);
+      (int, int)? pick;
+      for (final a in order) {
+        final m = [for (final b in reachable(a, board)) if (board[b] >= 0 && tilesMatch(board[a], board[b])) b];
+        if (m.isNotEmpty) {
+          pick = (a, m[_rng.nextInt(m.length)]);
+          break;
+        }
+      }
+      if (pick == null) return null;
+      board[pick.$1] = -1;
+      board[pick.$2] = -1;
+      out.add(pick);
+      left -= 2;
+    }
+    return out;
   }
 
   List<List<int>> _regroup(List<int> tiles) {

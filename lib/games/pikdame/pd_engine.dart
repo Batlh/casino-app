@@ -236,7 +236,7 @@ class PdGame {
 
   void drawStack(int p) {
     if (phase != PdPhase.draw || current != p) return;
-    if (stack.isEmpty) _refill();
+    // Ist der Stapel leer, endet die Runde (kein Neumischen, sonst kann sie ewig dauern)
     if (stack.isEmpty) {
       _endRound(null);
       return;
@@ -282,13 +282,6 @@ class PdGame {
     mustUse = null;
     _turnMelds.clear();
     _snap = _Snapshot.of(this);
-  }
-
-  void _refill() {
-    if (pile.length <= 1) return;
-    final top = pile.removeLast();
-    stack = [...pile]..shuffle(_rng);
-    pile = [top];
   }
 
   // ---------- Auslegen ----------
