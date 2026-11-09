@@ -25,6 +25,7 @@ import '../games/mahjong/tiles.dart' show paintTile;
 import '../games/shogi/shogi_board.dart';
 import '../games/shogi/shogi_engine.dart';
 import '../games/shogi/shogi_screen.dart';
+import '../games/craps/craps_screen.dart';
 import '../games/eins/eins_card.dart';
 import '../games/eins/eins_engine.dart';
 import '../games/eins/eins_screen.dart';
@@ -121,6 +122,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF6B1F1F),
         _SicBoArt.new,
         () => _open(const SicBoScreen()),
+      ),
+      _Game(
+        'Craps',
+        'Pass Line, Punkt und Field mit zwei Würfeln',
+        const Color(0xFF1B5E20),
+        _SicBoArt.new,
+        () => _open(const CrapsScreen()),
       ),
       _Game(
         'Keno',

@@ -30,6 +30,7 @@ import 'package:gluckspfennig/games/arschloch/ah_screen.dart';
 import 'package:gluckspfennig/games/baccarat/baccarat_screen.dart';
 import 'package:gluckspfennig/games/blackjack/blackjack_screen.dart';
 import 'package:gluckspfennig/games/caribbean/caribbean_screen.dart';
+import 'package:gluckspfennig/games/craps/craps_screen.dart';
 import 'package:gluckspfennig/games/keno/keno_screen.dart';
 import 'package:gluckspfennig/games/sicbo/sicbo_screen.dart';
 import 'package:gluckspfennig/games/eins/eins_engine.dart';
@@ -187,6 +188,8 @@ void main() {
       'caribbean': const CaribbeanScreen(),
       'sicbo': const SicBoScreen(seed: 1),
       'keno': const KenoScreen(seed: 1),
+      'craps': const CrapsScreen(seed: 1),
+      'omaha': const HoldemScreen(omaha: true),
       'skat': const SkatScreen(seed: 3),
       'pikdame': const PikDameScreen(seed: 1, options: PdOptions()),
       'solitaer_drache': const MahjongSolitaireScreen(seed: 4, layout: SolitaireLayout.dragon),

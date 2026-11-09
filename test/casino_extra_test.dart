@@ -5,6 +5,7 @@ import 'package:gluckspfennig/games/baccarat/baccarat_engine.dart';
 import 'package:gluckspfennig/games/caribbean/caribbean_screen.dart';
 import 'package:gluckspfennig/games/cards/hand_eval.dart';
 import 'package:gluckspfennig/games/cards/playing_card.dart';
+import 'package:gluckspfennig/games/craps/craps_screen.dart';
 import 'package:gluckspfennig/games/keno/keno_screen.dart';
 import 'package:gluckspfennig/games/sicbo/sicbo_screen.dart';
 
@@ -74,6 +75,20 @@ void main() {
       expect(paid, 20 + 20 + 100);
       final (noQual, _) = caribbeanSettle(flush, aq, 10);
       expect(noQual, 40);
+    });
+  });
+
+  group('Craps', () {
+    test('Erster Wurf und Punkt', () {
+      expect(crapsResolve(CrapsBet.pass, 7, null, 10), 20);
+      expect(crapsResolve(CrapsBet.pass, 12, null, 10), 0);
+      expect(crapsResolve(CrapsBet.pass, 6, null, 10), isNull);
+      expect(crapsResolve(CrapsBet.pass, 6, 6, 10), 20);
+      expect(crapsResolve(CrapsBet.pass, 7, 6, 10), 0);
+      expect(crapsResolve(CrapsBet.dontPass, 12, null, 10), 10);
+      expect(crapsResolve(CrapsBet.dontPass, 7, 8, 10), 20);
+      expect(crapsResolve(CrapsBet.field, 12, null, 10), 30);
+      expect(crapsResolve(CrapsBet.field, 7, null, 10), 0);
     });
   });
 }
