@@ -36,6 +36,7 @@ import 'package:gluckspfennig/games/holdem/holdem_screen.dart';
 import 'package:gluckspfennig/games/maumau/maumau_screen.dart';
 import 'package:gluckspfennig/games/pachinko/pachinko_screen.dart';
 import 'package:gluckspfennig/games/roulette/roulette_screen.dart';
+import 'package:gluckspfennig/games/skat/skat_screen.dart';
 import 'package:gluckspfennig/games/slots/slot_games.dart';
 import 'package:gluckspfennig/games/slots/slot_screen.dart';
 import 'package:gluckspfennig/games/solitaire/klondike_screen.dart';
@@ -178,6 +179,7 @@ void main() {
       'shisen': const ShisenScreen(seed: 2),
       'pikdame_start': const PikDameScreen(seed: 1),
       'arschloch': const ArschlochScreen(seed: 2),
+      'skat': const SkatScreen(seed: 3),
       'pikdame': const PikDameScreen(seed: 1, options: PdOptions()),
       'solitaer_drache': const MahjongSolitaireScreen(seed: 4, layout: SolitaireLayout.dragon),
     };
@@ -194,6 +196,7 @@ void main() {
       'erklaerung_amerikanisch': GuideScreen(guide: amGuide),
       'erklaerung_pikdame': GuideScreen(guide: pikDameGuide),
       'erklaerung_arschloch': const GuideScreen(guide: arschlochGuide),
+      'erklaerung_skat': const GuideScreen(guide: skatGuide),
       'erklaerung_shisen': GuideScreen(guide: shisenGuide),
       'singapur_lernen': mjTutorialFor(MjVariant.singapore),
       'erklaerung_schach': GuideScreen(guide: chessGuide),

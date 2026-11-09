@@ -34,6 +34,7 @@ import '../games/pinball/pinball_screen.dart';
 import '../games/quatro/quatro_screen.dart';
 import '../games/roulette/roulette_painters.dart';
 import '../games/roulette/roulette_screen.dart';
+import '../games/skat/skat_screen.dart';
 import '../games/slots/kosmos_art.dart';
 import '../games/slots/slot_games.dart';
 import '../games/slots/slot_screen.dart';
@@ -174,6 +175,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF6B3A1F),
         _ArschlochArt.new,
         () => _open(const ArschlochScreen()),
+      ),
+      _Game(
+        'Skat',
+        'Reizen, drücken, ansagen: zu dritt gegen zwei Computer',
+        const Color(0xFF15553A),
+        _SkatArt.new,
+        () => _open(const SkatScreen()),
       ),
       _Game(
         'Viererkette',
@@ -581,6 +589,21 @@ class _ArschlochArt extends CustomPainter {
     final c = Offset(size.width / 2, size.height * 0.56);
     for (var i = 0; i < 4; i++) {
       _miniCard(canvas, c + Offset((i - 1.5) * w * 0.42, (i - 1.5).abs() * 4), w, (i - 1.5) * 0.12, 'A', Suit.values[i]);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _SkatArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = math.min(size.width * 0.24, size.height * 0.56 * cardAspect);
+    final c = Offset(size.width / 2, size.height * 0.56);
+    const suits = [Suit.diamonds, Suit.hearts, Suit.spades, Suit.clubs];
+    for (var i = 0; i < 4; i++) {
+      _miniCard(canvas, c + Offset((i - 1.5) * w * 0.42, (i - 1.5).abs() * 4), w, (i - 1.5) * 0.12, 'J', suits[i]);
     }
   }
 

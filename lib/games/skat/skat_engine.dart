@@ -212,6 +212,9 @@ class SkatGame {
   int get bidTurn => _waitingListener ? listener : sayer;
   bool _waitingListener = false;
 
+  /// Wartet das Reizen auf ein Ja oder Passe des Hörers?
+  bool get listening => _waitingListener;
+
   /// Der Reizwert, um den es gerade geht.
   int get askedValue => _waitingListener ? bid : nextBid(bid == 0 ? 17 : bid);
 
