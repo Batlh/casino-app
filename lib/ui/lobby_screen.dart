@@ -11,6 +11,7 @@ import '../games/cards/playing_card.dart';
 import '../games/chess/chess_engine.dart';
 import '../games/chess/chess_pieces.dart';
 import '../games/chess/chess_screen.dart';
+import '../games/mahjong/american/am_guide.dart';
 import '../games/mahjong/classic/mj_rules.dart';
 import '../games/mahjong/classic/mj_variants_screen.dart';
 import '../games/mahjong/riichi_screen.dart';
@@ -210,6 +211,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF5B1530),
         () => _MahjongArt(const [34, 42, 46]),
         () => _open(const MjVariantsScreen()),
+      ),
+      _Game(
+        'American Mahjong',
+        'Mit Jokern, Charleston und eigener Glückskarte',
+        const Color(0xFF1F3F6B),
+        () => _MahjongArt(const [46, 10, 46]),
+        () => _open(amScreen()),
       ),
     ];
 

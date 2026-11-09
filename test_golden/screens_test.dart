@@ -10,6 +10,8 @@ import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/chess/chess_screen.dart';
 import 'package:gluckspfennig/games/chess/chess_tutorial.dart';
 import 'package:gluckspfennig/games/mahjong/mahjong_tutorial.dart';
+import 'package:gluckspfennig/games/mahjong/american/am_guide.dart';
+import 'package:gluckspfennig/games/mahjong/american/am_screen.dart';
 import 'package:gluckspfennig/games/mahjong/classic/mj_rules.dart';
 import 'package:gluckspfennig/games/mahjong/classic/mj_screen.dart';
 import 'package:gluckspfennig/games/mahjong/classic/mj_variants_screen.dart';
@@ -167,6 +169,7 @@ void main() {
       'taiwan': MjScreen(rules: mjRules[MjVariant.taiwan]!, seed: 4),
       'korea': MjScreen(rules: mjRules[MjVariant.korean]!, seed: 5),
       'mahjong_varianten': const MjVariantsScreen(),
+      'amerikanisch': const AmScreen(seed: 3),
     };
     for (final g in mahjong.entries) {
       await shot(tester, '${g.key}_handy', phone, Brightness.dark, screen: g.value);
@@ -178,6 +181,7 @@ void main() {
       'erklaerung_sichuan': GuideScreen(guide: mjGuideFor(MjVariant.sichuanRiver)),
       'erklaerung_mcr': GuideScreen(guide: mjGuideFor(MjVariant.mcr)),
       'sichuan_lernen': mjTutorialFor(MjVariant.sichuanRiver),
+      'erklaerung_amerikanisch': GuideScreen(guide: amGuide),
       'singapur_lernen': mjTutorialFor(MjVariant.singapore),
       'erklaerung_schach': GuideScreen(guide: chessGuide),
       'erklaerung_shogi': GuideScreen(guide: shogiGuide),
