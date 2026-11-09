@@ -29,6 +29,7 @@ class Settings extends ChangeNotifier {
         _einsCallRequired = _prefs.getBool(_einsCallKey) ?? true,
         _einsChallenge = _prefs.getBool(_einsChallengeKey) ?? true,
         _einsExpansion = _prefs.getBool(_einsExpansionKey) ?? false,
+        _pinballHigh = _prefs.getInt(_pinballHighKey) ?? 0,
         _botSpeed = BotSpeed.values.firstWhere(
           (v) => v.name == _prefs.getString(_botSpeedKey),
           orElse: () => BotSpeed.normal,
@@ -48,6 +49,7 @@ class Settings extends ChangeNotifier {
   static const _einsChallengeKey = 'settings.einsChallenge';
   static const _einsExpansionKey = 'settings.einsNoMercyExpansion';
   static const _botSpeedKey = 'settings.botSpeed';
+  static const _pinballHighKey = 'pinball.highscore';
   static const minCardScale = 0.8;
   static const maxCardScale = 1.6;
 
@@ -62,6 +64,16 @@ class Settings extends ChangeNotifier {
   bool _einsChallenge;
   bool _einsExpansion;
   BotSpeed _botSpeed;
+  int _pinballHigh;
+
+  /// Höchste Punktzahl am Flipper.
+  int get pinballHigh => _pinballHigh;
+
+  set pinballHigh(int value) {
+    _pinballHigh = value;
+    _prefs.setInt(_pinballHighKey, value);
+    notifyListeners();
+  }
 
   /// Wie schnell die Computergegner ziehen.
   BotSpeed get botSpeed => _botSpeed;

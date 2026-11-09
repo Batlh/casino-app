@@ -12,6 +12,7 @@ import 'package:gluckspfennig/games/chess/chess_tutorial.dart';
 import 'package:gluckspfennig/games/mahjong/mahjong_tutorial.dart';
 import 'package:gluckspfennig/games/mahjong/riichi_screen.dart';
 import 'package:gluckspfennig/games/mahjong/solitaire_screen.dart';
+import 'package:gluckspfennig/games/pinball/pinball_screen.dart';
 import 'package:gluckspfennig/games/shogi/shogi_screen.dart';
 import 'package:gluckspfennig/games/shogi/shogi_tutorial.dart';
 import 'package:gluckspfennig/ui/guide.dart';
@@ -149,6 +150,7 @@ void main() {
       'shogi_lernen': ShogiTutorialScreen(),
       'mahjong_solitaer': MahjongSolitaireScreen(seed: 3),
       'riichi': RiichiScreen(seed: 5),
+      'flipper': PinballScreen(seed: 1),
     };
     for (final g in games.entries) {
       await shot(tester, '${g.key}_handy', phone, Brightness.dark, screen: g.value);
@@ -161,6 +163,7 @@ void main() {
       'erklaerung_shogi': GuideScreen(guide: shogiGuide),
       'erklaerung_riichi': GuideScreen(guide: riichiGuide),
       'erklaerung_eins': const GuideScreen(guide: einsGuide),
+      'erklaerung_flipper': const GuideScreen(guide: pinballGuide),
       'mahjong_lernen': QuizTutorialScreen(title: 'Mahjong lernen', lessons: riichiLessons),
       'mahjong_solitaer_lernen': QuizTutorialScreen(title: 'Mahjong Solitär lernen', lessons: solitaireLessons),
     };

@@ -347,3 +347,28 @@ final riichiGuide = GameGuide(
   tutorial: (_) => QuizTutorialScreen(title: 'Mahjong lernen', lessons: riichiLessons),
   tutorialLabel: 'Mahjong lernen: 7 kurze Übungen',
 );
+
+const pinballGuide = GameGuide('Neon Flipper', [
+  GuideSection(
+    'Ziel',
+    'Halte die Kugel mit den beiden Flippern im Spiel und sammle Punkte. Ein Spiel hat drei Kugeln und kostet 20 Münzen; '
+        'am Ende gibt es eine Münze je 250 Punkte.',
+  ),
+  GuideSection(
+    'Steuerung am PC',
+    'Linker Flipper: A, Y oder linke Shift-Taste (auch Pfeil links). Rechter Flipper: L, M oder rechte Shift-Taste '
+        '(auch Pfeil rechts). Abschuss: Leertaste, Enter oder Pfeil runter gedrückt halten, um die Feder zu spannen, '
+        'dann loslassen. T rüttelt den Tisch, falls die Kugel festhängt.',
+  ),
+  GuideSection(
+    'Steuerung am Handy',
+    'Unten liegen drei große Tasten: Links und Rechts für die Flipper, in der Mitte der Abschuss. Beide Flipper '
+        'lassen sich gleichzeitig drücken. Abschuss gedrückt halten spannt die Feder.',
+  ),
+  GuideSection(
+    'Punkte',
+    'Pilze 100, Schleudern über den Flippern 10, jede obere Gasse 50. Leuchten alle drei Gassen, gibt es 1.000 Punkte '
+        'und der Multiplikator steigt, bis ×5. Er gilt für alle Punkte und fällt mit jeder verlorenen Kugel zurück auf ×1. '
+        'In den ersten 6 Sekunden nach dem Abschuss rettet die Ballrettung eine verlorene Kugel.',
+  ),
+]);

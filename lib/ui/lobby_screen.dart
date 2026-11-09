@@ -24,6 +24,7 @@ import '../games/hearts/hearts_screen.dart';
 import '../games/holdem/holdem_screen.dart';
 import '../games/maumau/maumau_screen.dart';
 import '../games/pachinko/pachinko_screen.dart';
+import '../games/pinball/pinball_screen.dart';
 import '../games/quatro/quatro_screen.dart';
 import '../games/roulette/roulette_painters.dart';
 import '../games/roulette/roulette_screen.dart';
@@ -88,6 +89,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF2B0B45),
         _PachinkoArt.new,
         () => _open(const PachinkoScreen()),
+      ),
+      _Game(
+        'Neon Flipper',
+        'Flipper mit Tastatur oder Bildschirmtasten',
+        const Color(0xFF1A0B33),
+        _FlipperArt.new,
+        () => _open(const PinballScreen()),
       ),
       _Game(
         'Black Jack',
@@ -922,6 +930,57 @@ class _HoldemArt extends CustomPainter {
         i == 1 ? const Color(0xFF241410) : const Color(0xFFC8321F),
       );
     }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _FlipperArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = math.min(size.width, size.height * 1.4);
+    final cx = size.width / 2;
+    final cy = size.height * 0.55;
+    final neon = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = s * 0.02
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0xFF63E6FF);
+    // Zwei Flipper und eine Kugel
+    void flipper(double x, double dir, double angle) {
+      canvas.save();
+      canvas.translate(x, cy + s * 0.18);
+      canvas.rotate(angle);
+      final l = s * 0.24 * dir;
+      final p = Path()
+        ..moveTo(0, -s * 0.03)
+        ..lineTo(l, -s * 0.012)
+        ..lineTo(l, s * 0.012)
+        ..lineTo(0, s * 0.03)
+        ..close();
+      canvas.drawPath(p, Paint()..color = const Color(0xFFFFC95C));
+      canvas.restore();
+    }
+
+    canvas.drawLine(Offset(cx - s * 0.42, cy - s * 0.1), Offset(cx - s * 0.3, cy + s * 0.16), neon);
+    canvas.drawLine(Offset(cx + s * 0.42, cy - s * 0.1), Offset(cx + s * 0.3, cy + s * 0.16), neon);
+    flipper(cx - s * 0.3, 1, -0.3);
+    flipper(cx + s * 0.3, -1, 0.45);
+    for (final b in [Offset(cx - s * 0.18, cy - s * 0.2), Offset(cx + s * 0.18, cy - s * 0.2)]) {
+      canvas.drawCircle(b, s * 0.07, Paint()..color = const Color(0xCCFF5EA8));
+      canvas.drawCircle(b, s * 0.03, Paint()..color = Colors.white);
+    }
+    final ball = Offset(cx + s * 0.05, cy - s * 0.02);
+    canvas.drawCircle(
+      ball,
+      s * 0.045,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(-0.4, -0.4),
+          colors: [Colors.white, Color(0xFF8A94AA)],
+        ).createShader(Rect.fromCircle(center: ball, radius: s * 0.045)),
+    );
   }
 
   @override
