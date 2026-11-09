@@ -69,7 +69,7 @@ MjScore scoreSichuan(Shape s, WinInfo w, {int cap = 6}) {
   if (w.rinshan) f.add(const Fan('Blüte auf dem Kan', 1));
   if (w.afterKongDiscard) f.add(const Fan('Schuss nach dem Kan', 1));
   if (w.robKong) f.add(const Fan('Kan geraubt', 1));
-  if (w.lastTile) f.add(const Fan(w.tsumo ? 'Mond aus dem Meer' : 'Letzter Abwurf', 1));
+  if (w.lastTile) f.add(Fan(w.tsumo ? 'Mond aus dem Meer' : 'Letzter Abwurf', 1));
   if (f.isEmpty) f.add(const Fan('Einfacher Sieg', 0));
   return _sum(f, cap: cap);
 }
