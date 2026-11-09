@@ -59,7 +59,7 @@ final pikDameGuide = GameGuide(
   [
     const GuideSection(
       'Ziel',
-      'Ein Rommé mit zwei Kartenspielen und sechs Jokern. Lege Sätze (drei oder vier gleiche Werte in verschiedenen Farben) '
+      'Ein Rommé mit zwei Kartenspielen und sechs Jokern. Lege Sätze (mindestens drei gleiche Werte, Farben dürfen doppelt sein) '
           'und Folgen (mindestens drei aufeinanderfolgende Karten einer Farbe) aus. Wer zuerst 1.000 Punkte hat, gewinnt.',
     ),
     const GuideSection(
@@ -70,7 +70,7 @@ final pikDameGuide = GameGuide(
     ),
     const GuideSection(
       'Joker',
-      'Je Auslage höchstens ein Joker. Liegt in deiner Auslage ein Joker und du hast die passende Karte, darfst du tauschen und '
+      'Üblich ist ein Joker je Auslage, wenn nötig auch zwei (einstellbar). Liegt in deiner Auslage ein Joker und du hast die passende Karte, darfst du tauschen und '
           'den Joker wieder auf die Hand nehmen.',
     ),
     const GuideSection(
@@ -80,14 +80,20 @@ final pikDameGuide = GameGuide(
     ),
     const GuideSection(
       'Kartenwerte',
-      '2 bis 9 zählen 5, 10 bis König 10, das Ass 15 und der Joker 20 (oder umgekehrt: Ass 20, Joker 15). Die Pik Dame zählt 100 – '
+      '2 bis 9 zählen 5, 10, Bube, Dame und König 10, das Ass 25, der Joker 20 (oder 15, einstellbar). Die Pik Dame zählt 100 – '
           'auf der Hand ist sie eine teure Last.',
+    ),
+    const GuideSection(
+      'Abheben und Stapel',
+      'Deckt der Abhebende eine Pik Dame oder einen Joker auf, darf er sie zusätzlich zu seinen 15 Karten behalten. '
+          'Ist der Stapel leer, wird die Ablage bis auf die oberste Karte gemischt und zum neuen Stapel. Nach dem dritten Mischen '
+          'endet die Runde, damit sie nicht endlos läuft.',
     ),
     const GuideSection(
       'Ausmachen und Hand',
       'Zum Ausmachen brauchst du eine letzte Karte zum Ablegen. Dann zählt jeder: Ausgelegtes plus, Karten auf der Hand minus. '
           'Legst du alles auf einmal aus, ohne vorher ausgelegt zu haben, ist das eine „Hand“: deine Punkte zählen doppelt und die '
-          'Handkarten der anderen doppelt minus. Ist der Stapel leer, endet die Runde ebenso.',
+          'Handkarten der anderen doppelt minus.',
     ),
     const GuideSection(
       'Münzen',
@@ -120,7 +126,8 @@ class _PikDameScreenState extends State<PikDameScreen> {
   // Einstellungen für das nächste Spiel
   int _players = 3;
   int _target = 1000;
-  bool _aceHigh = false;
+  bool _joker15 = false;
+  int _maxJokers = 1;
   bool _first50 = true;
 
   AppScope get _app => AppScope.of(context);
@@ -346,9 +353,13 @@ class _PikDameScreenState extends State<PikDameScreen> {
               Text('Neues Spiel', style: Theme.of(context).textTheme.titleLarge),
               row('Mitspieler', [for (final n in [2, 3, 4]) ('${n - 1} Computer', _players == n, () => _players = n)]),
               row('Ziel', [for (final t in [500, 1000]) ('$t Punkte', _target == t, () => _target = t)]),
-              row('Kartenwerte', [
-                ('Ass 15, Joker 20', !_aceHigh, () => _aceHigh = false),
-                ('Ass 20, Joker 15', _aceHigh, () => _aceHigh = true),
+              row('Joker zählt', [
+                ('20 Punkte', !_joker15, () => _joker15 = false),
+                ('15 Punkte', _joker15, () => _joker15 = true),
+              ]),
+              row('Joker je Auslage', [
+                ('Einer', _maxJokers == 1, () => _maxJokers = 1),
+                ('Bis zu zwei', _maxJokers == 2, () => _maxJokers = 2),
               ]),
               row('Erste Auslage', [
                 ('Mindestens 50', _first50, () => _first50 = true),
@@ -358,7 +369,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
               ActionButton(
                 primary: true,
                 label: 'Los geht’s',
-                onPressed: () => setState(() => _start(PdOptions(players: _players, target: _target, aceHigh: _aceHigh, firstMeld50: _first50))),
+                onPressed: () => setState(() => _start(PdOptions(players: _players, target: _target, joker15: _joker15, maxJokers: _maxJokers, firstMeld50: _first50))),
               ),
             ],
           ),

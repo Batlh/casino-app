@@ -45,3 +45,13 @@ Regeln laut Quelle:
   westlich klassisch (ohne Abrechnung unter Verlierern), Philippinen (Hausregel-Werte), Vietnam (Joker vereinfacht).
 - American Mahjong mit eigener „Glückskarte“ (24 Hände), weil die echte NMJL-Karte geschützt ist.
 - Shisen-Sho (Lösbarkeit per Löser geprüft), Solitär-Formen Pyramide, Festung, Drache, Kreuz.
+
+## Pik Dame: Antworten vom 9.11.2026
+
+- Stapel leer: Ablage ohne oberste Karte mischen, als neuer Stapel daneben; oberste Karte bleibt liegen.
+  (Sicherung im Spiel: nach dem dritten Mischen endet die Runde.)
+- Ass 25, Bube/Dame/König 10. Der Schalter betrifft nur noch den Joker (20 oder 15).
+- Anlegen nur an eigene Auslagen (bestätigt). Erste Auslage 50: bestätigt.
+- Joker: üblich einer je Auslage, wenn nötig zwei (Schalter, Standard einer).
+- Sätze dürfen gleiche Farben doppelt enthalten.
+- Abheben: aufgedeckte Pik Dame oder Joker kommt zusätzlich auf die Hand.

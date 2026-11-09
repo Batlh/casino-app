@@ -11,14 +11,16 @@ PdCard j() => PdCard.joker(_id++);
 void main() {
   test('Sätze und Folgen', () {
     expect(pdBuildMeld([c(7, Suit.hearts), c(7, Suit.spades), c(7, Suit.clubs)], 0)?.run, isFalse);
-    expect(pdBuildMeld([c(7, Suit.hearts), c(7, Suit.hearts), c(7, Suit.clubs)], 0), isNull, reason: 'gleiche Farbe doppelt');
+    expect(pdBuildMeld([c(7, Suit.hearts), c(7, Suit.hearts), c(7, Suit.clubs)], 0), isNotNull, reason: 'gleiche Farbe doppelt erlaubt');
     expect(pdBuildMeld([c(5, Suit.hearts), c(6, Suit.hearts), c(7, Suit.hearts)], 0)?.run, isTrue);
     expect(pdBuildMeld([c(5, Suit.hearts), c(6, Suit.clubs), c(7, Suit.hearts)], 0), isNull);
     expect(pdBuildMeld([c(14, Suit.hearts), c(2, Suit.hearts), c(3, Suit.hearts)], 0), isNotNull, reason: 'Ass tief');
     expect(pdBuildMeld([c(12, Suit.hearts), c(13, Suit.hearts), c(14, Suit.hearts)], 0), isNotNull, reason: 'Ass hoch');
     expect(pdBuildMeld([c(13, Suit.hearts), c(14, Suit.hearts), c(2, Suit.hearts)], 0), isNull, reason: 'kein Rundlauf');
     expect(pdBuildMeld([c(5, Suit.hearts), j(), c(7, Suit.hearts)], 0), isNotNull, reason: 'Joker in der Lücke');
-    expect(pdBuildMeld([c(5, Suit.hearts), j(), j()], 0), isNull, reason: 'höchstens ein Joker');
+    expect(pdBuildMeld([c(5, Suit.hearts), c(8, Suit.hearts), j(), j()], 0), isNull, reason: 'Standard: ein Joker');
+    expect(pdBuildMeld([c(5, Suit.hearts), c(8, Suit.hearts), j(), j()], 0, maxJokers: 2)?.run, isTrue, reason: 'zwei Joker erlaubt');
+    expect(pdBuildMeld([c(5, Suit.hearts), j(), j()], 0, maxJokers: 2), isNull, reason: 'mindestens zwei echte Karten');
   });
 
   test('Joker tauschen', () {
@@ -30,10 +32,10 @@ void main() {
 
   test('Werte', () {
     const a = PdOptions();
-    const b = PdOptions(aceHigh: true);
+    const b = PdOptions(joker15: true);
     expect(pdValue(c(12, Suit.spades), a), 100);
-    expect(pdValue(c(14, Suit.hearts), a), 15);
-    expect(pdValue(c(14, Suit.hearts), b), 20);
+    expect(pdValue(c(14, Suit.hearts), a), 25);
+    expect(pdValue(c(13, Suit.hearts), b), 10);
     expect(pdValue(j(), a), 20);
     expect(pdValue(j(), b), 15);
     expect(pdValue(c(9, Suit.hearts), a), 5);
@@ -44,7 +46,7 @@ void main() {
     test('Ganze Partien mit $players Spielern', () {
       for (var seed = 0; seed < 3; seed++) {
         final rng = Random(seed);
-        final g = PdGame(PdOptions(players: players, target: 500, firstMeld50: seed != 1, aceHigh: seed == 2), rng: Random(seed + 50))
+        final g = PdGame(PdOptions(players: players, target: 500, firstMeld50: seed != 1, joker15: seed == 2, maxJokers: seed == 0 ? 2 : 1), rng: Random(seed + 50))
           ..start();
         var turns = 0;
         var rounds = 0;

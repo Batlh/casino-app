@@ -32,19 +32,22 @@ class PdCard {
 }
 
 class PdOptions {
-  const PdOptions({this.aceHigh = false, this.firstMeld50 = true, this.target = 1000, this.players = 3});
+  const PdOptions({this.joker15 = false, this.maxJokers = 1, this.firstMeld50 = true, this.target = 1000, this.players = 3});
 
-  /// false: Ass 15, Joker 20. true: Ass 20, Joker 15.
-  final bool aceHigh;
+  /// false: Joker 20, true: Joker 15.
+  final bool joker15;
+
+  /// Joker je Auslage: üblich einer, wenn nötig auch zwei.
+  final int maxJokers;
   final bool firstMeld50;
   final int target;
   final int players;
 }
 
 int pdValue(PdCard c, PdOptions o) {
-  if (c.joker) return o.aceHigh ? 15 : 20;
+  if (c.joker) return o.joker15 ? 15 : 20;
   if (c.pikDame) return 100;
-  if (c.rank == 14) return o.aceHigh ? 20 : 15;
+  if (c.rank == 14) return 25;
   if (c.rank >= 10) return 10;
   return 5;
 }
@@ -67,18 +70,16 @@ class PdMeld {
 }
 
 /// Prüft eine Kartenmenge und baut daraus eine Auslage, oder null.
-PdMeld? pdBuildMeld(List<PdCard> cards, int owner) {
+/// Sätze: gleicher Wert, Farben dürfen doppelt sein. Folgen: eine Farbe, Ass tief oder hoch.
+PdMeld? pdBuildMeld(List<PdCard> cards, int owner, {int maxJokers = 1}) {
   if (cards.length < 3) return null;
   final jokers = cards.where((c) => c.joker).toList();
-  if (jokers.length > 1) return null;
+  if (jokers.length > maxJokers) return null;
   final real = cards.where((c) => !c.joker).toList();
-  if (real.isEmpty) return null;
+  if (real.length < 2) return null;
   // Satz
   if (real.every((c) => c.rank == real.first.rank)) {
-    final suits = real.map((c) => c.suit).toSet();
-    if (suits.length == real.length && cards.length <= 4) {
-      return PdMeld(false, [...real, ...jokers], [for (final _ in cards) real.first.rank], null, owner);
-    }
+    return PdMeld(false, [...real, ...jokers], [for (final _ in cards) real.first.rank], null, owner);
   }
   // Folge
   final suit = real.first.suit;
@@ -89,10 +90,10 @@ PdMeld? pdBuildMeld(List<PdCard> cards, int owner) {
     final span = rs.last - rs.first + 1;
     final gaps = span - rs.length;
     if (gaps > jokers.length) continue;
-    // Joker füllt eine Lücke oder hängt an einem Ende
+    // Joker füllen Lücken, übrige hängen oben an, sonst unten
     var lo = rs.first;
     var hi = rs.last;
-    if (gaps == 0 && jokers.isNotEmpty) {
+    for (var k = 0; k < jokers.length - gaps; k++) {
       if (hi < 14) {
         hi++;
       } else {
@@ -119,18 +120,23 @@ PdMeld? pdBuildMeld(List<PdCard> cards, int owner) {
 }
 
 /// Lässt sich die Karte an die Auslage legen? Gibt die neue Auslage zurück.
-PdMeld? pdExtend(PdMeld m, PdCard c) {
-  if (c.joker && m.jokerCount >= 1) return null;
-  return pdBuildMeld([...m.cards, c], m.owner);
+PdMeld? pdExtend(PdMeld m, PdCard c, {int maxJokers = 1}) => pdBuildMeld([...m.cards, c], m.owner, maxJokers: maxJokers);
+
+/// Welcher Joker der Auslage lässt sich durch die echte Karte ersetzen? -1 heißt keiner.
+int pdSwapIndex(PdMeld m, PdCard c) {
+  if (c.joker) return -1;
+  for (var i = 0; i < m.cards.length; i++) {
+    if (!m.cards[i].joker) continue;
+    if (m.run) {
+      if (c.suit == m.suit && (c.rank == m.ranks[i] || (c.rank == 14 && m.ranks[i] == 1))) return i;
+    } else if (c.rank == m.ranks[0]) {
+      return i;
+    }
+  }
+  return -1;
 }
 
-/// Kann die echte Karte den Joker in der Auslage ersetzen?
-bool pdCanSwapJoker(PdMeld m, PdCard c) {
-  if (c.joker || m.jokerCount == 0) return false;
-  final i = m.cards.indexWhere((x) => x.joker);
-  if (m.run) return c.suit == m.suit && (c.rank == m.ranks[i] || (c.rank == 14 && m.ranks[i] == 1));
-  return c.rank == m.ranks[0] && !m.cards.any((x) => !x.joker && x.suit == c.suit);
-}
+bool pdCanSwapJoker(PdMeld m, PdCard c) => pdSwapIndex(m, c) >= 0;
 
 class PdPlayer {
   PdPlayer(this.name, {this.human = false});
@@ -172,6 +178,13 @@ class PdGame {
   PdPhase phase = PdPhase.draw;
   int round = 0;
 
+  /// Wie oft in dieser Runde die Ablage neu gemischt wurde.
+  int reshuffles = 0;
+
+  /// Beim Abheben aufgedeckte Pik Dame oder Joker: wer sie bekommen hat.
+  PdCard? cutCard;
+  int cutter = -1;
+
   /// Erster Zug der Runde: die offene Karte darf ohne Auslegen genommen werden.
   bool firstTurn = true;
 
@@ -200,9 +213,15 @@ class PdGame {
           for (var r = 2; r <= 14; r++) PdCard(r, s, id++),
       for (var j = 0; j < 6; j++) PdCard.joker(id++),
     ]..shuffle(_rng);
+    // Abheben: Ist die aufgedeckte Karte eine Pik Dame oder ein Joker, darf der Abhebende sie zusätzlich behalten
+    cutter = (dealer + n - 1) % n;
+    final cutAt = 10 + _rng.nextInt(deck.length - 20);
+    final shown = deck[cutAt];
+    cutCard = shown.joker || shown.pikDame ? deck.removeAt(cutAt) : null;
     stack = deck;
     pile = [];
     melds = [];
+    reshuffles = 0;
     for (final p in players) {
       p
         ..hand = []
@@ -214,6 +233,7 @@ class PdGame {
         players[(dealer + i) % n].hand.add(stack.removeLast());
       }
     }
+    if (cutCard != null) players[cutter].hand.add(cutCard!);
     pile.add(stack.removeLast());
     current = (dealer + 1) % n;
     firstTurn = true;
@@ -222,7 +242,7 @@ class PdGame {
     _turnMelds.clear();
     result = null;
     round++;
-    lastEvent = '';
+    lastEvent = cutCard == null ? '' : '${who(cutter)} ${cutter == 0 ? 'hebst' : 'hebt'} ${cutCard!.name} ab und ${cutter == 0 ? 'behältst' : 'behält'} sie';
   }
 
   int value(PdCard c) => pdValue(c, options);
@@ -236,10 +256,18 @@ class PdGame {
 
   void drawStack(int p) {
     if (phase != PdPhase.draw || current != p) return;
-    // Ist der Stapel leer, endet die Runde (kein Neumischen, sonst kann sie ewig dauern)
+    // Ist der Stapel leer, wird die Ablage ohne die oberste Karte gemischt und neuer Stapel.
+    // Nach dem dritten Mal endet die Runde, damit sie nicht ewig dauert.
     if (stack.isEmpty) {
-      _endRound(null);
-      return;
+      if (pile.length <= 1 || reshuffles >= 3) {
+        _endRound(null);
+        return;
+      }
+      final top = pile.removeLast();
+      stack = [...pile]..shuffle(_rng);
+      pile = [top];
+      reshuffles++;
+      lastEvent = 'Die Ablage wird gemischt und neuer Stapel';
     }
     players[p].hand.add(stack.removeLast());
     firstTurn = false;
@@ -260,7 +288,7 @@ class PdGame {
   bool canTakePile(int p, List<PdCard> with_) {
     if (phase != PdPhase.draw || current != p || pile.isEmpty) return false;
     if (!with_.every(players[p].hand.contains)) return false;
-    return pdBuildMeld([...with_, pile.last], p) != null;
+    return pdBuildMeld([...with_, pile.last], p, maxJokers: options.maxJokers) != null;
   }
 
   void takePile(int p, List<PdCard> with_) {
@@ -290,11 +318,11 @@ class PdGame {
   bool _leavesCard(int p, int count) => players[p].hand.length - count >= 1;
 
   bool canMeld(int p, List<PdCard> cards) =>
-      phase == PdPhase.play && current == p && cards.every(players[p].hand.contains) && _leavesCard(p, cards.length) && pdBuildMeld(cards, p) != null;
+      phase == PdPhase.play && current == p && cards.every(players[p].hand.contains) && _leavesCard(p, cards.length) && pdBuildMeld(cards, p, maxJokers: options.maxJokers) != null;
 
   void meld(int p, List<PdCard> cards) {
     if (!canMeld(p, cards)) return;
-    final m = pdBuildMeld(cards, p)!;
+    final m = pdBuildMeld(cards, p, maxJokers: options.maxJokers)!;
     for (final c in cards) {
       players[p].hand.remove(c);
     }
@@ -310,13 +338,13 @@ class PdGame {
     if (m.owner != p) return false;
     // Erst anlegen, wenn die erste Auslage steht (50er-Regel)
     if (!players[p].hasMelded && !_turnMelds.contains(m)) return false;
-    return pdExtend(m, c) != null;
+    return pdExtend(m, c, maxJokers: options.maxJokers) != null;
   }
 
   void extend(int p, int meldIndex, PdCard c) {
     if (!canExtend(p, meldIndex, c)) return;
     final old = melds[meldIndex];
-    final m = pdExtend(old, c)!;
+    final m = pdExtend(old, c, maxJokers: options.maxJokers)!;
     melds[meldIndex] = m;
     final ti = _turnMelds.indexOf(old);
     if (ti >= 0) _turnMelds[ti] = m;
@@ -335,7 +363,7 @@ class PdGame {
   void swapJoker(int p, int meldIndex, PdCard c) {
     if (!canSwapJoker(p, meldIndex, c)) return;
     final m = melds[meldIndex];
-    final i = m.cards.indexWhere((x) => x.joker);
+    final i = pdSwapIndex(m, c);
     final joker = m.cards[i];
     final cards = [...m.cards]..[i] = c;
     final nm = PdMeld(m.run, cards, m.ranks, m.suit, p);
@@ -456,14 +484,11 @@ List<List<PdCard>> pdCandidateMelds(List<PdCard> hand) {
     byRank.putIfAbsent(c.rank, () => []).add(c);
   }
   for (final cards in byRank.values) {
-    final distinct = <Suit, PdCard>{};
-    for (final c in cards) {
-      distinct.putIfAbsent(c.suit!, () => c);
+    if (cards.length >= 3) {
+      out.add([...cards]);
+      if (cards.length > 3) out.add(cards.take(3).toList());
     }
-    final d = distinct.values.toList();
-    if (d.length >= 3) out.add(d.take(4).toList());
-    if (d.length == 3) out.add(d);
-    if (d.length >= 2 && jokers.isNotEmpty) out.add([...d.take(min(3, d.length)), jokers.first]);
+    if (cards.length >= 2 && jokers.isNotEmpty) out.add([...cards.take(3), jokers.first]);
   }
   // Folgen
   for (final s in Suit.values) {
