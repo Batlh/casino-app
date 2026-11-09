@@ -29,6 +29,7 @@ import 'package:gluckspfennig/ui/guides.dart';
 import 'package:gluckspfennig/games/arschloch/ah_screen.dart';
 import 'package:gluckspfennig/games/baccarat/baccarat_screen.dart';
 import 'package:gluckspfennig/games/blackjack/blackjack_screen.dart';
+import 'package:gluckspfennig/games/caribbean/caribbean_screen.dart';
 import 'package:gluckspfennig/games/keno/keno_screen.dart';
 import 'package:gluckspfennig/games/sicbo/sicbo_screen.dart';
 import 'package:gluckspfennig/games/eins/eins_engine.dart';
@@ -183,6 +184,7 @@ void main() {
       'pikdame_start': const PikDameScreen(seed: 1),
       'arschloch': const ArschlochScreen(seed: 2),
       'baccarat': const BaccaratScreen(),
+      'caribbean': const CaribbeanScreen(),
       'sicbo': const SicBoScreen(seed: 1),
       'keno': const KenoScreen(seed: 1),
       'skat': const SkatScreen(seed: 3),

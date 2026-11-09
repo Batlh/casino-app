@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gluckspfennig/games/baccarat/baccarat_engine.dart';
+import 'package:gluckspfennig/games/caribbean/caribbean_screen.dart';
+import 'package:gluckspfennig/games/cards/hand_eval.dart';
 import 'package:gluckspfennig/games/cards/playing_card.dart';
 import 'package:gluckspfennig/games/keno/keno_screen.dart';
 import 'package:gluckspfennig/games/sicbo/sicbo_screen.dart';
@@ -58,6 +60,20 @@ void main() {
       expect(kenoPayout(1, 1, 10), 30);
       expect(kenoPayout(10, 0, 10), 20);
       expect(kenoPayout(5, 2, 10), 0);
+    });
+  });
+
+  group('Caribbean Stud', () {
+    test('Bank qualifiziert sich ab Ass-König', () {
+      final ak = bestHand([PlayingCard(14, Suit.hearts), PlayingCard(13, Suit.clubs), PlayingCard(9, Suit.spades), PlayingCard(5, Suit.hearts), PlayingCard(3, Suit.diamonds)]);
+      final aq = bestHand([PlayingCard(14, Suit.hearts), PlayingCard(12, Suit.clubs), PlayingCard(9, Suit.spades), PlayingCard(5, Suit.hearts), PlayingCard(3, Suit.diamonds)]);
+      expect(dealerQualifies(ak), isTrue);
+      expect(dealerQualifies(aq), isFalse);
+      final flush = bestHand([for (final r in [2, 5, 8, 10, 13]) PlayingCard(r, Suit.hearts)]);
+      final (paid, _) = caribbeanSettle(flush, ak, 10);
+      expect(paid, 20 + 20 + 100);
+      final (noQual, _) = caribbeanSettle(flush, aq, 10);
+      expect(noQual, 40);
     });
   });
 }

@@ -10,6 +10,7 @@ import '../games/arschloch/ah_screen.dart';
 import '../games/baccarat/baccarat_screen.dart';
 import '../games/blackjack/blackjack_screen.dart';
 import '../games/cards/playing_card.dart';
+import '../games/caribbean/caribbean_screen.dart';
 import '../games/chess/chess_engine.dart';
 import '../games/chess/chess_pieces.dart';
 import '../games/chess/chess_screen.dart';
@@ -106,6 +107,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF14504A),
         _BaccaratArt.new,
         () => _open(const BaccaratScreen()),
+      ),
+      _Game(
+        'Caribbean Stud',
+        'Fünf-Karten-Poker gegen die Bank',
+        const Color(0xFF0E5E6B),
+        _HoldemArt.new,
+        () => _open(const CaribbeanScreen()),
       ),
       _Game(
         'Sic Bo',
