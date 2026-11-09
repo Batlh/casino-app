@@ -1,0 +1,203 @@
+import 'dart:math';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:gluckspfennig/games/mahjong/classic/mj_bot.dart';
+import 'package:gluckspfennig/games/mahjong/classic/mj_engine.dart';
+import 'package:gluckspfennig/games/mahjong/classic/mj_hand.dart';
+import 'package:gluckspfennig/games/mahjong/classic/mj_rules.dart';
+import 'package:gluckspfennig/games/mahjong/classic/mj_shape.dart';
+import 'package:gluckspfennig/games/mahjong/riichi_hand.dart';
+
+/// Kurzschrift wie im Riichi-Test: 123m 456p 789s 1234z (z = Ehrensteine 1 bis 7).
+List<int> h(String s) {
+  final out = <int>[];
+  final digits = <int>[];
+  for (final ch in s.split('')) {
+    if (ch == ' ') continue;
+    final d = int.tryParse(ch);
+    if (d != null) {
+      digits.add(d);
+      continue;
+    }
+    final base = switch (ch) { 'm' => 0, 'p' => 9, 's' => 18, 'z' => 27, 'j' => -1, _ => throw ch };
+    for (final d in digits) {
+      out.add(base < 0 ? jokerTile : base + d - 1);
+    }
+    digits.clear();
+  }
+  return out;
+}
+
+MjScore? score(MjVariant v, String closed, int win, {bool tsumo = false, List<Meld> melds = const [], List<int> bonus = const []}) {
+  final r = mjRules[v]!;
+  return r.evaluate(
+    h(closed),
+    melds,
+    WinInfo(winTile: win, tsumo: tsumo, seatWind: 27, roundWind: 27, seat: 0, bonus: bonus),
+  );
+}
+
+int total(MjGame g) {
+  var n = g.wall.length;
+  for (final p in g.players) {
+    n += p.hand.length + p.bonus.length + p.wonTiles.length;
+    n += p.discards.where((d) => !d.called).length;
+    for (final m in p.melds) {
+      n += m.tiles.length;
+    }
+  }
+  return n;
+}
+
+void step(MjGame g, Random rng) {
+  switch (g.phase) {
+    case MjPhase.exchange:
+      g.submitExchange(0, g.botExchange(0));
+    case MjPhase.voidChoice:
+      g.chooseVoid(0, g.botVoid(0));
+    case MjPhase.discard:
+      final p = g.current;
+      switch (mjBotTurn(g, p, rng)) {
+        case MjBotWin():
+          g.tsumo(p);
+        case MjBotKan(:final tile):
+          g.kan(p, tile);
+        case MjBotDiscard(:final tile):
+          g.discard(p, tile);
+      }
+    case MjPhase.claim:
+      g.resolveClaims({for (final e in g.claims.entries) e.key: mjBotClaim(g, e.key, e.value)});
+    case MjPhase.handOver:
+      g.nextHand();
+    case MjPhase.gameOver:
+      break;
+  }
+}
+
+void main() {
+  group('Hand mit Jokern', () {
+    test('Fertige Hand ohne Joker', () {
+      final c = countsPlain(h('123m456p789s11122z'));
+      expect(isCompleteJ(c, 0, 4, 0), isTrue);
+    });
+    test('Joker füllen Folge und Paar', () {
+      final hand = h('12m456p789s111z5p') + [jokerTile, jokerTile];
+      // 12m+J, 456p, 789s, 111z, 5p+J
+      final c = countsPlain(hand);
+      expect(isCompleteJ(c, 2, 4, 0), isTrue);
+    });
+    test('16er-Hand mit fünf Gruppen', () {
+      final c = countsPlain(h('123m456m789m123p456p55s'));
+      expect(isCompleteJ(c, 0, 5, 0), isTrue);
+      expect(isCompleteJ(c, 0, 4, 0), isFalse);
+    });
+    test('Zerlegung mit Joker nennt den ersetzten Stein', () {
+      final d = decompositionsJ(countsPlain(h('13m')), 1);
+      expect(d, isEmpty, reason: 'Ohne Paar ist das nichts');
+      final d2 = decompositionsJ(countsPlain(h('13m55p')), 1);
+      expect(d2.any((e) => e.$3.contains(1)), isTrue);
+    });
+  });
+
+  group('Wertungen', () {
+    test('Sichuan: Sieben Paare und reine Farbe', () {
+      final s = score(MjVariant.sichuanBattle, '11223344556677m', 6)!;
+      expect(s.fans.map((f) => f.name), containsAll(['Sieben Paare', 'Reine Farbe']));
+      expect(s.points, 4);
+    });
+    test('Sichuan: Drachen-Sieben-Paare', () {
+      final s = score(MjVariant.sichuanBattle, '11112233445566m', 5)!;
+      expect(s.fans.first.name, 'Drachen-Sieben-Paare');
+    });
+    test('Hongkong: nur Pungs mit Drache', () {
+      final s = score(MjVariant.hongKong, '111m999p555s66677z', 32)!;
+      expect(s.fans.map((f) => f.name), containsAll(['Nur Pungs']));
+      expect(s.points, greaterThanOrEqualTo(4));
+    });
+    test('Hongkong: Dreizehn Waisen ist Limit', () {
+      final s = score(MjVariant.hongKong, '19m19p19s12345677z', 33)!;
+      expect(s.limit, isTrue);
+    });
+    test('MCR: Hühnerhand zählt 8', () {
+      final s = score(MjVariant.mcr, '678s11z', 25, melds: [
+        Meld(MeldKind.chi, [0, 1, 2]),
+        Meld(MeldKind.chi, [13, 14, 15]),
+        Meld(MeldKind.pon, [21, 21, 21]),
+      ])!;
+      expect(s.fans.first.name, 'Hühnerhand');
+      expect(s.points, 8);
+    });
+    test('MCR: Reine Farbe 24', () {
+      final s = score(MjVariant.mcr, '11123456789999m', 0)!;
+      expect(s.fans.map((f) => f.name), contains('Neun Tore'));
+    });
+    test('MCR: Gleiche Folge in drei Farben', () {
+      final s = score(MjVariant.mcr, '234m234p234s789s55p', 13, tsumo: true)!;
+      expect(s.fans.map((f) => f.name), contains('Gleiche Folge in drei Farben'));
+    });
+    test('MCR: Große Ehren und Verbundene', () {
+      final s = score(MjVariant.mcr, '147m25p36s1234567z', 33);
+      expect(s, isNotNull);
+      expect(s!.fans.first.name, 'Große Ehren und Verbundene');
+    });
+    test('Taiwan: 17 Steine mit fünf Gruppen', () {
+      final s = score(MjVariant.taiwan, '123m456m789m123p456p55s', 4)!;
+      expect(s.fans.map((f) => f.name), contains('Verdeckte Hand'));
+    });
+    test('Taiwan: Sieben Paare und ein Pung', () {
+      final s = score(MjVariant.taiwan, '11223344556677m999p', 17);
+      expect(s, isNotNull);
+    });
+    test('Zung Jung: Hühnerhand 1 Punkt', () {
+      final s = score(MjVariant.zungJung, '123m456p789s11z', 0, melds: [
+        Meld(MeldKind.pon, h('222z')),
+      ])!;
+      expect(s.points, greaterThan(0));
+    });
+    test('Westlich: Pungs geben Grundpunkte', () {
+      final s = score(MjVariant.western, '111m999p555s66677z', 32)!;
+      expect(s.points, greaterThan(20));
+    });
+    test('Vietnam: Joker im Pung', () {
+      final hand = h('11m999p555s66677z') + [jokerTile];
+      final s = mjRules[MjVariant.vietnam]!
+          .evaluate(hand, const [], const WinInfo(winTile: 32, tsumo: false, seatWind: 27, roundWind: 27, seat: 0));
+      expect(s, isNotNull);
+    });
+  });
+
+  group('Ganze Spiele mit Computern', () {
+    for (final v in MjVariant.values) {
+      test('${v.name} läuft durch', () {
+        for (var seed = 0; seed < 3; seed++) {
+          final rng = Random(seed * 31 + v.index);
+          final g = MjGame(mjRules[v]!, rng: Random(seed + 100 * v.index))..start();
+          final start = g.players.fold(0, (a, p) => a + p.points);
+          var tiles = total(g);
+          var steps = 0;
+          var wins = 0;
+          var lastHands = 0;
+          while (g.phase != MjPhase.gameOver && steps < 40000) {
+            if (g.handsPlayed != lastHands) {
+              lastHands = g.handsPlayed;
+              wins += g.result?.wins.length ?? 0;
+            }
+            if (g.phase == MjPhase.exchange || g.phase == MjPhase.handOver) {
+              step(g, rng);
+              tiles = total(g);
+              steps++;
+              continue;
+            }
+            step(g, rng);
+            expect(total(g), tiles, reason: 'Steine verschwunden bei ${g.phase}, Schritt $steps');
+            steps++;
+          }
+          expect(g.phase, MjPhase.gameOver, reason: 'Spiel endet nicht');
+          expect(g.players.fold(0, (a, p) => a + p.points), start, reason: 'Punkte gehen nicht auf');
+          // ignore: avoid_print
+          print('${v.name} seed $seed: ${g.handsPlayed} Hände, $wins Siege, Punkte ${g.players.map((p) => p.points).join('/')}');
+        }
+      });
+    }
+  });
+}

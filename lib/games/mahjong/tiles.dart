@@ -5,12 +5,17 @@ import 'package:flutter/material.dart';
 /// Mahjong-Steine als Zahlen: 0 bis 8 Zeichen (Man), 9 bis 17 Kreise (Pin),
 /// 18 bis 26 Bambus (Sou), 27 bis 30 Winde Ost, Süd, West, Nord,
 /// 31 bis 33 Drachen Weiß, Grün, Rot. Für das Solitär zusätzlich
-/// 34 bis 37 Blumen und 38 bis 41 Jahreszeiten.
+/// 34 bis 37 Blumen und 38 bis 41 Jahreszeiten, 42 bis 45 Tiere (Katze, Maus, Hahn, Tausendfüßer)
+/// und 46 der Joker.
 const tileKinds = 34;
 const firstWind = 27;
 const firstDragon = 31;
 const firstFlower = 34;
 const firstSeason = 38;
+const firstAnimal = 42;
+const jokerKind = 46;
+const animalNames = ['Katze', 'Maus', 'Hahn', 'Tausendfüßer'];
+const _animalKanji = ['貓', '鼠', '雞', '蜈'];
 
 int suitOf(int t) => t < 27 ? t ~/ 9 : 3;
 int numberOf(int t) => t < 27 ? t % 9 + 1 : 0;
@@ -30,7 +35,9 @@ String tileName(int t) {
   if (t < 31) return '${windNames[t - 27]}wind';
   if (t < 34) return const ['Weißer Drache', 'Grüner Drache', 'Roter Drache'][t - 31];
   if (t < 38) return 'Blume ${t - 33}';
-  return 'Jahreszeit ${t - 37}';
+  if (t < 42) return 'Jahreszeit ${t - 37}';
+  if (t < 46) return animalNames[t - 42];
+  return 'Joker';
 }
 
 const _ivory = Color(0xFFFBF5E6);
@@ -222,7 +229,40 @@ void _paintFace(Canvas canvas, Rect r, int t) {
     _text(canvas, '中', r.center, w * 0.8, _red);
     return;
   }
-  // Blumen und Jahreszeiten für das Solitär
+  if (t >= firstAnimal && t < jokerKind) {
+    final k = t - firstAnimal;
+    const colors = [Color(0xFF6D4C41), Color(0xFF546E7A), Color(0xFFC62828), Color(0xFF2E7D32)];
+    canvas.drawCircle(at(const Offset(0.5, 0.42)), w * 0.4, Paint()..color = colors[k].withValues(alpha: 0.15));
+    _text(canvas, _animalKanji[k], at(const Offset(0.5, 0.42)), w * 0.72, colors[k]);
+    _text(canvas, '${k + 1}', at(const Offset(0.5, 0.9)), w * 0.28, _ink);
+    return;
+  }
+  if (t == jokerKind) {
+    final c = at(const Offset(0.5, 0.42));
+    final star = Path();
+    for (var i = 0; i < 10; i++) {
+      final a = -math.pi / 2 + i * math.pi / 5;
+      final rr = i.isEven ? w * 0.42 : w * 0.18;
+      final pt = c + Offset(math.cos(a), math.sin(a)) * rr;
+      if (i == 0) {
+        star.moveTo(pt.dx, pt.dy);
+      } else {
+        star.lineTo(pt.dx, pt.dy);
+      }
+    }
+    star.close();
+    canvas.drawPath(star, Paint()..color = const Color(0xFFFFB300));
+    canvas.drawPath(
+      star,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.03
+        ..color = _red,
+    );
+    _text(canvas, 'JOKER', at(const Offset(0.5, 0.88)), w * 0.24, _red);
+    return;
+  }
+  // Blumen und Jahreszeiten
   final flower = t < firstSeason;
   final k = flower ? t - firstFlower : t - firstSeason;
   final colors = flower
