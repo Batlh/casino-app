@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gluckspfennig/core/saves.dart';
 import 'package:gluckspfennig/games/arschloch/ah_engine.dart';
 import 'package:gluckspfennig/games/cards/playing_card.dart';
+import 'package:gluckspfennig/games/hearts/hearts_engine.dart';
 import 'package:gluckspfennig/games/mahjong/american/am_engine.dart';
 import 'package:gluckspfennig/games/mahjong/classic/mj_bot.dart';
 import 'package:gluckspfennig/games/mahjong/classic/mj_engine.dart';
@@ -224,6 +225,34 @@ void main() {
     for (var p = 0; p < 4; p++) {
       expect(r.players[p].hand, g.players[p].hand);
       expect(r.players[p].points, g.players[p].points);
+    }
+  });
+
+  test('Schwarze Dame: Nachspielen', () {
+    HeartsEngine make() => HeartsEngine(rng: Random(17), seats: [for (final n in ['a', 'b', 'c', 'd']) HeartsSeat(n)]);
+    final e = make()..newGame();
+    for (var i = 0; i < 150 && e.phase != HeartsPhase.gameOver; i++) {
+      switch (e.phase) {
+        case HeartsPhase.passing:
+          for (var s = 0; s < 4; s++) {
+            e.choosePass(s, heartsBotPass(e.seats[s].hand));
+          }
+        case HeartsPhase.playing:
+          e.play(heartsBotPlay(e));
+        case HeartsPhase.handOver:
+          e.startHand();
+        case HeartsPhase.gameOver:
+          break;
+      }
+    }
+    final r = make();
+    for (final a in viaJson(e.actionLog)) {
+      heartsApply(r, a as List);
+    }
+    expect(r.phase, e.phase);
+    for (var s = 0; s < 4; s++) {
+      expect(r.seats[s].hand, e.seats[s].hand);
+      expect(r.seats[s].score, e.seats[s].score);
     }
   });
 }

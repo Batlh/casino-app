@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/scope.dart';
+import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guides.dart';
@@ -25,14 +26,22 @@ class HeartsScreen extends StatefulWidget {
 }
 
 class _HeartsScreenState extends State<HeartsScreen> {
-  final _e = HeartsEngine(
-    seats: [
-      HeartsSeat('Du', human: true),
-      HeartsSeat('Helga'),
-      HeartsSeat('Otto'),
-      HeartsSeat('Bärbel'),
-    ],
-  );
+  late HeartsEngine _e;
+  late int _seed;
+  static const _saveId = 'hearts';
+
+  /// Für Spielstände; auch beim Schließen noch erreichbar.
+  late final Settings _store;
+
+  HeartsEngine _make() => HeartsEngine(
+        rng: math.Random(_seed),
+        seats: [
+          HeartsSeat('Du', human: true),
+          HeartsSeat('Helga'),
+          HeartsSeat('Otto'),
+          HeartsSeat('Bärbel'),
+        ],
+      );
   final Set<PlayingCard> _selected = {};
   bool _running = false;
   bool _showLast = false;
@@ -48,7 +57,45 @@ class _HeartsScreenState extends State<HeartsScreen> {
   @override
   void initState() {
     super.initState();
-    _e.newGame();
+    _store = _app.settings;
+    _seed = math.Random.secure().nextInt(1 << 31);
+    final d = _store.loadGame(_saveId);
+    if (d != null) {
+      try {
+        _seed = d['seed'] as int;
+        final e = _make();
+        for (final a in d['log'] as List) {
+          heartsApply(e, a as List);
+        }
+        _e = e;
+        _rewardDone = d['paid'] == e.actionLog.length;
+        WidgetsBinding.instance.addPostFrameCallback((_) => _pump());
+        return;
+      } catch (_) {
+        _store.clearGame(_saveId);
+      }
+    }
+    _e = _make()..newGame();
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _persist();
+  }
+
+  @override
+  void dispose() {
+    _persist();
+    super.dispose();
+  }
+
+  void _persist() {
+    if (_e.phase == HeartsPhase.gameOver && _rewardDone) {
+      _store.clearGame(_saveId);
+      return;
+    }
+    _store.saveGame(_saveId, {'seed': _seed, 'log': _e.actionLog, 'paid': _rewardDone ? _e.actionLog.length : -1});
   }
 
   void _tap(PlayingCard c) {
@@ -149,7 +196,8 @@ class _HeartsScreenState extends State<HeartsScreen> {
 
   void _next() {
     if (_e.phase == HeartsPhase.gameOver) {
-      _e.newGame();
+      _seed = math.Random.secure().nextInt(1 << 31);
+      _e = _make()..newGame();
     } else {
       _e.startHand();
     }

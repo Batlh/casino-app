@@ -1,3 +1,5 @@
+import '../../core/action_log.dart';
+import '../../core/saves.dart';
 import 'dart:math';
 
 import '../cards/playing_card.dart';
@@ -30,7 +32,7 @@ int pointsOf(Iterable<PlayingCard> cards) =>
 
 /// Schwarze Dame für vier Spieler. Gespielt wird im Uhrzeigersinn:
 /// 0 unten, 1 links, 2 oben, 3 rechts. Ende ab 100 Punkten.
-class HeartsEngine {
+class HeartsEngine with ActionLog {
   HeartsEngine({required this.seats, Random? rng, this.target = 100})
       : _rng = rng ?? Random.secure();
 
@@ -63,7 +65,9 @@ class HeartsEngine {
 
   bool get queenPlayed => played.any(isQueenOfSpades);
 
-  void startHand({List<PlayingCard>? deck}) {
+  void startHand({List<PlayingCard>? deck}) => record(['s'], () => _startHandImpl(deck: deck));
+
+  void _startHandImpl({List<PlayingCard>? deck}) {
     final cards = deck?.toList() ?? shuffledDeck(_rng);
     for (final s in seats) {
       s.hand = [];
@@ -89,7 +93,9 @@ class HeartsEngine {
     }
   }
 
-  void newGame() {
+  void newGame() => record(['g'], _newGameImpl);
+
+  void _newGameImpl() {
     for (final s in seats) {
       s.score = 0;
     }
@@ -99,7 +105,9 @@ class HeartsEngine {
 
   bool hasPassed(int seat) => _passes.containsKey(seat);
 
-  void choosePass(int seat, List<PlayingCard> cards) {
+  void choosePass(int seat, List<PlayingCard> cards) => record(['p', seat, ...cardCodes(cards)], () => _choosePassImpl(seat, cards));
+
+  void _choosePassImpl(int seat, List<PlayingCard> cards) {
     if (phase != HeartsPhase.passing || cards.length != 3) {
       throw StateError('Weitergabe nicht möglich');
     }
@@ -157,6 +165,12 @@ class HeartsEngine {
 
   /// Spielt eine Karte. Liefert true, wenn damit ein Stich fertig ist.
   bool play(PlayingCard c) {
+    var done = false;
+    record(['c', cardCode(c)], () => done = _playImpl(c));
+    return done;
+  }
+
+  bool _playImpl(PlayingCard c) {
     final s = current;
     if (!legalCards(s).contains(c)) throw StateError('Karte nicht erlaubt');
     seats[s].hand.remove(c);
@@ -269,4 +283,18 @@ PlayingCard heartsBotPlay(HeartsEngine e) {
   final hearts = legal.where((c) => c.suit == Suit.hearts);
   if (hearts.isNotEmpty) return highest(hearts);
   return highest(legal);
+}
+
+/// Spielt einen gespeicherten Zug nach.
+void heartsApply(HeartsEngine e, List<dynamic> a) {
+  switch (a[0] as String) {
+    case 'g':
+      e.newGame();
+    case 's':
+      e.startHand();
+    case 'p':
+      e.choosePass(a[1] as int, [for (final x in a.sublist(2)) cardFromCode(x as String)]);
+    case 'c':
+      e.play(cardFromCode(a[1] as String));
+  }
 }
