@@ -398,7 +398,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
           ),
         ),
         const SizedBox(height: 4),
-        Wrap(spacing: 4, runSpacing: 4, alignment: WrapAlignment.center, children: [for (final m in g.meldsOf(p)) _meldRow(m, w)]),
+        Wrap(spacing: 12, runSpacing: 4, alignment: WrapAlignment.center, children: [for (final m in g.meldsOf(p)) _meldRow(m, w)]),
       ],
     );
   }
@@ -446,8 +446,8 @@ class _PikDameScreenState extends State<PikDameScreen> {
                       Text('Du · ${g.me.score} Punkte', style: const TextStyle(color: Color(0xFFFFC95C), fontWeight: FontWeight.w700)),
                       const SizedBox(height: 4),
                       Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
+                        spacing: 16,
+                        runSpacing: 8,
                         alignment: WrapAlignment.center,
                         children: [for (final i in myMelds) _meldRow(g.melds[i], small * 1.2, onTap: () => _tapMeld(i))],
                       ),

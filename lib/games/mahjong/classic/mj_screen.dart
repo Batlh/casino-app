@@ -392,7 +392,8 @@ class _MjScreenState extends State<MjScreen> {
     final tags = [
       wind,
       formatCoins(pl.points),
-      if (pl.voidSuit != null) 'ohne ${suitNames[pl.voidSuit!]}',
+      // Die Wahl der anderen bleibt verdeckt, bis alle gewählt haben
+      if (pl.voidSuit != null && (p == 0 || _g.phase != MjPhase.voidChoice)) 'ohne ${suitNames[pl.voidSuit!]}',
       if (pl.out) 'fertig',
       if (pl.locked) '${pl.wonTiles.length}× gewonnen',
     ];
