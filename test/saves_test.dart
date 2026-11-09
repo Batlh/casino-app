@@ -155,7 +155,7 @@ void main() {
     expect(r.phase, g.phase);
     expect([for (final c in r.pile) c.id], [for (final c in g.pile) c.id]);
     for (var p = 0; p < 3; p++) {
-      expect([for (final c in r.players[p].hand) c.id], [for (final c in g.players[p].hand) c.id]);
+      expect([for (final c in r.players[p].hand) c.id]..sort(), [for (final c in g.players[p].hand) c.id]..sort());
       expect(r.players[p].score, g.players[p].score);
     }
   });

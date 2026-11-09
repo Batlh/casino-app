@@ -54,7 +54,6 @@ class ArschlochScreen extends StatefulWidget {
 }
 
 class _ArschlochScreenState extends State<ArschlochScreen> {
-  late math.Random _rng;
   late AhGame _g;
   final Set<PlayingCard> _sel = {};
   bool _running = false;
@@ -71,7 +70,6 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
   void initState() {
     super.initState();
     _store = AppScope.of(context).settings;
-    _rng = widget.seed == null ? math.Random.secure() : math.Random(widget.seed);
     _seed = widget.seed ?? math.Random.secure().nextInt(1 << 31);
     _g = _restore() ?? _make();
     WidgetsBinding.instance.addPostFrameCallback((_) => _pump());
