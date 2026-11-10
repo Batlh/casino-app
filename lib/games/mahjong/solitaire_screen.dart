@@ -120,7 +120,7 @@ class _MahjongSolitaireScreenState extends State<MahjongSolitaireScreen> {
     if (_won) return;
     if (!_e.isFree(i)) {
       _app.sfx.play(Sound.tick);
-      setState(() => _message = 'Dieser Stein ist nicht frei: Er braucht eine freie linke oder rechte Seite und nichts darauf');
+      setState(() => _message = 'Nicht frei: links oder rechts muss Platz sein, oben nichts drauf');
       return;
     }
     final sel = _selected;
@@ -150,7 +150,7 @@ class _MahjongSolitaireScreenState extends State<MahjongSolitaireScreen> {
         setState(() => _message = 'Alles abgeräumt! +${formatCoins(_reward)} Münzen');
       } else if (_e.stuck) {
         _app.sfx.play(Sound.lose);
-        setState(() => _message = 'Kein passendes Paar mehr frei. Mischen oder Rückgängig');
+        setState(() => _message = 'Kein Paar mehr frei – mischen oder zurück');
       }
     } else {
       setState(() {

@@ -214,7 +214,7 @@ class _ShisenScreenState extends State<ShisenScreen> {
       setState(() => _message = 'Alles abgeräumt! +${formatCoins(_reward)} Münzen');
     } else if (_e.stuck) {
       _app.sfx.play(Sound.lose);
-      setState(() => _message = 'Kein Paar lässt sich mehr verbinden. Mischen oder Rückgängig');
+      setState(() => _message = 'Kein Paar mehr verbindbar – mischen oder zurück');
     }
   }
 
