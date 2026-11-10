@@ -59,6 +59,9 @@ Jedes Spiel mit Erklärung und Tutorial wie die anderen, mit eigenen Einstellung
 
 ## 5. Mehrspieler an einem Gerät
 
+- Ablauf beim Start (bestätigt am 10.11.2026): Vor jedem Spiel kommt die Frage, wie viele Menschen an diesem Gerät
+  mitspielen, mit Namen für jeden. Alle übrigen Plätze übernehmen Computer. Wer allein spielt, wählt „1 Spieler“ und
+  spielt wie bisher gegen Computer. Die letzte Wahl wird pro Spiel gemerkt.
 - Alle neuen Brettspiele (siehe 4).
 - Kartenspiele, bei denen die Hand verdeckt ist: Mau Mau, Eins, Pik Dame, Arschloch. Das Gerät wird weitergegeben.
   Dazwischen kommt ein Bildschirm „Gib das Gerät an …“, und die Hand ist erst nach Antippen sichtbar.
