@@ -11,7 +11,7 @@ Quelle: https://www.gutefrage.net/frage/pik-dame---spielanleitung (Antworten von
 
 Festgelegt mit dem Nutzer (8.11.2026):
 - Blatt: 2×52 Karten + 6 Joker (110 Karten, zwei Pik Damen)
-- Kartenwerte als Schalter, beide Varianten:
+- Kartenwerte (überholt, gültig sind die Antworten vom 9.11.2026 unten):
   - A: 2–9 = 5, 10–König = 10, Ass = 15, Joker = 20, Pik Dame = 100
   - B: wie A, aber Ass = 20, Joker = 15
 - Erstes Auslegen mindestens 50 Punkte: Schalter, standardmäßig an
@@ -26,9 +26,9 @@ Regeln laut Quelle:
 - Rundenende: Ausgelegtes zählt plus, Karten auf der Hand minus.
 - „Hand“ (alles auf einmal ohne vorherige Auslage): eigene Punkte doppelt, Handkarten der anderen doppelt minus, deren Auslagen einfach plus.
 - Ziel: als Erster 1.000 Punkte.
-- Eingebaut mit den Standardantworten auf die offenen Fragen: Folgen nur in einer Farbe, Anlegen nur an eigene Auslagen,
+- Zuerst eingebaut (überholt, siehe Antworten vom 9.11.2026): Folgen nur in einer Farbe, Anlegen nur an eigene Auslagen,
   höchstens ein Joker je Auslage, Sätze nur aus verschiedenen Farben.
-- Selbst entschieden: Ist der Stapel leer, endet die Runde und jeder rechnet ab (kein Neumischen, sonst kann eine Runde
+- Zuerst selbst entschieden (überholt): Ist der Stapel leer, endet die Runde und jeder rechnet ab (kein Neumischen, sonst kann eine Runde
   endlos laufen). Wenn die Familienregel anders ist, umstellen.
 
 ## Flipper / Pinball (Wunsch vom 8.11.2026)
