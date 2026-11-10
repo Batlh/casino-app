@@ -81,7 +81,7 @@ final pikDameGuide = GameGuide(
     ),
     const GuideSection(
       'Kartenwerte',
-      '2 bis 9 zählen 5, 10, Bube, Dame und König 10, das Ass 25, der Joker 20 (oder 15, einstellbar). Die Pik Dame zählt 100 – '
+      '2 bis 9 zählen 5, 10, Bube, Dame und König 10, das Ass 25, der Joker 25 (oder 20 bzw. 15, einstellbar). Die Pik Dame zählt 100 – '
           'auf der Hand ist sie eine teure Last.',
     ),
     const GuideSection(
@@ -127,7 +127,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
   // Einstellungen für das nächste Spiel
   int _players = 3;
   int _target = 1000;
-  bool _joker15 = false;
+  int _jokerValue = 25;
   int _maxJokers = 1;
   bool _first50 = true;
 
@@ -162,7 +162,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
       final o = PdOptions(
         players: d['players'] as int,
         target: d['target'] as int,
-        joker15: d['joker15'] as bool,
+        jokerValue: d['jokerValue'] as int? ?? (d['joker15'] == true ? 15 : 20),
         maxJokers: d['maxJokers'] as int,
         firstMeld50: d['first50'] as bool,
       );
@@ -208,7 +208,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
       'seed': _seed,
       'players': o.players,
       'target': o.target,
-      'joker15': o.joker15,
+      'jokerValue': o.jokerValue,
       'maxJokers': o.maxJokers,
       'first50': o.firstMeld50,
       'log': game.actionLog,
@@ -432,10 +432,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
               Text('Neues Spiel', style: Theme.of(context).textTheme.titleLarge),
               row('Mitspieler', [for (final n in [2, 3, 4]) ('${n - 1} Computer', _players == n, () => _players = n)]),
               row('Ziel', [for (final t in [500, 1000]) ('$t Punkte', _target == t, () => _target = t)]),
-              row('Joker zählt', [
-                ('20 Punkte', !_joker15, () => _joker15 = false),
-                ('15 Punkte', _joker15, () => _joker15 = true),
-              ]),
+              row('Joker zählt', [for (final v in [25, 20, 15]) ('$v Punkte', _jokerValue == v, () => _jokerValue = v)]),
               row('Joker je Auslage', [
                 ('Einer', _maxJokers == 1, () => _maxJokers = 1),
                 ('Bis zu zwei', _maxJokers == 2, () => _maxJokers = 2),
@@ -448,7 +445,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
               ActionButton(
                 primary: true,
                 label: 'Los geht’s',
-                onPressed: () => setState(() => _start(PdOptions(players: _players, target: _target, joker15: _joker15, maxJokers: _maxJokers, firstMeld50: _first50))),
+                onPressed: () => setState(() => _start(PdOptions(players: _players, target: _target, jokerValue: _jokerValue, maxJokers: _maxJokers, firstMeld50: _first50))),
               ),
             ],
           ),

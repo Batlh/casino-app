@@ -32,11 +32,13 @@ void main() {
 
   test('Werte', () {
     const a = PdOptions();
-    const b = PdOptions(joker15: true);
+    const b = PdOptions(jokerValue: 15);
+    const m = PdOptions(jokerValue: 20);
     expect(pdValue(c(12, Suit.spades), a), 100);
     expect(pdValue(c(14, Suit.hearts), a), 25);
     expect(pdValue(c(13, Suit.hearts), b), 10);
-    expect(pdValue(j(), a), 20);
+    expect(pdValue(j(), a), 25);
+    expect(pdValue(j(), m), 20);
     expect(pdValue(j(), b), 15);
     expect(pdValue(c(9, Suit.hearts), a), 5);
     expect(pdValue(c(10, Suit.hearts), a), 10);
@@ -46,7 +48,7 @@ void main() {
     test('Ganze Partien mit $players Spielern', () {
       for (var seed = 0; seed < 3; seed++) {
         final rng = Random(seed);
-        final g = PdGame(PdOptions(players: players, target: 500, firstMeld50: seed != 1, joker15: seed == 2, maxJokers: seed == 0 ? 2 : 1), rng: Random(seed + 50))
+        final g = PdGame(PdOptions(players: players, target: 500, firstMeld50: seed != 1, jokerValue: seed == 2 ? 15 : 25, maxJokers: seed == 0 ? 2 : 1), rng: Random(seed + 50))
           ..start();
         var turns = 0;
         var rounds = 0;

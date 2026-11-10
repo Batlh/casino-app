@@ -33,10 +33,10 @@ class PdCard {
 }
 
 class PdOptions {
-  const PdOptions({this.joker15 = false, this.maxJokers = 1, this.firstMeld50 = true, this.target = 1000, this.players = 3});
+  const PdOptions({this.jokerValue = 25, this.maxJokers = 1, this.firstMeld50 = true, this.target = 1000, this.players = 3});
 
-  /// false: Joker 20, true: Joker 15.
-  final bool joker15;
+  /// Wert des Jokers: 25 (Standard), 20 oder 15.
+  final int jokerValue;
 
   /// Joker je Auslage: üblich einer, wenn nötig auch zwei.
   final int maxJokers;
@@ -46,7 +46,7 @@ class PdOptions {
 }
 
 int pdValue(PdCard c, PdOptions o) {
-  if (c.joker) return o.joker15 ? 15 : 20;
+  if (c.joker) return o.jokerValue;
   if (c.pikDame) return 100;
   if (c.rank == 14) return 25;
   if (c.rank >= 10) return 10;

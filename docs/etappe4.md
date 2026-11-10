@@ -50,7 +50,7 @@ Regeln laut Quelle:
 
 - Stapel leer: Ablage ohne oberste Karte mischen, als neuer Stapel daneben; oberste Karte bleibt liegen.
   (Sicherung im Spiel: nach dem dritten Mischen endet die Runde.)
-- Ass 25, Bube/Dame/König 10. Der Schalter betrifft nur noch den Joker (20 oder 15).
+- Ass 25, Bube/Dame/König 10. Der Joker zählt 25, umstellbar auf 20 oder 15.
 - Anlegen nur an eigene Auslagen (bestätigt). Erste Auslage 50: bestätigt.
 - Joker: üblich einer je Auslage, wenn nötig zwei (Schalter, Standard einer).
 - Sätze dürfen gleiche Farben doppelt enthalten.
