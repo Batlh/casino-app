@@ -44,6 +44,7 @@ import '../games/slots/kosmos_art.dart';
 import '../games/slots/slot_games.dart';
 import '../games/slots/slot_screen.dart';
 import '../games/slots/tiefsee_art.dart';
+import '../games/backgammon/bg_screen.dart';
 import '../games/dame/dame_screen.dart';
 import '../games/kniffel/kniffel_screen.dart';
 import '../games/ladder/ladder_screen.dart';
@@ -273,6 +274,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF5A3420),
         _MuehleArt.new,
         () => _open(const MuehleScreen()),
+      ),
+      _Game(
+        'Backgammon',
+        'Würfeln, schlagen, abtragen: der Klassiker für zwei',
+        const Color(0xFF5A3420),
+        _BackgammonArt.new,
+        () => _open(const BgScreen()),
       ),
       _Game(
         'Reversi',
@@ -860,6 +868,46 @@ class _MemoryArt extends CustomPainter {
         ..color = const Color(0xFFF6E7C8));
       canvas.restore();
     }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _BackgammonArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = math.min(size.width * 0.8, size.height * 1.2);
+    final h = w * 0.7;
+    final o = Offset((size.width - w) / 2, (size.height - h) / 2);
+    canvas.drawRect(o & Size(w, h), Paint()..color = const Color(0xFF1E6B45));
+    final cw = w / 6;
+    for (var i = 0; i < 6; i++) {
+      final x = o.dx + i * cw;
+      final c = i.isEven ? const Color(0xFFC9A57A) : const Color(0xFF9C3B2A);
+      canvas.drawPath(
+        Path()
+          ..moveTo(x, o.dy)
+          ..lineTo(x + cw, o.dy)
+          ..lineTo(x + cw / 2, o.dy + h * 0.42)
+          ..close(),
+        Paint()..color = c,
+      );
+      canvas.drawPath(
+        Path()
+          ..moveTo(x, o.dy + h)
+          ..lineTo(x + cw, o.dy + h)
+          ..lineTo(x + cw / 2, o.dy + h * 0.58)
+          ..close(),
+        Paint()..color = i.isEven ? const Color(0xFF9C3B2A) : const Color(0xFFC9A57A),
+      );
+    }
+    final r = cw * 0.42;
+    for (var k = 0; k < 3; k++) {
+      canvas.drawCircle(o + Offset(cw * 0.5, h - r - k * r * 2), r, Paint()..color = const Color(0xFFF2EEE6));
+      canvas.drawCircle(o + Offset(cw * 4.5, r + k * r * 2), r, Paint()..color = const Color(0xFF2A2A30));
+    }
+    canvas.drawCircle(o + Offset(cw * 2.5, h - r), r, Paint()..color = const Color(0xFF2A2A30));
   }
 
   @override

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gluckspfennig/games/backgammon/bg_engine.dart';
 import 'package:gluckspfennig/games/dame/dame_engine.dart';
 import 'package:gluckspfennig/games/kniffel/kniffel_engine.dart';
 import 'package:gluckspfennig/games/ladder/ladder_engine.dart';
@@ -330,6 +331,75 @@ void main() {
         }
         final r = KniffelGame.fromJson(viaJson(g.toJson()));
         expect(r.scores, g.scores);
+      }
+    });
+  });
+
+  group('Backgammon', () {
+    test('Aufstellung, Würfe, Pflicht zum höheren Würfel', () {
+      final g = BgGame(rng: Random(1));
+      expect(g.pips(0), 167);
+      expect(g.pips(1), 167);
+      g.roll(3, 1);
+      final seqs = g.sequences();
+      expect(seqs.every((s) => s.length == 2), isTrue);
+      // 8/5 6/5: Punkt machen ist dabei
+      expect(seqs.any((s) => s.any((x) => x.from == 7 && x.to == 4) && s.any((x) => x.from == 5 && x.to == 4)), isTrue);
+      g.endTurn();
+      g.roll(6, 6);
+      expect(g.remaining.length, 4);
+    });
+
+    test('Schlagen, Bar zuerst, Abtragen', () {
+      final g = BgGame(rng: Random(2));
+      for (final p in [0, 1]) {
+        g.counts[p].fillRange(0, 24, 0);
+      }
+      g.counts[0][10] = 1;
+      g.counts[1][23 - 8] = 1; // schwarzer Einzelstein auf meinem Punkt 8
+      g.roll(2, 5);
+      final hit = g.stepFor(10, 2)!;
+      expect(hit.hit, isTrue);
+      g.apply(hit);
+      expect(g.bar[1], 1);
+      g.endTurn();
+      g.roll(1, 2);
+      final seqs = g.sequences();
+      expect(seqs.every((s) => s.first.from == bgBar), isTrue);
+      // Abtragen nur mit allen im Heimfeld
+      final h = BgGame(rng: Random(3));
+      for (final p in [0, 1]) {
+        h.counts[p].fillRange(0, 24, 0);
+      }
+      h.counts[0][2] = 1;
+      h.counts[0][0] = 14;
+      h.counts[1][0] = 15;
+      h.roll(6, 1);
+      final s = h.sequences();
+      expect(s.any((q) => q.any((x) => x.to == bgOff && x.die == 6 && x.from == 2)), isTrue);
+    });
+
+    test('Computer gegen Computer bis zum Ende', () {
+      for (var seed = 0; seed < 6; seed++) {
+        final rng = Random(seed);
+        final g = BgGame(rng: rng)..start();
+        var turns = 0;
+        while (!g.over && turns++ < 600) {
+          if (!g.rolled) g.roll();
+          for (final st in bgBotSequence(g, seed.isEven ? 1 : 0, rng)) {
+            g.apply(st);
+          }
+          if (!g.over) g.endTurn();
+          var total = 0;
+          for (final p in [0, 1]) {
+            total += g.bar[p] + g.off[p] + g.counts[p].fold(0, (a, b) => a + b);
+          }
+          expect(total, 30);
+        }
+        expect(g.over, isTrue);
+        expect(g.off[g.winner!], 15);
+        final r = BgGame.fromJson(viaJson(g.toJson()));
+        expect(r.counts, g.counts);
       }
     });
   });
