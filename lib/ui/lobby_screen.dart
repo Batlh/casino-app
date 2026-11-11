@@ -44,6 +44,9 @@ import '../games/slots/kosmos_art.dart';
 import '../games/slots/slot_games.dart';
 import '../games/slots/slot_screen.dart';
 import '../games/slots/tiefsee_art.dart';
+import '../games/ladder/ladder_screen.dart';
+import '../games/memory/memory_screen.dart';
+import '../games/reversi/reversi_screen.dart';
 import '../games/solitaire/klondike_screen.dart';
 import '../games/solitaire/spider_screen.dart';
 import '../games/videopoker/video_poker_screen.dart';
@@ -252,6 +255,27 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF5A3420),
         _ShogiArt.new,
         () => _open(const ShogiScreen()),
+      ),
+      _Game(
+        'Reversi',
+        'Steine einklemmen und umdrehen, Ecken sind Gold',
+        const Color(0xFF1E5631),
+        _ReversiArt.new,
+        () => _open(const ReversiScreen()),
+      ),
+      _Game(
+        'Memory',
+        'Paare finden: allein, zu mehreren oder gegen den Computer',
+        const Color(0xFF6B2A4A),
+        _MemoryArt.new,
+        () => _open(const MemoryScreen()),
+      ),
+      _Game(
+        'Leiterspiel',
+        'Würfeln, Leitern hoch, Schlangen runter, bis zu vier',
+        const Color(0xFF7A5A1F),
+        _LadderArt.new,
+        () => _open(const LadderScreen()),
       ),
     ];
 
@@ -751,6 +775,99 @@ class _ChessArt extends CustomPainter {
     piece(-knight, size.width * 0.28, cell * 2.2);
     piece(king, size.width * 0.5, cell * 2.8);
     piece(-queen, size.width * 0.72, cell * 2.4);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _ReversiArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final u = math.min(size.width, size.height) / 5;
+    final o = Offset(size.width / 2 - u * 2, size.height / 2 - u * 2);
+    canvas.drawRect(o & Size.square(u * 4), Paint()..color = const Color(0xFF1E7A4A));
+    const stones = [0, 1, 2, 1, 1, 2, 2, 0, 2, 1, 2, 1, 0, 2, 1, 0];
+    for (var i = 0; i < 16; i++) {
+      final c = o + Offset((i % 4 + 0.5) * u, (i ~/ 4 + 0.5) * u);
+      canvas.drawRect(Rect.fromCenter(center: c, width: u, height: u), Paint()
+        ..style = PaintingStyle.stroke
+        ..color = const Color(0xFF0E4A2C));
+      if (stones[i] == 0) continue;
+      canvas.drawCircle(c, u * 0.4, Paint()..color = stones[i] == 1 ? const Color(0xFF1A1A1A) : const Color(0xFFF2F2F2));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _MemoryArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = math.min(size.width / 4.2, size.height / 2.2);
+    for (var i = 0; i < 3; i++) {
+      final r = Rect.fromCenter(center: Offset(size.width * (0.27 + i * 0.23), size.height * 0.52), width: w, height: w * 1.25);
+      canvas.save();
+      canvas.translate(r.center.dx, r.center.dy);
+      canvas.rotate((i - 1) * 0.12);
+      canvas.translate(-r.center.dx, -r.center.dy);
+      final rr = RRect.fromRectAndRadius(r, Radius.circular(w * 0.1));
+      if (i == 1) {
+        canvas.drawRRect(rr, Paint()..color = const Color(0xFFB8452A));
+      } else {
+        canvas.drawRRect(rr, Paint()..color = const Color(0xFFFFF8E8));
+        canvas.save();
+        canvas.translate(r.left + r.width * 0.1, r.top + r.height * 0.18);
+        CatFacePainter(7).paint(canvas, Size(w * 0.8, w * 0.8));
+        canvas.restore();
+      }
+      canvas.drawRRect(rr, Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = const Color(0xFFF6E7C8));
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _LadderArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final u = math.min(size.width, size.height) / 5;
+    final o = Offset(size.width / 2 - u * 2, size.height / 2 - u * 2);
+    for (var i = 0; i < 16; i++) {
+      canvas.drawRect(
+        Rect.fromLTWH(o.dx + (i % 4) * u, o.dy + (i ~/ 4) * u, u, u),
+        Paint()..color = (i % 4 + i ~/ 4).isEven ? const Color(0xFFF3E3B8) : const Color(0xFFE2C98E),
+      );
+    }
+    final rail = Paint()
+      ..strokeWidth = u * 0.12
+      ..color = const Color(0xFF8A5A2B);
+    canvas.drawLine(o + Offset(u * 0.6, u * 3.7), o + Offset(u * 1.6, u * 0.4), rail);
+    canvas.drawLine(o + Offset(u * 1.0, u * 3.8), o + Offset(u * 2.0, u * 0.5), rail);
+    for (var k = 1; k < 6; k++) {
+      final t = k / 6;
+      canvas.drawLine(
+        Offset.lerp(o + Offset(u * 0.6, u * 3.7), o + Offset(u * 1.6, u * 0.4), t)!,
+        Offset.lerp(o + Offset(u * 1.0, u * 3.8), o + Offset(u * 2.0, u * 0.5), t)!,
+        rail..strokeWidth = u * 0.08,
+      );
+    }
+    final snake = Path()
+      ..moveTo(o.dx + u * 3.4, o.dy + u * 0.5)
+      ..quadraticBezierTo(o.dx + u * 2.4, o.dy + u * 1.4, o.dx + u * 3.2, o.dy + u * 2.2)
+      ..quadraticBezierTo(o.dx + u * 3.9, o.dy + u * 3.0, o.dx + u * 2.8, o.dy + u * 3.6);
+    canvas.drawPath(snake, Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = u * 0.3
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0xFF2E7D3A));
+    canvas.drawCircle(o + Offset(u * 3.4, u * 0.5), u * 0.24, Paint()..color = const Color(0xFF2E7D3A));
   }
 
   @override
