@@ -673,7 +673,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
           '${g.players[p].name}: ${r == null ? '' : '${r.changes[p] >= 0 ? '+' : '−'}${r.changes[p].abs()} → '}${g.players[p].score}',
           style: TextStyle(color: pal.ink, fontSize: 15, fontWeight: g.players[p].human ? FontWeight.w700 : FontWeight.w500),
         ),
-      if (r != null && g.players[r.winner].human && g.players.any((x) => !x.human)) Text('+${pdRoundWinReward * (r!.hand ? 2 : 1)} Münzen', style: const TextStyle(color: Color(0xFFFFC95C), fontWeight: FontWeight.w700)),
+      if (r != null && g.players[r.winner].human && g.players.any((x) => !x.human)) Text('+${pdRoundWinReward * (r.hand ? 2 : 1)} Münzen', style: const TextStyle(color: Color(0xFFFFC95C), fontWeight: FontWeight.w700)),
     ];
     if (over) {
       final order = g.ranking();
