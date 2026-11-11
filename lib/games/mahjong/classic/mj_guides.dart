@@ -255,7 +255,7 @@ final _koreanLessons = <QuizLesson>[
   ),
   const QuizLesson(
     title: 'Punkte',
-    text: 'Gewonnen wird ab 2 Handpunkten. Blumen bringen Bonuspunkte, die nicht zum Minimum zählen. Bei einem Abwurf zahlt '
+    text: 'Gewonnen wird ab 3 Handpunkten. Blumen bringen Bonuspunkte, die nicht zum Minimum zählen. Bei einem Abwurf zahlt '
         'der Werfende die Handpunkte doppelt, die Bonuspunkte zahlen beide.',
     question: 'Zählen Blumen für das Minimum?',
     textOptions: ['Ja', 'Nein'],
@@ -269,6 +269,15 @@ final _koreanLessons = <QuizLesson>[
     textOptions: ['Ja', 'Nein'],
     correct: 1,
     explain: 'Richtig, Chi gibt es hier nicht.',
+  ),
+  const QuizLesson(
+    title: 'Bambus 1 und 9',
+    text: 'Ein Pung aus Bambus 1 oder Bambus 9 bringt 1 Handpunkt. Hast du beide, gibt es 4 Punkte extra, zusammen also 6.',
+    tiles: [18, 18, 18, -1, 26, 26, 26],
+    question: 'Wie viele Handpunkte bringen diese beiden Pungs zusammen?',
+    textOptions: ['2', '4', '6'],
+    correct: 2,
+    explain: 'Genau: 1 + 1 + 4 = 6.',
   ),
 ];
 
@@ -335,30 +344,44 @@ final _westernLessons = <QuizLesson>[
 final _filipinoLessons = <QuizLesson>[
   ..._basics,
   const QuizLesson(
-    title: '16 Steine und Blumen',
-    text: 'Wie in Taiwan hat jeder 16 Steine und braucht fünf Gruppen und ein Paar. Jede Blume bringt 1 Punkt. '
-        'Wer die ganze Hand keine Blume bekommt, erhält Sin Flores.',
-    question: 'Was bringt eine Hand ganz ohne Blumen?',
-    textOptions: ['Nichts', 'Sin Flores', 'Sie ist ungültig'],
+    title: 'Nur Farben in der Hand',
+    text: 'Auf den Philippinen spielt man nur mit Kreisen, Bambus und Zeichen. Winde, Drachen, Blumen und Jahreszeiten '
+        'sind alle „Blumen“: Sie werden sofort beiseitegelegt und durch einen neuen Stein ersetzt. Jeder hat 16 Steine '
+        'und braucht fünf Gruppen und ein Paar.',
+    tiles: [27, 31, 34, 38],
+    question: 'Du ziehst den Ostwind. Was passiert?',
+    textOptions: ['Er kommt in die Hand', 'Er wird beiseitegelegt und ersetzt', 'Du musst ihn abwerfen'],
     correct: 1,
-    explain: 'Genau, 2 Punkte für Sin Flores.',
+    explain: 'Genau, Winde und Drachen zählen hier wie Blumen.',
   ),
   const QuizLesson(
-    title: 'Bunot',
-    text: 'Ziehst du den Gewinnstein selbst (Bunot), wird der ganze Wert verdoppelt. Escalera heißt die Straße 1 bis 9 in einer Farbe.',
+    title: 'Viertel',
+    text: 'Gezahlt wird in Vierteln einer Auszahlung. Der Sieg (Todas) ist eine ganze Auszahlung, also 4 Viertel. '
+        'Escalera (1 bis 9 in einer Farbe), Siete Pares (sieben Paare und ein Pung) und alles in einer Farbe bringen je 2 dazu, '
+        'nur Folgen, nur Pungs, ganz verdeckt und manche Wartungen je 1.',
     tiles: [9, 10, 11, 12, 13, 14, 15, 16, 17],
-    question: 'Wie heißt diese Straße?',
-    textOptions: ['Escalera', 'Siete Pares', 'Bunot'],
-    correct: 0,
-    explain: 'Richtig, 5 Punkte für die Escalera.',
+    question: 'Was bringt die Escalera zusätzlich?',
+    textOptions: ['1 Viertel', '2 Viertel (eine halbe Auszahlung)', '4 Viertel'],
+    correct: 1,
+    explain: 'Richtig, eine halbe Auszahlung.',
   ),
   const QuizLesson(
-    title: 'Bunot rechnen',
-    text: 'Selbst gezogen (Bunot) verdoppelt den ganzen Wert.',
-    question: 'Deine Hand ist 4 Punkte wert, du ziehst den Gewinnstein selbst. Was zählt?',
-    textOptions: ['4', '6', '8'],
-    correct: 2,
-    explain: 'Genau, doppelt: 8 Punkte.',
+    title: 'Bunot und Abwurf',
+    text: 'Ziehst du den Gewinnstein selbst (Bunot), zahlen alle doppelt. Gewinnst du auf einen Abwurf, zahlt der Werfende '
+        'doppelt und der Rest einfach.',
+    question: 'Deine Hand ist 6 Viertel wert, du gewinnst auf Bens Abwurf. Was zahlt Ben?',
+    textOptions: ['6 Viertel', '12 Viertel', 'Nichts'],
+    correct: 1,
+    explain: 'Genau, der Werfende zahlt doppelt.',
+  ),
+  const QuizLesson(
+    title: 'Sofort bezahlt',
+    text: 'Manches zahlt der Tisch sofort, egal wer die Hand gewinnt: ein Kan 1 Viertel, ein geheimer Kan und Sagasa '
+        '(Pung zum Kan erweitert) je 2, keine einzige Blume beim Austeilen 1, 13 Blumen gesammelt 1.',
+    question: 'Du erweiterst deinen Pung zum Kan. Wie heißt das?',
+    textOptions: ['Bunot', 'Sagasa', 'Escalera'],
+    correct: 1,
+    explain: 'Richtig, Sagasa bringt sofort 2 Viertel von jedem.',
   ),
 ];
 
@@ -496,7 +519,8 @@ GameGuide mjGuide(MjVariant v, {WidgetBuilder? tutorial}) {
         GuideSection(
           'Ziel',
           'Die offizielle chinesische Turnierregel (Mahjong Competition Rules). 81 Muster, gewonnen wird erst ab 8 Punkten. '
-              'Neben normalen Händen gibt es Sieben Paare, Dreizehn Waisen und die Verbundenen Steine (147, 258, 369 plus Ehren).',
+              'Neben normalen Händen gibt es Sieben Paare, Dreizehn Waisen, die Verbundenen Steine (147, 258, 369 plus einzelne '
+              'Ehren) und die Verbundene Straße (147, 258, 369 in drei Farben plus eine Gruppe und ein Paar).',
           picture: (_) => _row(const [0, 3, 6, -1, 10, 13, 16, -1, 20, 23, 26, -1, 27, 28, 29, 30, 31, 32, 33], width: 22),
         ),
         _turn,
@@ -504,8 +528,10 @@ GameGuide mjGuide(MjVariant v, {WidgetBuilder? tutorial}) {
           'Punkte',
           'Kleine Muster: Selbst gezogen 1, Einzelwartung 1, ohne Ehren 1, Drachen-Pung 2, verdeckte Hand 2, nur Folgen 2. '
               'Größer: gemischte Straße 8, gleiche Folge in drei Farben 8, nur Pungs 6, halbe Farbe 6, alle Sorten 6, '
-              'reine Straße 16, Sieben Paare 24, reine Farbe 24, bis zu 88 für die ganz seltenen Hände. Blumen zählen je 1, '
-              'aber nicht für das Minimum. Die Ausschlussregeln sind vereinfacht.',
+              'Verbundene Straße 12, reine Straße 16, Sieben Paare 24, reine Farbe 24, bis zu 88 für die ganz seltenen Hände. '
+              'Blumen zählen je 1, aber nicht für das Minimum. Ein großes Muster schließt die kleinen aus, die schon darin stecken. '
+              'Rand-, Mittel- und Einzelwartung zählen nur, wenn genau ein Stein die Hand fertig machen konnte. '
+              'Noch nicht dabei: „Letzter seiner Art“ (4 Punkte).',
         ),
         const GuideSection(
           'Bezahlen',
@@ -535,15 +561,24 @@ GameGuide mjGuide(MjVariant v, {WidgetBuilder? tutorial}) {
         GuideSection(
           'Ziel',
           'Koreanisches Mahjong zu dritt. Es fehlen Nordwind, Bambus 2 bis 8 und die Jahreszeiten; vier Blumen sind dabei. '
-              'Chi ist verboten, gewonnen wird ab 2 Handpunkten.',
+              'Chi ist verboten, Folgen gibt es nur aus eigenen Steinen. Gewonnen wird ab 3 Handpunkten, der Geber wechselt jede Hand.',
           picture: (_) => _row(const [18, 26, -1, 27, 28, 29, -1, 31, 32, 33, -1, 34, 35, 36, 37]),
         ),
         _turn,
         const GuideSection(
           'Punkte',
-          'Verdeckte Hand 1, selbst gezogen 1, Drachen- und eigener Wind-Pung je 1, nur Folgen 1, nur Mittelsteine 1, '
-              'nur Pungs 4, halbe Farbe 4, Sieben Paare 4, reine Farbe 10, Grenze 40. Jede Blume ist ein Bonuspunkt, alle vier '
-              'geben 4 extra. Die Punktetabelle ist an die koreanische Regel angelehnt und vereinfacht.',
+          'Handpunkte: Drachen-Pung 1 (zwei Drachen 1 extra), Wind-Pung 1 (+1 eigener Wind, +1 Rundenwind), Kan 1 (drei Kans 3 extra), '
+              'Pung Bambus 1 oder 9 je 1 (beide 4 extra), zwei gleiche Folgen 2, drei verdeckte Pungs 3, nur Pungs 3 (nur End- und '
+              'Ehrensteine 6 extra), halbe Farbe 3, reine Farbe 6, Sieben Paare 3, Straße 1 bis 9 3, ohne Ehrensteine 1 (nur Folgen 2 '
+              'extra), verdeckte Hand 2 (aus der Mauer 2 extra). Grenze 40, kleine Drachen und kleine Winde 20. '
+              'Bonuspunkte zählen nicht fürs Minimum: aus der Mauer 1, letzter Stein 1, Ersatzstein 1, Kan geraubt 1, '
+              'jede Blume 1 (alle vier 4 extra).',
+        ),
+        const GuideSection(
+          'Bezahlen',
+          'Jeder Punkt sind 10. Aus der Mauer: beide zahlen Hand- und Bonuspunkte. Auf einen Abwurf: der Werfende zahlt die '
+              'Handpunkte doppelt, der andere nichts davon; die Bonuspunkte zahlen beide. Bei einer Grenzhand zahlen beide die '
+              'Grenze, der Werfende doppelt. Quelle: englische Wikipedia „Three-player mahjong“.',
         ),
         _coins(3),
       ],
@@ -587,15 +622,22 @@ GameGuide mjGuide(MjVariant v, {WidgetBuilder? tutorial}) {
     MjVariant.filipino => [
         GuideSection(
           'Ziel',
-          'Mahjong von den Philippinen: 16 Steine, fünf Gruppen und ein Paar, dazu Blumen und Jahreszeiten.',
+          'Mahjong von den Philippinen: 16 Steine nur aus Kreisen, Bambus und Zeichen, fünf Gruppen und ein Paar. Winde, '
+              'Drachen, Blumen und Jahreszeiten sind alle Blumen und werden sofort ersetzt. Siete Pares heißt sieben Paare und ein Pung.',
           picture: (_) => _row(const [9, 10, 11, 12, 13, 14, 15, 16, 17]),
         ),
         _turn,
         const GuideSection(
           'Punkte',
-          'Sieg 1, jede Blume 1, ganz ohne Blumen (Sin Flores) 2, nur Folgen 3, nur Pungs 5, Escalera 1 bis 9 in einer Farbe 5, '
-              'Sieg vor dem fünften Abwurf 5, Siete Pares (sieben Paare und ein Pung) 10, reine Farbe 10. Bunot (selbst gezogen) '
-              'verdoppelt alles. Die Werte sind eine Hausregel, denn auf den Philippinen spielt jeder Tisch etwas anders.',
+          'Gezählt wird in Vierteln einer Auszahlung (1 Viertel = 10 Punkte). Todas (Sieg) 4, Escalera 1 bis 9 in einer Farbe 2, '
+              'Siete Pares 2, alles eine Farbe 2, nur Folgen 1, nur Pungs 1, All up (nichts aufgedeckt) 1, All down (alles aufgedeckt) 1, '
+              'Single, Back to back und Paningit (Wartungen) je 1, vor dem fünften Abwurf 4, Bisaklat 4.',
+        ),
+        const GuideSection(
+          'Bezahlen',
+          'Bunot (selbst gezogen): alle zahlen doppelt. Auf einen Abwurf: der Werfende doppelt, die anderen einfach. Sofort zahlen '
+              'alle: Kan 1 Viertel, geheimer Kan 2, Sagasa 2, keine Blume beim Austeilen 1, 13 Blumen 1. '
+              'Quellen: „Mahjong, as we play it“ (mahjongero.com) und filipinomj.com; jeder Tisch spielt etwas anders.',
         ),
         _coins(4),
       ],

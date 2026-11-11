@@ -50,6 +50,9 @@ class MjRules {
     this.multiRon = false,
     this.hands = 4,
     this.dealerStays = true,
+    this.honorsAreFlowers = false,
+    this.instant = const {},
+    this.instantUnit = 0,
   });
 
   final MjVariant variant;
@@ -89,6 +92,13 @@ class MjRules {
   /// Geberwechsel bis zum Spielende (eine Runde).
   final int hands;
   final bool dealerStays;
+
+  /// Winde und Drachen werden wie Blumen beiseitegelegt (Philippinen).
+  final bool honorsAreFlowers;
+
+  /// Sofortzahlungen in Einheiten: kanOpen, kanClosed, kanAdded, noFlowers, flowers13.
+  final Map<String, int> instant;
+  final int instantUnit;
 
   int get sets => handSize == 16 ? 5 : 4;
 
@@ -152,13 +162,19 @@ List<int> _mcrPay(MjScore s, PayContext c) {
   return out;
 }
 
+/// Korea: Ron zahlt der Werfende die Handpunkte doppelt, Bonuspunkte zahlen beide.
+/// Bei einer Grenzhand zahlen beide die Grenze, der Werfende doppelt.
 List<int> _koreanPay(MjScore s, PayContext c) {
   final out = List.filled(c.players, 0);
   final hand = s.core * 10;
   final bonus = s.extra * 10;
   for (var p = 0; p < c.players; p++) {
     if (p == c.winner) continue;
-    final v = c.loser == null ? hand + bonus : (p == c.loser ? 2 * hand + bonus : bonus);
+    final v = c.loser == null
+        ? hand + bonus
+        : p == c.loser
+            ? 2 * hand + bonus
+            : (s.limit ? hand : 0) + bonus;
     out[p] -= v;
     out[c.winner] += v;
   }
@@ -264,7 +280,7 @@ final mjRules = <MjVariant, MjRules>{
   MjVariant.korean: MjRules(
     variant: MjVariant.korean,
     title: 'Korea (zu dritt)',
-    blurb: 'Drei Spieler, ohne Nordwind und Bambus 2 bis 8, kein Chi',
+    blurb: 'Drei Spieler, ohne Nordwind und Bambus 2 bis 8, kein Chi, ab 3 Handpunkten',
     unitName: 'Punkte',
     kinds: _koreanKinds,
     players: 3,
@@ -272,9 +288,10 @@ final mjRules = <MjVariant, MjRules>{
     chi: false,
     scorer: scoreKorean,
     pay: _koreanPay,
-    minScore: 2,
+    minScore: 3,
     startPoints: 1000,
     hands: 3,
+    dealerStays: false,
   ),
   MjVariant.zungJung: MjRules(
     variant: MjVariant.zungJung,
@@ -301,16 +318,20 @@ final mjRules = <MjVariant, MjRules>{
   MjVariant.filipino: MjRules(
     variant: MjVariant.filipino,
     title: 'Philippinen',
-    blurb: '16 Steine, Blumen zählen, selbst gezogen zahlt doppelt',
-    unitName: 'Punkte',
+    blurb: '16 Steine nur aus Farben, Winde und Drachen sind Blumen, Bunot zahlt doppelt',
+    unitName: 'Viertel',
     kinds: _allKinds,
     handSize: 16,
     flowers: 8,
+    honorsAreFlowers: true,
     sevenPairs: false,
     orphans: false,
     pairsPung: true,
     scorer: scoreFilipino,
-    pay: simplePay((s) => 10 * s.points),
+    // Ein Viertel einer Auszahlung sind 10 Punkte; bei Ron zahlt der Werfende doppelt, bei Bunot alle doppelt
+    pay: simplePay((s) => 10 * s.points, ronFactor: 2, ronOthers: 1, tsumoFactor: 2),
+    instant: const {'kanOpen': 1, 'kanClosed': 2, 'kanAdded': 2, 'noFlowers': 1, 'flowers13': 1},
+    instantUnit: 10,
     startPoints: 2000,
   ),
   MjVariant.vietnam: MjRules(

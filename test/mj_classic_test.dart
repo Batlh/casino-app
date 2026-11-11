@@ -166,6 +166,30 @@ void main() {
       expect(names, containsAll(['Sieben Paare', 'Selbst gezogen']));
       expect(names, isNot(contains('Ganz verdeckt')));
     });
+    test('Korea: Bambus 1 und 9 geben zusammen 6', () {
+      final s = score(MjVariant.korean, '111s999s123m456m11p', 0)!;
+      final names = s.fans.map((f) => f.name);
+      expect(names, contains('Bambus 1 und 9'));
+      expect(s.core, greaterThanOrEqualTo(6));
+    });
+    test('Korea: kleine Drachen sind die halbe Grenze', () {
+      final s = score(MjVariant.korean, '555z666z77z123m456m', 0)!;
+      expect(s.limit, isTrue);
+      expect(s.core, 20);
+    });
+    test('Philippinen: Todas und Escalera in Vierteln', () {
+      final s = score(MjVariant.filipino, '123m456m789m123p456p55s', 4, tsumo: true)!;
+      final names = s.fans.map((f) => f.name);
+      expect(names, containsAll(['Todas (Sieg)', 'Escalera (1 bis 9)']));
+      expect(s.points, greaterThanOrEqualTo(8));
+    });
+    test('Philippinen: Winde und Drachen landen bei den Blumen', () {
+      final g = MjGame(mjRules[MjVariant.filipino]!, rng: Random(5))..start();
+      for (final p in g.players) {
+        expect(p.hand.where((t) => t >= 27), isEmpty);
+      }
+      expect(g.players.expand((p) => p.bonus).where((t) => t >= 27 && t < 34), isNotEmpty);
+    });
     test('Taiwan: 17 Steine mit fünf Gruppen', () {
       final s = score(MjVariant.taiwan, '123m456m789m123p456p55s', 4)!;
       expect(s.fans.map((f) => f.name), contains('Verdeckte Hand'));

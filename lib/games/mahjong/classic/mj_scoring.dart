@@ -481,34 +481,85 @@ MjScore scoreSingapore(Shape s, WinInfo w) {
 
 // ---------------------------------------------------------------- Korea (drei Spieler)
 
+/// Korea zu dritt (Quelle: englische Wikipedia „Three-player mahjong“, Abschnitt Korean).
+/// Handpunkte zählen fürs Minimum von 3, Bonuspunkte nicht. Grenze 40, kleine Drachen und kleine Winde 20.
 MjScore scoreKorean(Shape s, WinInfo w) {
-  final f = <Fan>[];
-  if (s.special == 'orphans') return MjScore([const Fan('Dreizehn Waisen', 40)], 40, limit: true);
-  if (s.dragonTrips.length == 3) return MjScore([const Fan('Drei große Drachen', 40)], 40, limit: true);
-  if (s.allHonors) return MjScore([const Fan('Nur Ehrensteine', 40)], 40, limit: true);
-  if (s.concealedTrips == 4) return MjScore([const Fan('Vier verdeckte Pungs', 40)], 40, limit: true);
-  if (s.fullFlush) f.add(const Fan('Reine Farbe', 10));
-  if (s.halfFlush) f.add(const Fan('Halbe Farbe', 4));
-  if (s.special == 'sevenPairs') f.add(const Fan('Sieben Paare', 4));
-  if (s.allTrip) f.add(const Fan('Nur Pungs', 4));
-  if (s.dragonTrips.length == 2 && s.dragonPair) f.add(const Fan('Drei kleine Drachen', 6));
-  if (s.concealedTrips == 3) f.add(const Fan('Drei verdeckte Pungs', 4));
-  for (final g in s.dragonTrips) {
-    f.add(Fan('Drache: ${tileName(g.first)}', 1));
+  int bonusPoints(List<Fan> into) {
+    var b = 0;
+    void add(String n, int v) {
+      into.add(Fan(n, v));
+      b += v;
+    }
+
+    if (w.tsumo) add('Aus der Mauer gewonnen', 1);
+    if (w.lastTile) add('Letzter Stein der Mauer', 1);
+    if (w.rinshan) add('Ersatzstein nach Blume oder Kan', 1);
+    if (w.robKong) add('Kan geraubt', 1);
+    final fl = w.bonus.length;
+    if (fl > 0) add(fl == 4 ? 'Alle vier Blumen' : 'Blumen', fl + (fl == 4 ? 4 : 0));
+    return b;
   }
-  if (s.hasTrip(w.seatWind)) f.add(const Fan('Sitzwind', 1));
+
+  MjScore limit(String name, int value) {
+    final f = [Fan(name, value)];
+    final b = bonusPoints(f);
+    return MjScore(f, value + b, extra: b, limit: true);
+  }
+
+  final windTrips = s.windTrips.length;
+  if (s.special == 'orphans') return limit('Dreizehn Waisen', 40);
+  if (s.dragonTrips.length == 3) return limit('Große Drachen', 40);
+  if (windTrips == 3) return limit('Große Winde', 40);
+  if (s.allHonors) return limit('Nur Ehrensteine', 40);
+  if (s.special.isEmpty && s.concealedTrips == 4) return limit('Vier verdeckte Pungs', 40);
+  if (s.kans.length == 4) return limit('Vier Kans', 40);
+  if (_nineGates(s)) return limit('Neun Tore', 40);
+  if (s.all.every((t) => t >= 18)) return limit('Nur Bambus und Ehren', 40);
+  if (s.dragonTrips.length == 2 && s.dragonPair) return limit('Kleine Drachen', 20);
+  if (windTrips == 2 && s.windPair) return limit('Kleine Winde', 20);
+
+  final f = <Fan>[];
+  final dragons = s.dragonTrips.length;
+  for (final g in s.dragonTrips) {
+    f.add(Fan('Drachen-Pung: ${tileName(g.first)}', 1));
+  }
+  if (dragons == 2) f.add(const Fan('Zwei Drachen-Pungs', 1));
+  for (final g in s.windTrips) {
+    f.add(Fan('Wind-Pung: ${tileName(g.first)}', 1));
+  }
+  if (s.hasTrip(w.seatWind)) f.add(const Fan('Eigener Wind', 1));
   if (s.hasTrip(w.roundWind)) f.add(const Fan('Rundenwind', 1));
-  if (s.allSeq) f.add(const Fan('Nur Folgen', 1));
-  if (s.allSimple) f.add(const Fan('Nur Mittelsteine', 1));
-  if (s.concealed) f.add(const Fan('Verdeckte Hand', 1));
-  if (w.tsumo) f.add(const Fan('Selbst gezogen', 1));
-  if (w.rinshan) f.add(const Fan('Blüte auf dem Kan', 1));
-  if (w.lastTile) f.add(const Fan('Letzter Stein', 1));
-  final fl = w.bonus.length;
-  final bonus = fl + (fl == 4 ? 4 : 0);
-  if (fl > 0) f.add(Fan(fl == 4 ? 'Alle vier Blumen' : 'Blumen', bonus));
-  final total = f.fold(0, (a, x) => a + x.value);
-  return MjScore(f, min(40, total), extra: bonus, limit: total >= 40);
+  for (var k = 0; k < s.kans.length; k++) {
+    f.add(const Fan('Kan', 1));
+  }
+  if (s.kans.length == 3) f.add(const Fan('Drei Kans', 3));
+  final bam = [18, 26].where(s.hasTrip).length;
+  for (var k = 0; k < bam; k++) {
+    f.add(const Fan('Pung Bambus 1 oder 9', 1));
+  }
+  if (bam == 2) f.add(const Fan('Bambus 1 und 9', 4));
+  final starts = [for (final g in s.seqs) g.first];
+  if (starts.toSet().any((x) => starts.where((y) => y == x).length >= 2)) f.add(const Fan('Zwei gleiche Folgen', 2));
+  if (s.concealedTrips >= 3) f.add(const Fan('Drei verdeckte Pungs', 3));
+  if (s.allTrip) {
+    f.add(const Fan('Nur Pungs', 3));
+    if (s.allTermHonor) f.add(const Fan('Nur End- und Ehrensteine', 6));
+  }
+  if (s.halfFlush) f.add(const Fan('Halbe Farbe', 3));
+  if (s.fullFlush) f.add(const Fan('Reine Farbe', 6));
+  if (s.special == 'sevenPairs') f.add(const Fan('Sieben Paare', 3));
+  if (s.pureStraight) f.add(const Fan('Straße 1 bis 9', 3));
+  if (!s.hasHonor) {
+    f.add(const Fan('Ohne Ehrensteine', 1));
+    if (s.allSeq) f.add(const Fan('Nur Folgen mit einfachem Paar', 2));
+  }
+  if (s.concealed) {
+    f.add(const Fan('Verdeckte Hand', 2));
+    if (w.tsumo) f.add(const Fan('Verdeckt und aus der Mauer', 2));
+  }
+  final hand = min(40, f.fold(0, (a, x) => a + x.value));
+  final b = bonusPoints(f);
+  return MjScore(f, hand + b, extra: b, limit: hand >= 40);
 }
 
 // ---------------------------------------------------------------- Zung Jung
@@ -691,25 +742,25 @@ MjScore scoreWestern(Shape s, WinInfo w) {
 
 // ---------------------------------------------------------------- Philippinen
 
+/// Philippinen (Quelle: mahjongero.com „Mahjong, as we play it“, filipinomj.com).
+/// Eine volle Auszahlung sind vier Viertel. Kans, Sagasa, keine Blumen und 13 Blumen zahlt der Tisch sofort.
 MjScore scoreFilipino(Shape s, WinInfo w) {
-  final f = <Fan>[const Fan('Sieg', 1)];
-  if (w.bonus.isNotEmpty) f.add(Fan('Blumen', w.bonus.length));
-  if (w.bonus.isEmpty) f.add(const Fan('Sin Flores (keine Blumen)', 2));
-  if (s.special == 'pairsPung') f.add(const Fan('Siete Pares', 10));
-  if (s.pureStraight) f.add(const Fan('Escalera (1 bis 9)', 5));
-  if (s.allSeq) f.add(const Fan('Nur Folgen', 3));
-  if (s.allTrip) f.add(const Fan('Nur Pungs', 5));
-  if (s.fullFlush) f.add(const Fan('Reine Farbe', 10));
-  if (w.early) f.add(const Fan('Vor dem fünften Abwurf', 5));
-  if (w.rinshan) f.add(const Fan('Sieg auf dem Kan', 2));
-  final concealedKans = s.kans.where((g) => !g.open).length;
-  if (concealedKans > 0) f.add(Fan('Geheimer Kan', 2 * concealedKans));
-  var total = f.fold(0, (a, x) => a + x.value);
-  if (w.tsumo) {
-    f.add(const Fan('Bunot (selbst gezogen): doppelt', 0));
-    total *= 2;
-  }
-  return MjScore(f, total);
+  final f = <Fan>[const Fan('Todas (Sieg)', 4)];
+  if (w.heaven) f.add(const Fan('Bisaklat (Geber fertig ausgeteilt)', 4));
+  if (w.early && !w.heaven) f.add(const Fan('Vor dem fünften Abwurf', 4));
+  if (s.special == 'pairsPung') f.add(const Fan('Siete Pares', 2));
+  if (s.pureStraight) f.add(const Fan('Escalera (1 bis 9)', 2));
+  if (s.fullFlush) f.add(const Fan('Alles eine Farbe', 2));
+  if (s.allSeq) f.add(const Fan('Nur Folgen', 1));
+  if (s.allTrip) f.add(const Fan('Nur Pungs', 1));
+  final openMelds = s.groups.where((g) => g.open).length;
+  if (s.concealed) f.add(const Fan('All up (nichts aufgedeckt)', 1));
+  if (s.special.isEmpty && openMelds == 5 && s.wait == 'tanki') f.add(const Fan('All down (alles aufgedeckt)', 1));
+  if (s.special.isEmpty && s.wait == 'tanki') f.add(const Fan('Single (Warten aufs Paar)', 1));
+  if (s.special.isEmpty && s.wait == 'shanpon') f.add(const Fan('Back to back (zwei Paare)', 1));
+  if (s.special.isEmpty && s.wait == 'kanchan') f.add(const Fan('Paningit (Lücke in der Folge)', 1));
+  if (w.tsumo) f.add(const Fan('Bunot (selbst gezogen): alle zahlen doppelt', 0));
+  return MjScore(f, f.fold(0, (a, x) => a + x.value));
 }
 
 // ---------------------------------------------------------------- Vietnam

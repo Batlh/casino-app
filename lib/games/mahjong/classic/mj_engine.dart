@@ -185,6 +185,10 @@ class MjGame with ActionLog {
     handChanges = List.filled(n, 0);
     handWins.clear();
     handNotes.clear();
+    for (var p = 0; p < n; p++) {
+      if (players[p].bonus.isEmpty) _instant(p, 'noFlowers', 'keine Blumen');
+      if (players[p].bonus.length >= 13) _instant(p, 'flowers13', '13 Blumen');
+    }
     lastEvent = '';
     current = dealer;
     drawn = null;
@@ -203,8 +207,8 @@ class MjGame with ActionLog {
 
   void _replaceBonus(int p) {
     final pl = players[p];
-    while (pl.hand.any(isBonusTile) && wall.isNotEmpty) {
-      final b = pl.hand.firstWhere(isBonusTile);
+    while (pl.hand.any(_isBonus) && wall.isNotEmpty) {
+      final b = pl.hand.firstWhere(_isBonus);
       pl.hand.remove(b);
       pl.bonus.add(b);
       pl.hand.add(wall.removeLast());
@@ -320,8 +324,9 @@ class MjGame with ActionLog {
         return;
       }
       final t = replacement ? wall.removeLast() : wall.removeAt(0);
-      if (isBonusTile(t)) {
+      if (_isBonus(t)) {
         pl.bonus.add(t);
+        if (pl.bonus.length == 13) _instant(p, 'flowers13', '13 Blumen');
         lastEvent = '${who(p)} ${_verb(p, 'ziehst', 'zieht')} ${tileName(t)} und ${_verb(p, 'nimmst', 'nimmt')} Ersatz';
         replacement = true;
         continue;
@@ -467,6 +472,7 @@ class MjGame with ActionLog {
     pl.melds.add(Meld(MeldKind.kan, [t, t, t, t], open: false));
     lastEvent = '${who(p)} ${_verb(p, 'machst', 'macht')} einen verdeckten Kan';
     _kanPay(p, null, 2);
+    _instant(p, 'kanClosed', 'den geheimen Kan');
     _draw(p, replacement: true);
   }
 
@@ -480,7 +486,26 @@ class MjGame with ActionLog {
     claims = {};
     lastEvent = '${who(p)} ${_verb(p, 'erweiterst', 'erweitert')} zum Kan';
     _kanPay(p, null, 1);
+    _instant(p, 'kanAdded', 'Sagasa (Pung zum Kan erweitert)');
     _draw(p, replacement: true);
+  }
+
+  /// Bonussteine; auf den Philippinen zählen auch Winde und Drachen dazu.
+  bool _isBonus(int t) => isBonusTile(t) || (rules.honorsAreFlowers && t >= 27 && t < 34);
+
+  /// Sofortzahlung von allen anderen (Philippinen: Kan, Sagasa, keine Blumen, 13 Blumen).
+  void _instant(int p, String key, String label) {
+    final units = rules.instant[key] ?? 0;
+    if (units == 0) return;
+    final v = units * rules.instantUnit;
+    for (var q = 0; q < n; q++) {
+      if (q == p || players[q].out) continue;
+      players[q].points -= v;
+      players[p].points += v;
+      handChanges[q] -= v;
+      handChanges[p] += v;
+    }
+    handNotes.add('${who(p)} ${_verb(p, 'bekommst', 'bekommt')} für $label sofort $v von jedem');
   }
 
   /// Sichuan: Kans bringen sofort Punkte. from: wer zahlt (null = alle anderen).
@@ -638,6 +663,7 @@ class MjGame with ActionLog {
     lastEvent = '${who(q)} ${_verb(q, 'rufst', 'ruft')} $name';
     if (kind == MeldKind.kan) {
       _kanPay(q, from, 2);
+      _instant(q, 'kanOpen', 'den Kan');
       _draw(q, replacement: true);
     } else {
       current = q;
