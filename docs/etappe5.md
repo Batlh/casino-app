@@ -25,6 +25,14 @@ Alle Antworten unten hat der Nutzer am 10.11.2026 gegeben.
 - Hinweis: Die CI meldet `package:flutter/material.dart` als veraltet (neues Paket `material_ui`); nur Hinweise,
   Umstellung später.
 
+## Stand 12.11.2026 nachts (Version 0.8.5)
+
+- 0.8.4 ausgeliefert: Backgammon, Halma, Go mit Go-Schule, Weitergeben bei Mau Mau, Pik Dame und Arschloch,
+  Spielstand als Datei, Mahjong-Steinkunde mit Hilfszahlen, Übungen für alle Mahjong-Varianten.
+- Neu in 0.8.5: Weitergeben auch bei Eins! (beim Wettrennen hat jeder Mensch einen eigenen Knopf, Münzseite fragt
+  jeden einzeln). Mahjong-Regeln (3) für MCR, Korea und Philippinen, Quellen siehe unten.
+- Offen: Vietnam mit echten Jokerarten (siehe 3), Flipper ausbauen (6), Grafik (7).
+
 ## 1. Fehler zuerst
 
 - **Flipper:** Der Ball rollt aus dem Spielfeld zurück in die Startrampe. Lösung: eine Klappe, die nur in eine
@@ -59,6 +67,24 @@ Die vereinfachten Varianten auf die echten Regeln bringen. Vorher die Quellen re
 - **Vietnam:** die Joker-Regeln vollständig.
 - **Philippinen:** echte Werte statt Hausregel-Werten.
 - Für jede Variante die Erklärung und das Tutorial anpassen.
+
+Umgesetzt am 12.11.2026:
+- **MCR:** Verbundene Straße (12) als eigene Hand mit einer Gruppe und einem Paar (die Gruppe darf aufgedeckt sein);
+  Kleine Ehren mit kompletter Straße zählen beides. Ausschluss nach dem Nicht-Wiederholungs-Prinzip: Ein Muster, das
+  selbst ausgeschlossen ist, schließt nichts aus. Ergänzte Ausschlüsse (Ganz verdeckt bei Sieben Paaren, Waisen und
+  Verbundenen, Drei Kans, Vier verschobene Folgen, Drei große Winde, Nur Folgen schließt Ohne Ehren aus). Rand-, Mittel-
+  und Einzelwartung zählen nur, wenn es die einzige Wartung war. Fehlt noch: „Letzter seiner Art“ (4).
+- **Korea:** Handpunkte, Bonuspunkte, Grenze 40 und halbe Grenze 20, Minimum 3, Geber wechselt jede Hand, Bezahlung
+  wie in der Quelle (Grenzhand bei Ron: beide zahlen, der Werfende doppelt). Quelle: englische Wikipedia
+  „Three-player mahjong“, Abschnitt Korean. Weggelassen: 2 Bonuspunkte je Gegner, der nicht fertig ist, und das Ansagen.
+- **Philippinen:** Winde und Drachen sind Blumen (nur Farben in der Hand), Werte in Vierteln einer Auszahlung,
+  Sofortzahlungen für Kan, geheimen Kan, Sagasa, keine Blumen und 13 Blumen; Bunot alle doppelt, bei Ron der Werfende
+  doppelt. Quellen: mahjongero.com „Mahjong, as we play it“ (2020) und filipinomj.com. Ohne den optionalen Joker.
+- **Vietnam (noch offen):** Quelle riichi_advanced, documentation/vietnamese.md: 176 Steine mit 16 Blumen (auch Kaiser
+  und Kaiserin), 12 grünen Jokern (Allgemein, Kreise, Bambus, Zeichen) und 12 roten (Blume, Wind, Drache, Farbe),
+  je drei mit verschiedenem Rahmen. Joker können für Punkte beiseitegelegt werden. Wertung in Phán und Mủn (6 Phán =
+  1 Mủn), keine Sieben Paare, Sonderhand „Keine Blumen, keine Blätter“. Braucht neue Steine, Joker mit Einschränkung
+  in der Zerlegung und eine neue Wertung; kommt als eigener Schritt.
 
 ## 4. Neue Spiele
 
