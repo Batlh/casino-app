@@ -129,6 +129,15 @@ final _hkLessons = <QuizLesson>[
     correct: 1,
     explain: 'Richtig. Oft reicht schon Selbst gezogen, eine verdeckte Hand oder ein Drachen-Pung.',
   ),
+  const QuizLesson(
+    title: 'Selbst gezogen',
+    text: 'Ziehst du den letzten Stein selbst von der Mauer, bringt das 1 Fan. Gewinnst du mit einer Hand ohne gerufene Steine '
+        '(verdeckt) durch einen Abwurf, bringt das ebenfalls 1 Fan. Beides zusammen zählt nur einmal.',
+    question: 'Du gewinnst selbst gezogen mit verdeckter Hand. Wie viele Fan bringt das?',
+    textOptions: ['1', '2', '3'],
+    correct: 0,
+    explain: 'Richtig, 1 Fan für Selbst gezogen. Das Fan für die verdeckte Hand gibt es nur beim Sieg durch einen Abwurf.',
+  ),
 ];
 
 final _taiwanLessons = <QuizLesson>[
@@ -151,6 +160,22 @@ final _taiwanLessons = <QuizLesson>[
     textOptions: ['Halbe Farbe', 'Nur Pungs', 'Beides gleich viel'],
     correct: 2,
     explain: 'Beide zählen 4 Tai.',
+  ),
+  const QuizLesson(
+    title: 'Verdeckt und selbst gezogen',
+    text: 'Hast du nichts gerufen und ziehst den Gewinnstein selbst, gibt es 3 Tai. Der Geber bekommt immer 1 Tai dazu.',
+    question: 'Du bist Geber und gewinnst verdeckt und selbst gezogen. Wie viele Tai sind das mindestens?',
+    textOptions: ['1', '3', '4'],
+    correct: 2,
+    explain: 'Genau: 3 Tai für verdeckt und selbst gezogen plus 1 Tai als Geber.',
+  ),
+  const QuizLesson(
+    title: 'Punkte ausrechnen',
+    text: 'Grundwert 100, jedes Tai 50 dazu.',
+    question: 'Was ist eine Hand mit 4 Tai wert?',
+    textOptions: ['200', '300', '400'],
+    correct: 1,
+    explain: 'Richtig: 100 plus 4 mal 50 sind 300.',
   ),
 ];
 
@@ -207,6 +232,14 @@ final _sgLessons = <QuizLesson>[
     correct: 1,
     explain: 'Genau. Jeder Bonusstein macht Ping Hu billiger.',
   ),
+  const QuizLesson(
+    title: 'Obergrenze',
+    text: 'In Singapur zählen höchstens 5 Tai. Alles darüber bringt nicht mehr.',
+    question: 'Deine Hand hätte 7 Tai. Wie viele zählen?',
+    textOptions: ['5', '7', '10'],
+    correct: 0,
+    explain: 'Genau, bei 5 Tai ist Schluss.',
+  ),
 ];
 
 final _koreanLessons = <QuizLesson>[
@@ -229,6 +262,14 @@ final _koreanLessons = <QuizLesson>[
     correct: 1,
     explain: 'Genau, nur echte Muster zählen.',
   ),
+  const QuizLesson(
+    title: 'Kein Chi',
+    text: 'In der koreanischen Variante gibt es kein Chi: Folgen musst du selbst ziehen. Pung und Kan auf Abwürfe gehen.',
+    question: 'Darfst du eine Folge aus dem Abwurf deines linken Nachbarn rufen?',
+    textOptions: ['Ja', 'Nein'],
+    correct: 1,
+    explain: 'Richtig, Chi gibt es hier nicht.',
+  ),
 ];
 
 final _zjLessons = <QuizLesson>[
@@ -249,6 +290,14 @@ final _zjLessons = <QuizLesson>[
     textOptions: ['Alle', 'Nur der Werfende', 'Niemand'],
     correct: 1,
     explain: 'Genau. Gefährliche Steine solltest du deshalb festhalten.',
+  ),
+  const QuizLesson(
+    title: 'Höchstwert',
+    text: 'Mehr als 320 Punkte zählen in Zung Jung nicht.',
+    question: 'Deine Muster ergeben zusammen 400 Punkte. Wie viel zählt die Hand?',
+    textOptions: ['320', '400', '80'],
+    correct: 0,
+    explain: 'Genau, bei 320 ist die Grenze.',
   ),
 ];
 
@@ -273,6 +322,14 @@ final _westernLessons = <QuizLesson>[
     correct: 2,
     explain: 'Richtig, das ist das Achtfache.',
   ),
+  const QuizLesson(
+    title: 'Wer zahlt?',
+    text: 'In der westlichen Wertung zahlen alle dem Sieger, der Geber doppelt.',
+    question: 'Du gewinnst mit 40 Punkten, ein Mitspieler ist Geber. Wie viel zahlt er dir?',
+    textOptions: ['40', '80', '120'],
+    correct: 1,
+    explain: 'Richtig, der Geber zahlt doppelt.',
+  ),
 ];
 
 final _filipinoLessons = <QuizLesson>[
@@ -295,6 +352,14 @@ final _filipinoLessons = <QuizLesson>[
     correct: 0,
     explain: 'Richtig, 5 Punkte für die Escalera.',
   ),
+  const QuizLesson(
+    title: 'Bunot rechnen',
+    text: 'Selbst gezogen (Bunot) verdoppelt den ganzen Wert.',
+    question: 'Deine Hand ist 4 Punkte wert, du ziehst den Gewinnstein selbst. Was zählt?',
+    textOptions: ['4', '6', '8'],
+    correct: 2,
+    explain: 'Genau, doppelt: 8 Punkte.',
+  ),
 ];
 
 final _vietLessons = <QuizLesson>[
@@ -309,9 +374,28 @@ final _vietLessons = <QuizLesson>[
     correct: 0,
     explain: 'Richtig, er spielt die 3 Zeichen.',
   ),
+  const QuizLesson(
+    title: 'Joker im Paar',
+    text: 'Ein Joker darf auch das Paar ergänzen: Ein Stein plus Joker ist ein Paar.',
+    tiles: [31, 46],
+    question: 'Ist Weißer Drache plus Joker ein gültiges Paar?',
+    textOptions: ['Ja', 'Nein'],
+    correct: 0,
+    explain: 'Richtig, der Joker spielt den zweiten Weißen Drachen.',
+  ),
+  const QuizLesson(
+    title: 'Ohne Joker',
+    text: 'Wer ganz ohne Joker gewinnt, bekommt 1 Fan extra. Joker sind trotzdem fast immer nützlich.',
+    question: 'Was bringt eine Siegerhand ganz ohne Joker?',
+    textOptions: ['Nichts', '1 Fan extra', 'Doppelte Punkte'],
+    correct: 1,
+    explain: 'Genau, 1 Fan extra.',
+  ),
 ];
 
-List<QuizLesson> mjLessons(MjVariant v) => switch (v) {
+List<QuizLesson> mjLessons(MjVariant v) => [..._variantLessons(v), ...mahjongPractice];
+
+List<QuizLesson> _variantLessons(MjVariant v) => switch (v) {
       MjVariant.sichuanBattle || MjVariant.sichuanRiver => _sichuanLessons,
       MjVariant.hongKong => _hkLessons,
       MjVariant.taiwan => _taiwanLessons,

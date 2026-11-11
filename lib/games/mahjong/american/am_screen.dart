@@ -13,6 +13,7 @@ import '../tiles.dart';
 import 'am_card.dart';
 import 'am_engine.dart';
 import '../../../ui/tap_catcher.dart';
+import '../tile_legend.dart';
 
 const amPlaceRewards = [300, 120, 40, 0];
 
@@ -405,6 +406,7 @@ class _AmScreenState extends State<AmScreen> {
   @override
   Widget build(BuildContext context) {
     return GameFrame(
+      actions: const [TileLegendButton()],
       title: 'American Mahjong',
       guide: widget.guide,
       background: const BoxDecoration(

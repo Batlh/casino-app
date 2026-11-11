@@ -8,6 +8,7 @@ import '../tiles.dart';
 import 'mj_guides.dart';
 import 'mj_rules.dart';
 import 'mj_screen.dart';
+import '../tile_legend.dart';
 
 /// Kleine Auswahl an Steinen als Erkennungszeichen der Variante.
 const _variantTiles = <MjVariant, List<int>>{
@@ -40,6 +41,7 @@ class MjVariantsScreen extends StatelessWidget {
     final list = only ?? MjVariant.values;
     void open(Widget w) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => w));
     return GameFrame(
+      actions: const [TileLegendButton()],
       title: only == null ? 'Mahjong-Varianten' : 'Sichuan Mahjong',
       background: const BoxDecoration(
         gradient: RadialGradient(radius: 1.2, colors: [Color(0xFF6B1F2A), Color(0xFF2A0C12)]),

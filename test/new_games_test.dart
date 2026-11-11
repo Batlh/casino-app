@@ -11,6 +11,10 @@ import 'package:gluckspfennig/games/halma/halma_engine.dart';
 import 'package:gluckspfennig/games/kniffel/kniffel_engine.dart';
 import 'package:gluckspfennig/games/ladder/ladder_engine.dart';
 import 'package:gluckspfennig/games/madn/madn_engine.dart';
+import 'package:gluckspfennig/games/mahjong/classic/mj_guides.dart';
+import 'package:gluckspfennig/games/mahjong/classic/mj_rules.dart';
+import 'package:gluckspfennig/games/mahjong/mahjong_tutorial.dart';
+import 'package:gluckspfennig/games/mahjong/tiles.dart';
 import 'package:gluckspfennig/games/memory/memory_engine.dart';
 import 'package:gluckspfennig/games/muehle/muehle_engine.dart';
 import 'package:gluckspfennig/games/pikdame/pd_engine.dart';
@@ -565,6 +569,28 @@ void main() {
       expect(g.who(0), 'Anna');
       final solo = PdGame(const PdOptions(players: 3), rng: Random(2))..start();
       expect(solo.who(0), 'Du');
+    });
+  });
+
+  group('Mahjong-Übungen', () {
+    test('Jede Variante hat Grundlagen, eigene Übungen und den Übungsteil', () {
+      for (final v in MjVariant.values) {
+        final l = mjLessons(v);
+        expect(l.length, greaterThanOrEqualTo(mahjongPractice.length + 4), reason: v.name);
+        for (final q in l) {
+          final n = q.tileOptions.isNotEmpty ? q.tileOptions.length : q.textOptions.length;
+          expect(q.correct, inInclusiveRange(0, n - 1), reason: '${v.name}: ${q.title}');
+        }
+      }
+    });
+
+    test('Hilfszahlen für alle Grundsteine', () {
+      for (var t = 0; t < 34; t++) {
+        expect(tileHintLabel(t), isNotNull);
+      }
+      expect(tileHintLabel(3), '4');
+      expect(tileHintLabel(30), 'N');
+      expect(tileHintLabel(33), 'Rot');
     });
   });
 }

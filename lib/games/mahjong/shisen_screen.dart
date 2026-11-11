@@ -14,6 +14,7 @@ import 'mahjong_tutorial.dart';
 import 'shisen_engine.dart';
 import 'tiles.dart';
 import '../../ui/tap_catcher.dart';
+import 'tile_legend.dart';
 
 const shisenHintCost = 30;
 const shisenShuffleCost = 50;
@@ -265,6 +266,7 @@ class _ShisenScreenState extends State<ShisenScreen> {
   @override
   Widget build(BuildContext context) {
     return GameFrame(
+      actions: const [TileLegendButton()],
       title: 'Shisen-Sho',
       guide: shisenGuide,
       background: const BoxDecoration(

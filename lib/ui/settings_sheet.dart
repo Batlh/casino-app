@@ -70,7 +70,7 @@ class _SettingsSheet extends StatelessWidget {
                         style: TextStyle(color: p.ink, fontSize: 17, fontWeight: FontWeight.w700),
                       ),
                       subtitle: Text(
-                        'Ton, Tempo der Computer, Bildkarten, Kartengröße',
+                        'Ton, Tempo, Bildkarten, Kartengröße, Mahjong-Hilfszahlen, Spielstand',
                         style: TextStyle(color: p.inkSoft, fontSize: 14),
                       ),
                       children: [_general(context)],
@@ -158,6 +158,16 @@ Widget _general(BuildContext context) {
             activeColor: p.accent,
             label: '${(app.settings.cardScale * 100).round()} %',
             onChanged: (v) => app.settings.cardScale = v,
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text('Hilfszahlen auf Mahjong-Steinen', style: TextStyle(color: p.ink, fontSize: 17)),
+            subtitle: Text(
+              'Zeigt auf jedem Stein klein die Zahl, die Windrichtung (O, S, W, N) oder die Drachenfarbe.',
+              style: TextStyle(color: p.inkSoft, fontSize: 14),
+            ),
+            value: app.settings.mahjongHints,
+            onChanged: (v) => app.settings.mahjongHints = v,
           ),
           const SizedBox(height: 8),
       const SizedBox(height: 8),

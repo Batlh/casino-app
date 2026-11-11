@@ -18,6 +18,7 @@ import 'mj_hand.dart';
 import 'mj_rules.dart';
 import 'mj_shape.dart';
 import '../../../ui/tap_catcher.dart';
+import '../tile_legend.dart';
 
 const suitNames = ['Zeichen', 'Kreise', 'Bambus'];
 
@@ -395,6 +396,7 @@ class _MjScreenState extends State<MjScreen> {
   @override
   Widget build(BuildContext context) {
     return GameFrame(
+      actions: const [TileLegendButton()],
       title: _r.title,
       guide: widget.guide,
       background: const BoxDecoration(

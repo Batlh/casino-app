@@ -366,7 +366,7 @@ final riichiGuide = GameGuide(
           '300, 120 oder 40 Münzen für Platz 1 bis 3.',
     ),
   ],
-  tutorial: (_) => QuizTutorialScreen(title: 'Mahjong lernen', lessons: riichiLessons),
+  tutorial: (_) => QuizTutorialScreen(title: 'Mahjong lernen', lessons: [...riichiLessons, ...mahjongPractice]),
   tutorialLabel: 'Mahjong lernen: 7 kurze Übungen',
 );
 

@@ -15,6 +15,7 @@ import 'riichi_engine.dart';
 import 'riichi_hand.dart';
 import 'tiles.dart';
 import '../../ui/tap_catcher.dart';
+import 'tile_legend.dart';
 
 /// Münzen je Platz am Ende der Ostrunde.
 const riichiPlaceRewards = [300, 120, 40, 0];
@@ -298,6 +299,7 @@ class _RiichiScreenState extends State<RiichiScreen> {
   @override
   Widget build(BuildContext context) {
     return GameFrame(
+      actions: const [TileLegendButton()],
       title: 'Riichi Mahjong',
       guide: riichiGuide,
       background: const BoxDecoration(

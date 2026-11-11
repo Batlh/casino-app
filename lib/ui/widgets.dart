@@ -183,6 +183,7 @@ class GameFrame extends StatefulWidget {
     this.background,
     this.guide,
     this.settings,
+    this.actions = const [],
   });
 
   final String title;
@@ -194,6 +195,9 @@ class GameFrame extends StatefulWidget {
 
   /// Eigene Einstellungen des Spiels; ohne nur die allgemeinen.
   final GameSettings? settings;
+
+  /// Zusätzliche Knöpfe in der Kopfzeile (z. B. Steinkunde bei Mahjong).
+  final List<Widget> actions;
 
   @override
   State<GameFrame> createState() => _GameFrameState();
@@ -270,6 +274,7 @@ class _GameFrameState extends State<GameFrame> {
                         ),
                       ),
                     ),
+                    ...widget.actions,
                     if (widget.guide != null)
                       IconButton(
                         visualDensity: dense,

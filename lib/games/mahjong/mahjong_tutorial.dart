@@ -5,6 +5,7 @@ import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/widgets.dart';
 import 'tiles.dart';
+import 'tile_legend.dart';
 
 /// Eine Übung mit Frage. Antworten sind Steine oder Texte.
 class QuizLesson {
@@ -58,6 +59,103 @@ Widget _stack(List<(int, int, int, int)> tiles, {double unit = 22}) {
     ),
   );
 }
+
+/// Übungen für alle Varianten: Steine lesen, Gruppen erkennen, Warten und Abwerfen.
+const mahjongPractice = <QuizLesson>[
+  QuizLesson(
+    title: 'Übung: Zahlzeichen',
+    text: 'Bei den Zeichen-Steinen steht die Zahl als chinesisches Zeichen oben, das rote 萬 darunter zeigt nur die Farbe. '
+        '一 二 三 sind 1, 2 und 3 Striche, 四 ist die 4, 五 die 5. Tipp: Oben in der Kopfzeile zeigt der Knopf mit den Kästchen '
+        'alle Steine mit Namen, und in den Einstellungen gibt es Hilfszahlen auf den Steinen.',
+    tiles: [0, 1, 2, 3, 4],
+    question: 'Welcher Stein ist die 4 Zeichen?',
+    tileOptions: [2, 3, 5, 6],
+    correct: 1,
+    explain: 'Richtig, 四 ist die 4.',
+  ),
+  QuizLesson(
+    title: 'Übung: Noch ein Zahlzeichen',
+    text: '六 ist die 6, 七 die 7, 八 die 8 (sieht aus wie zwei Striche, die auseinanderlaufen), 九 die 9.',
+    tiles: [5, 6, 7, 8],
+    question: 'Welcher Stein ist die 8 Zeichen?',
+    tileOptions: [5, 7, 8, 6],
+    correct: 1,
+    explain: 'Genau, 八 ist die 8.',
+  ),
+  QuizLesson(
+    title: 'Übung: Winde',
+    text: 'Die vier Winde: 東 Ost, 南 Süd, 西 West, 北 Nord.',
+    tiles: [27, 28, 29, 30],
+    question: 'Welcher Stein ist der Nordwind?',
+    tileOptions: [28, 30, 27, 29],
+    correct: 1,
+    explain: 'Richtig, 北 ist Nord.',
+  ),
+  QuizLesson(
+    title: 'Übung: Drachen',
+    text: 'Weißer Drache: leerer Rahmen. Grüner Drache: grünes 發. Roter Drache: rotes 中.',
+    tiles: [31, 32, 33],
+    question: 'Welcher Stein ist der Rote Drache?',
+    tileOptions: [31, 32, 33],
+    correct: 2,
+    explain: 'Genau, das rote 中.',
+  ),
+  QuizLesson(
+    title: 'Übung: Pung oder Folge?',
+    text: 'Drei gleiche Steine sind ein Pung, drei aufeinanderfolgende Zahlen einer Farbe eine Folge.',
+    tiles: [22, 22, 22],
+    question: 'Was ist das?',
+    textOptions: ['Eine Folge', 'Ein Pung', 'Ein Paar'],
+    correct: 1,
+    explain: 'Richtig, drei mal 5 Bambus sind ein Pung.',
+  ),
+  QuizLesson(
+    title: 'Übung: Keine Folge',
+    text: 'Folgen gibt es nur innerhalb einer Farbe, und nach der 9 geht es nicht wieder mit der 1 weiter.',
+    tiles: [7, 8, 9],
+    question: 'Ist 8 Zeichen, 9 Zeichen, 1 Kreise eine Folge?',
+    textOptions: ['Ja', 'Nein'],
+    correct: 1,
+    explain: 'Genau, die 1 Kreise ist eine andere Farbe.',
+  ),
+  QuizLesson(
+    title: 'Übung: Fertig?',
+    text: 'In den meisten Varianten ist eine Hand fertig, wenn sich alle 14 Steine in vier Gruppen und ein Paar ordnen lassen '
+        '(in Taiwan und auf den Philippinen fünf Gruppen und ein Paar).',
+    tiles: [0, 0, 0, -1, 4, 5, 6, -1, 13, 14, 15, -1, 22, 23, 24, -1, 28, 28],
+    question: 'Ist diese Hand fertig geordnet?',
+    textOptions: ['Ja', 'Nein'],
+    correct: 0,
+    explain: 'Ja: Pung aus 1 Zeichen, drei Folgen 5-6-7 und ein Paar Süd.',
+  ),
+  QuizLesson(
+    title: 'Übung: Worauf wartest du?',
+    text: 'Dir fehlt nur noch ein Stein. Vier Gruppen sind schon fertig, ein einzelner Stein wartet auf seinen Partner.',
+    tiles: [0, 1, 2, -1, 12, 13, 14, -1, 24, 25, 26, -1, 27, 27, 27, -1, 10],
+    question: 'Welcher Stein macht die Hand fertig?',
+    tileOptions: [10, 11, 9, 28],
+    correct: 0,
+    explain: 'Richtig, die 2 Kreise macht das Paar.',
+  ),
+  QuizLesson(
+    title: 'Übung: Zwei Möglichkeiten',
+    text: 'Hier wartet eine angefangene Folge 5-6 Kreise. Sie kann an beiden Enden fertig werden, das ist die beste Wartung.',
+    tiles: [0, 1, 2, -1, 3, 4, 5, -1, 27, 27, 27, -1, 31, 31, -1, 13, 14],
+    question: 'Welcher dieser Steine macht die Hand fertig?',
+    tileOptions: [11, 12, 16, 17],
+    correct: 1,
+    explain: 'Genau, die 4 Kreise. Die 7 Kreise ginge auch.',
+  ),
+  QuizLesson(
+    title: 'Übung: Was abwerfen?',
+    text: 'Wirf Steine ab, die mit nichts zusammenpassen. Einzelne Winde oder Drachen sind dafür oft gut geeignet.',
+    tiles: [0, 1, 2, -1, 12, 13, 14, -1, 24, 25, 26, -1, 27, 27, -1, 31, 31, -1, 30],
+    question: 'Welchen Stein wirfst du ab?',
+    tileOptions: [27, 31, 30, 0],
+    correct: 2,
+    explain: 'Richtig, der Nordwind hat keinen Partner. Ost und Weiß sind Paare und können noch Pungs werden.',
+  ),
+];
 
 final riichiLessons = <QuizLesson>[
   const QuizLesson(
@@ -204,6 +302,7 @@ class _QuizTutorialScreenState extends State<QuizTutorialScreen> {
     final last = _index == widget.lessons.length - 1;
     final style = TextStyle(color: p.onFelt, fontSize: 15, height: 1.3);
     return GameFrame(
+      actions: const [TileLegendButton()],
       title: widget.title,
       background: const BoxDecoration(
         gradient: RadialGradient(radius: 1.2, colors: [Color(0xFF1F6B52), Color(0xFF0C2B21)]),

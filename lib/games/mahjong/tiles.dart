@@ -47,7 +47,47 @@ const _blue = Color(0xFF1F4E9A);
 const _ink = Color(0xFF1E120D);
 
 /// Zeichnet einen Stein in das Rechteck der Vorderseite. depth: Dicke nach rechts unten.
+/// Hilfszahlen auf den Steinen (Einstellung „Hilfszahlen auf Mahjong-Steinen“).
+final tileHints = ValueNotifier<bool>(false);
+
+/// Kurze Beschriftung für die Hilfszahlen: Zahl, Windrichtung oder Drachenfarbe.
+String? tileHintLabel(int t) {
+  if (t < 27) return '${t % 9 + 1}';
+  if (t < 31) return const ['O', 'S', 'W', 'N'][t - 27];
+  if (t < 34) return const ['Weiß', 'Grün', 'Rot'][t - 31];
+  return null;
+}
+
 void paintTile(
+  Canvas canvas,
+  Rect face,
+  int tile, {
+  double depth = 0,
+  bool selected = false,
+  bool dim = false,
+  bool hint = false,
+  bool back = false,
+}) {
+  _paintTileBody(canvas, face, tile, depth: depth, selected: selected, dim: dim, hint: hint, back: back);
+  if (back || !tileHints.value) return;
+  final label = tileHintLabel(tile);
+  if (label == null) return;
+  final fs = face.width * (label.length > 1 ? 0.2 : 0.26);
+  final tp = TextPainter(
+    text: TextSpan(text: label, style: TextStyle(color: Colors.white, fontSize: fs, fontWeight: FontWeight.w800, height: 1)),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  final box = Rect.fromLTWH(
+    face.right - tp.width - face.width * 0.1,
+    face.bottom - tp.height - face.width * 0.08,
+    tp.width + face.width * 0.06,
+    tp.height + face.width * 0.04,
+  );
+  canvas.drawRRect(RRect.fromRectAndRadius(box, Radius.circular(face.width * 0.06)), Paint()..color = const Color(0xCC1E120D));
+  tp.paint(canvas, box.topLeft + Offset(face.width * 0.03, face.width * 0.02));
+}
+
+void _paintTileBody(
   Canvas canvas,
   Rect face,
   int tile, {
@@ -317,16 +357,20 @@ class TileView extends StatelessWidget {
     final h = width / aspect;
     return Semantics(
       label: back ? 'verdeckter Stein' : tileName(tile),
-      child: CustomPaint(
-        size: Size(width + depth, h + depth),
-        painter: _TilePainter(tile, selected, dim, back, depth),
+      child: ValueListenableBuilder<bool>(
+        valueListenable: tileHints,
+        builder: (context, hints, _) => CustomPaint(
+          size: Size(width + depth, h + depth),
+          painter: _TilePainter(tile, selected, dim, back, depth, hints),
+        ),
       ),
     );
   }
 }
 
 class _TilePainter extends CustomPainter {
-  _TilePainter(this.tile, this.selected, this.dim, this.back, this.depth);
+  _TilePainter(this.tile, this.selected, this.dim, this.back, this.depth, this.hints);
+  final bool hints;
   final int tile;
   final bool selected;
   final bool dim;
@@ -348,5 +392,5 @@ class _TilePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _TilePainter o) =>
-      o.tile != tile || o.selected != selected || o.dim != dim || o.back != back || o.depth != depth;
+      o.tile != tile || o.selected != selected || o.dim != dim || o.back != back || o.depth != depth || o.hints != hints;
 }

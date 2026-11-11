@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../games/cards/playing_card.dart';
 import '../games/eins/eins_engine.dart';
+import '../games/mahjong/tiles.dart';
 
 /// Tempo der Computergegner.
 enum BotSpeed {
@@ -39,7 +40,19 @@ class Settings extends ChangeNotifier {
         _einsMode = EinsMode.values.firstWhere(
           (v) => v.name == _prefs.getString(_einsModeKey),
           orElse: () => EinsMode.classic,
-        );
+        ) {
+    tileHints.value = mahjongHints;
+  }
+
+  static const _mahjongHintsKey = 'settings.mahjongHints';
+
+  /// Kleine Zahlen und Buchstaben auf den Mahjong-Steinen für Einsteiger.
+  bool get mahjongHints => _prefs.getBool(_mahjongHintsKey) ?? false;
+  set mahjongHints(bool value) {
+    _prefs.setBool(_mahjongHintsKey, value);
+    tileHints.value = value;
+    notifyListeners();
+  }
 
   static const _cardNamesKey = 'settings.cardNames';
   static const _penaltyKey = 'settings.mauPenaltyEndsTurn';

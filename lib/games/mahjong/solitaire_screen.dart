@@ -12,6 +12,7 @@ import '../cards/card_widgets.dart';
 import 'solitaire_engine.dart';
 import 'tiles.dart';
 import '../../ui/tap_catcher.dart';
+import 'tile_legend.dart';
 
 const mahjongSolitaireReward = 300;
 const mahjongHintCost = 30;
@@ -209,6 +210,7 @@ class _MahjongSolitaireScreenState extends State<MahjongSolitaireScreen> {
   @override
   Widget build(BuildContext context) {
     return GameFrame(
+      actions: const [TileLegendButton()],
       title: 'Mahjong Solitär',
       guide: mahjongSolitaireGuide,
       background: const BoxDecoration(
