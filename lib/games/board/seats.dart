@@ -175,3 +175,40 @@ bool vsComputer(List<Seat> seats) => seats.any((s) => !s.human);
 /// Münzen nur, wenn ein Mensch gegen mindestens einen Computer gewinnt.
 int seatReward(List<Seat> seats, int winner, int amount) =>
     seats[winner].human && vsComputer(seats) ? amount : 0;
+
+/// Verdeckte Hand beim Weitergeben des Geräts: erst antippen, wenn der richtige Spieler es hält.
+class HandCover extends StatelessWidget {
+  const HandCover({super.key, required this.name, required this.onReveal});
+  final String name;
+  final VoidCallback onReveal;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      decoration: BoxDecoration(
+        color: p.panel,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: p.panelEdge, width: 2),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.phonelink_ring, color: p.ink, size: 32),
+          const SizedBox(height: 6),
+          Text('Gib das Gerät an $name', textAlign: TextAlign.center, style: TextStyle(color: p.ink, fontSize: 18, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text('Die anderen schauen bitte weg.', textAlign: TextAlign.center, style: TextStyle(color: p.inkSoft, fontSize: 14)),
+          const SizedBox(height: 10),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: p.accent, foregroundColor: p.onAccent),
+            onPressed: onReveal,
+            child: Text('Ich bin $name: Karten zeigen'),
+          ),
+        ],
+      ),
+    );
+  }
+}

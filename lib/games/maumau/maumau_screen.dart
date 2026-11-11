@@ -8,6 +8,7 @@ import '../../core/theme.dart';
 import '../../ui/guides.dart';
 import '../../ui/settings_sheet.dart';
 import '../../ui/widgets.dart';
+import '../board/seats.dart';
 import '../cards/card_widgets.dart';
 import '../cards/playing_card.dart';
 import '../cards/rewards.dart';
@@ -25,31 +26,59 @@ class MauMauScreen extends StatefulWidget {
 
 class _MauMauScreenState extends State<MauMauScreen> {
   final _rng = math.Random.secure();
-  int _opponents = 2;
+  int get _opponents => _seats.length - 1;
   int _round = 0;
   late MauMauEngine _e;
   bool _running = false;
   bool _rewarded = false;
 
+  /// Plätze am Tisch; mehrere Menschen geben das Gerät weiter.
+  List<Seat> _seats = const [Seat('Du', human: true), Seat('Helga'), Seat('Otto')];
+
+  /// Wessen Hand gezeigt wird, und ob sie gerade verdeckt ist (Gerät wird weitergegeben).
+  int _viewer = 0;
+  bool _covered = false;
+
   AppScope get _app => AppScope.of(context);
-  bool get _myTurn => !_e.finished && _e.actor.human && !_running;
+  int get _humans => _seats.where((s) => s.human).length;
+  bool get _myTurn => !_e.finished && _e.actor.human && !_running && !_covered && _e.current == _viewer;
 
   @override
   void initState() {
     super.initState();
+    final saved = AppScope.of(context).settings.loadGame('seats.maumau');
+    if (saved != null) {
+      try {
+        final list = [for (final j in saved['seats'] as List) Seat.fromJson(j as Map<String, dynamic>)];
+        if (list.length >= 2 && list.any((x) => x.human)) _seats = list;
+      } catch (_) {
+        // Standard behalten
+      }
+    }
     _setup();
   }
 
   void _setup() {
     final offset = _rng.nextInt(_names.length);
+    var bot = 0;
     _e = MauMauEngine(
       players: [
-        MauPlayer('Du', human: true),
-        for (var i = 0; i < _opponents; i++) MauPlayer(_names[(offset + i) % _names.length]),
+        for (final seat in _seats)
+          seat.human ? MauPlayer(seat.name, human: true) : MauPlayer(_names[(offset + bot++) % _names.length]),
       ],
       rng: _rng,
-    )..start(startPlayer: _round % (_opponents + 1));
+    )..start(startPlayer: _round % _seats.length);
     _rewarded = false;
+    _viewer = _seats.indexWhere((x) => x.human);
+    _covered = false;
+    _syncViewer();
+  }
+
+  /// Ist ein anderer Mensch dran, wird die Hand verdeckt, bis er das Gerät hat.
+  void _syncViewer() {
+    if (_e.finished || !_e.actor.human || _e.current == _viewer) return;
+    _viewer = _e.current;
+    _covered = _humans > 1;
   }
 
   void _newRound() {
@@ -62,13 +91,9 @@ class _MauMauScreenState extends State<MauMauScreen> {
   }
 
   Future<void> _askOpponents() async {
-    final i = await showChoiceSheet(
-      context,
-      title: 'Wie viele Gegner?',
-      options: const ['Ein Gegner', 'Zwei Gegner', 'Drei Gegner'],
-    );
-    if (i == null || !mounted) return;
-    _opponents = i + 1;
+    final seats = await showSeatSetup(context, gameId: 'maumau', title: 'Mau Mau', minSeats: 2, maxSeats: 4);
+    if (seats == null || !mounted) return;
+    _seats = seats;
     _newRound();
   }
 
@@ -82,8 +107,8 @@ class _MauMauScreenState extends State<MauMauScreen> {
     _e.play(c, wishSuit: wish);
     _app.sfx.play(Sound.card);
     // „Mau!“: nur noch eine Karte
-    if (!_e.finished && _e.players.first.hand.length == 1) _app.wallet.credit(callReward);
-    setState(() {});
+    if (!_e.finished && _e.players[_viewer].hand.length == 1 && vsComputer(_seats)) _app.wallet.credit(callReward);
+    setState(_syncViewer);
     _after();
   }
 
@@ -91,14 +116,14 @@ class _MauMauScreenState extends State<MauMauScreen> {
     if (!_myTurn || _e.drewThisTurn) return;
     _e.draw();
     _app.sfx.play(Sound.card);
-    setState(() {});
+    setState(_syncViewer);
     _after();
   }
 
   void _keep() {
     if (!_myTurn) return;
     _e.pass();
-    setState(() {});
+    setState(_syncViewer);
     _after();
   }
 
@@ -141,19 +166,23 @@ class _MauMauScreenState extends State<MauMauScreen> {
     }
     _running = false;
     if (!mounted) return;
-    setState(() {});
+    setState(_syncViewer);
     if (_e.finished) _finish();
   }
 
   /// Trostpreis: je Gegner mit mehr Karten auf der Hand.
-  int get _placeReward =>
-      placeReward(beatenCount([for (final p in _e.players) p.hand.length], 0));
+  int get _placeReward => _humans == 1
+      ? placeReward(beatenCount([for (final p in _e.players) p.hand.length], _seats.indexWhere((x) => x.human)))
+      : 0;
+
+  /// Münzen gibt es nur gegen den Computer: je Computer-Gegner.
+  int get _winReward => mauRewardPerOpponent * _seats.where((x) => !x.human).length;
 
   void _finish() {
     if (_rewarded) return;
     _rewarded = true;
     if (_e.winner!.human) {
-      _app.wallet.credit(mauRewardPerOpponent * _opponents);
+      if (_winReward > 0) _app.wallet.credit(_winReward);
       _app.sfx.play(Sound.win);
     } else {
       if (_placeReward > 0) _app.wallet.credit(_placeReward);
@@ -165,9 +194,17 @@ class _MauMauScreenState extends State<MauMauScreen> {
   String get _status {
     if (_e.finished) {
       return _e.winner!.human
-          ? 'Gewonnen! +${formatCoins(mauRewardPerOpponent * _opponents)} Münzen'
+          ? (_humans > 1
+              ? '${_e.winner!.name} gewinnt!${_winReward > 0 ? ' +${formatCoins(_winReward)} Münzen' : ''}'
+              : 'Gewonnen! +${formatCoins(_winReward)} Münzen')
           : '${_e.winner!.name} gewinnt die Runde'
               '${_placeReward > 0 ? '. Trostpreis +${formatCoins(_placeReward)} Münzen' : ''}';
+    }
+    if (_e.actor.human && _covered) return 'Gib das Gerät an ${_e.actor.name}';
+    if (_e.actor.human && _humans > 1) {
+      if (_e.pendingDraw > 0) return '${_e.actor.name}: Lege eine Sieben oder zieh ${_e.pendingDraw}';
+      if (_e.drewThisTurn) return '${_e.actor.name}: Gezogene Karte legen oder behalten';
+      return '${_e.actor.name} ist dran';
     }
     if (_e.actor.human) {
       if (_e.pendingDraw > 0) return 'Lege eine Sieben oder zieh ${_e.pendingDraw}';
@@ -200,7 +237,7 @@ class _MauMauScreenState extends State<MauMauScreen> {
   }
 
   Widget _layout(BoxConstraints box, double scale) {
-    final me = _e.players.first;
+    final me = _e.players[_viewer];
     final w = box.maxWidth;
     final h = box.maxHeight;
     final landscape = w > h * 1.3;
@@ -219,7 +256,8 @@ class _MauMauScreenState extends State<MauMauScreen> {
     final opponents = Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        for (var i = 1; i < _e.players.length; i++)
+        for (var k = 1; k < _e.players.length; k++)
+          for (final i in [(_viewer + k) % _e.players.length])
           OpponentBadge(
             name: _e.players[i].name,
             cardCount: _e.players[i].hand.length,
@@ -241,7 +279,7 @@ class _MauMauScreenState extends State<MauMauScreen> {
       children: _e.finished
           ? [
               ActionButton(primary: true, label: 'Neue Runde', onPressed: _newRound),
-              ActionButton(label: 'Gegner wählen', onPressed: _askOpponents),
+              ActionButton(label: 'Mitspieler wählen', onPressed: _askOpponents),
             ]
           : [
               ActionButton(
@@ -255,13 +293,15 @@ class _MauMauScreenState extends State<MauMauScreen> {
                 ActionButton(label: 'Behalten', onPressed: _keep),
             ],
     );
-    final hand = HandFan(
-      cards: sortedHand(me.hand),
-      maxCardWidth: handW,
-      isEnabled: (c) => !_myTurn || _e.canPlay(c),
-      isRaised: (c) => _myTurn && _e.canPlay(c),
-      onTap: _play,
-    );
+    final Widget hand = _covered
+        ? HandCover(name: _e.actor.name, onReveal: () => setState(() => _covered = false))
+        : HandFan(
+            cards: sortedHand(me.hand),
+            maxCardWidth: handW,
+            isEnabled: (c) => !_myTurn || _e.canPlay(c),
+            isRaised: (c) => _myTurn && _e.canPlay(c),
+            onTap: _play,
+          );
     final center = FittedBox(fit: BoxFit.scaleDown, child: _center(pileW));
 
     if (landscape) {
