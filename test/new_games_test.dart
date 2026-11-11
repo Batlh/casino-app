@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gluckspfennig/games/ladder/ladder_engine.dart';
 import 'package:gluckspfennig/games/madn/madn_engine.dart';
 import 'package:gluckspfennig/games/memory/memory_engine.dart';
+import 'package:gluckspfennig/games/muehle/muehle_engine.dart';
 import 'package:gluckspfennig/games/reversi/reversi_engine.dart';
 
 Map<String, dynamic> viaJson(Map<String, Object?> m) => jsonDecode(jsonEncode(m)) as Map<String, dynamic>;
@@ -190,6 +191,50 @@ void main() {
         final r = MadnGame.fromJson(viaJson(g.toJson()));
         expect(r.pieces, g.pieces);
       }
+    });
+  });
+
+  group('Mühle', () {
+    test('Nachbarn und Mühlen', () {
+      expect(muehleMills.length, 16);
+      for (var i = 0; i < 24; i++) {
+        expect(muehleNeighbors[i].length, i % 2 == 0 ? 2 : (i >= 8 && i < 16 ? 4 : 3));
+        for (final n in muehleNeighbors[i]) {
+          expect(muehleNeighbors[n], contains(i));
+        }
+      }
+    });
+
+    test('Mühle schließen verlangt Schlagen, geschützte Steine', () {
+      final g = MuehleGame();
+      expect(g.play(const MuehleMove(null, 0)), isTrue);
+      expect(g.play(const MuehleMove(null, 8)), isTrue);
+      expect(g.play(const MuehleMove(null, 1)), isTrue);
+      expect(g.play(const MuehleMove(null, 9)), isTrue);
+      expect(g.play(const MuehleMove(null, 2)), isFalse, reason: 'Mühle ohne Schlagen');
+      expect(g.play(const MuehleMove(null, 2, 8)), isTrue);
+      expect(g.board[8], 0);
+      expect(g.count(2), 1);
+      expect(g.toPlace, [6, 7]);
+    });
+
+    test('Computer gegen Computer endet, stark schlägt schwach', () {
+      var strongWins = 0;
+      for (var seed = 0; seed < 4; seed++) {
+        final rng = Random(seed);
+        final g = MuehleGame();
+        final strong = seed.isEven ? 1 : 2;
+        var steps = 0;
+        while (!g.over && steps++ < 400) {
+          final m = muehleBotMove(g.copy(), g.current == strong ? 2 : 0, rng);
+          expect(g.play(m), isTrue, reason: 'Zug $m');
+        }
+        expect(g.over, isTrue);
+        if (g.winner == strong) strongWins++;
+        final r = MuehleGame.fromJson(viaJson(g.toJson()));
+        expect(r.board, g.board);
+      }
+      expect(strongWins, greaterThanOrEqualTo(2));
     });
   });
 }

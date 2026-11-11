@@ -47,6 +47,7 @@ import '../games/slots/tiefsee_art.dart';
 import '../games/ladder/ladder_screen.dart';
 import '../games/madn/madn_screen.dart';
 import '../games/memory/memory_screen.dart';
+import '../games/muehle/muehle_screen.dart';
 import '../games/reversi/reversi_screen.dart';
 import '../games/solitaire/klondike_screen.dart';
 import '../games/solitaire/spider_screen.dart';
@@ -256,6 +257,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF5A3420),
         _ShogiArt.new,
         () => _open(const ShogiScreen()),
+      ),
+      _Game(
+        'Mühle',
+        'Neun Steine, Mühlen schließen, springen mit dreien',
+        const Color(0xFF5A3420),
+        _MuehleArt.new,
+        () => _open(const MuehleScreen()),
       ),
       _Game(
         'Reversi',
@@ -836,6 +844,38 @@ class _MemoryArt extends CustomPainter {
         ..color = const Color(0xFFF6E7C8));
       canvas.restore();
     }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _MuehleArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final u = math.min(size.width, size.height) / 7.5;
+    final o = Offset(size.width / 2 - u * 3, size.height / 2 - u * 3);
+    final line = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = u * 0.12
+      ..color = const Color(0xFFD9B67A);
+    for (var r = 0; r < 3; r++) {
+      canvas.drawRect(Rect.fromLTWH(o.dx + r * u, o.dy + r * u, (6 - 2 * r) * u, (6 - 2 * r) * u), line);
+    }
+    canvas.drawLine(o + Offset(u * 3, 0), o + Offset(u * 3, u * 2), line);
+    canvas.drawLine(o + Offset(u * 3, u * 4), o + Offset(u * 3, u * 6), line);
+    canvas.drawLine(o + Offset(0, u * 3), o + Offset(u * 2, u * 3), line);
+    canvas.drawLine(o + Offset(u * 4, u * 3), o + Offset(u * 6, u * 3), line);
+    void stone(double x, double y, bool white) {
+      canvas.drawCircle(o + Offset(x * u, y * u), u * 0.42, Paint()..color = white ? const Color(0xFFF4F1EA) : const Color(0xFF1E1E22));
+    }
+
+    stone(0, 0, true);
+    stone(3, 0, true);
+    stone(6, 0, true);
+    stone(1, 5, false);
+    stone(3, 4, false);
+    stone(5, 5, false);
   }
 
   @override
