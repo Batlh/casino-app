@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:forge2d/forge2d.dart';
 
+import '../../core/debug_log.dart';
+
 /// Flippertisch „Neon Nacht“ mit Forge2D, ohne Oberfläche, damit er sich in Tests simulieren lässt.
 /// Einheiten: Spielfeld 0 bis 9,25 breit, rechts daneben die Abschussbahn bis 9,95; 18 hoch, y zeigt nach unten.
 
@@ -287,6 +289,7 @@ class PinballTable {
     // Liegt der Ball wieder in der Bahn, darf er neu abgeschossen werden
     if (!ballInLane && x > fieldRight && y > 16.8 && b.linearVelocity.length < 0.5) {
       ballInLane = true;
+      if (gateClosed) debugLog.warn('flipper', 'Kugel trotz Klappe wieder in der Abschussbahn');
     }
 
     for (final bu in bumpers) {
@@ -338,6 +341,7 @@ class PinballTable {
       _still += dt;
       if (_still > 3) {
         _still = 0;
+        debugLog.detail('flipper', 'Kugel steht bei (${x.toStringAsFixed(2)}, ${y.toStringAsFixed(2)}), Schubs');
         nudge();
       }
     } else {
@@ -345,6 +349,7 @@ class PinballTable {
     }
 
     if (y > height + 0.3 || x < -0.5 || x > width + 0.5 || !x.isFinite || !y.isFinite) {
+      if (y <= height + 0.3) debugLog.warn('flipper', 'Kugel hat den Tisch verlassen bei ($x, $y)');
       _world.destroyBody(b);
       _ball = null;
       if (_saveLeft > 0) {

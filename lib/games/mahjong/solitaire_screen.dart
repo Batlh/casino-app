@@ -270,8 +270,10 @@ class _MahjongSolitaireScreenState extends State<MahjongSolitaireScreen> {
   Widget _board(BoxConstraints b) {
     final m = _Metrics.fit(b.maxWidth, b.maxHeight, _e.slots);
     return TapCatcher(
+      area: 'mahjong.solitaer',
       onTap: (pos) {
         final i = m.hit(_e, pos);
+        debugLog.detail('mahjong.solitaer', 'Tippen bei (${pos.dx.round()}, ${pos.dy.round()}): ${i == null ? 'kein Stein' : 'Stein $i, ${_e.isFree(i) ? 'frei' : 'nicht frei'}'}');
         if (i != null) _tap(i);
       },
       child: CustomPaint(

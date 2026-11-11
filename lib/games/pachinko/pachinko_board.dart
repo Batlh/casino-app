@@ -80,11 +80,11 @@ class PachinkoBoard {
   static const double lcdRight = 6.2;
   static const double lcdBottom = 6.3;
 
-  /// Steiles Spitzdach über dem Anzeigefeld (gut 45 Grad), damit kein Ball oben liegen bleibt.
-  static const double lcdRoof = 1.6;
+  /// Steiles Spitzdach über dem Anzeigefeld (knapp 40 Grad), damit kein Ball oben liegen bleibt.
+  static const double lcdRoof = 1.2;
 
   /// Abstand der Nägel zum Anzeigefeld: breit genug, dass sich keine Kugel verkeilt.
-  static const double lcdClear = 0.55;
+  static const double lcdClear = 0.45;
 
   List<int> reels = [7, 7, 7];
   bool reelsSpinning = false;

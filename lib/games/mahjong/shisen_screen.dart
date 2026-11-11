@@ -303,12 +303,14 @@ class _ShisenScreenState extends State<ShisenScreen> {
     Offset center(math.Point<int> p) => Offset((p.x + 1) * tw, (p.y + 1) * th);
     return Center(
       child: TapCatcher(
+        area: 'shisen',
         onTap: (pos) {
           // Feld aus der Position, die Lücken zwischen den Steinen zählen mit
           final c = (pos.dx / tw - 0.5).floor();
           final r = (pos.dy / th - 0.5).floor();
           if (c < 0 || r < 0 || c >= _e.cols || r >= _e.rows) return;
           final i = r * _e.cols + c;
+          debugLog.detail('shisen', 'Tippen Feld $c/$r: ${_e.cells[i] >= 0 ? 'Stein' : 'leer'}');
           if (_e.cells[i] >= 0) _tap(i);
         },
         child: SizedBox(

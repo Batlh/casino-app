@@ -1,15 +1,20 @@
 import 'package:flutter/widgets.dart';
 
+import '../core/debug_log.dart';
+
 /// Zuverlässiges Antippen am Handy: liest die Finger direkt statt über die Gestenerkennung.
 /// So geht kein Tippen verloren, wenn sich der Finger etwas bewegt oder ein Zoom-Bereich
 /// (InteractiveViewer) die Geste für sich beansprucht. Gezählt wird beim Loslassen, wenn
 /// der Finger nicht weiter als [slop] gewandert ist und kein zweiter Finger dazukam.
 class TapCatcher extends StatefulWidget {
-  const TapCatcher({super.key, required this.onTap, required this.child, this.slop = 24});
+  const TapCatcher({super.key, required this.onTap, required this.child, this.slop = 24, this.area = 'tippen'});
 
   final void Function(Offset localPosition)? onTap;
   final Widget child;
   final double slop;
+
+  /// Bereich im Protokoll der Fehlersuche.
+  final String area;
 
   @override
   State<TapCatcher> createState() => _TapCatcherState();
@@ -44,7 +49,12 @@ class _TapCatcherState extends State<TapCatcher> {
         _active = (_active - 1).clamp(0, 99);
         if (e.pointer != _pointer) return;
         _pointer = null;
-        if (!_cancelled && (e.position - _downGlobal).distance <= widget.slop) widget.onTap?.call(_down);
+        final moved = (e.position - _downGlobal).distance;
+        if (!_cancelled && moved <= widget.slop) {
+          widget.onTap?.call(_down);
+        } else {
+          debugLog.detail(widget.area, 'Tippen verworfen: Finger ${moved.round()} px bewegt oder zweiter Finger');
+        }
       },
       onPointerCancel: (e) {
         _active = (_active - 1).clamp(0, 99);
