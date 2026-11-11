@@ -3,6 +3,17 @@
 Geplant am 10.11.2026 (nach Version 0.8.2). Umsetzung ab 11.11.2026, Reihenfolge wie unten.
 Alle Antworten unten hat der Nutzer am 10.11.2026 gegeben.
 
+## Stand 11.11.2026 (Version 0.8.3)
+
+- Erledigt: Fehler aus 1 (Flipper-Klappe; Pachinko mit steilem Dach und breiten Lücken statt ohne Kollision, weil
+  ohne Kollision die Auszahlung auf 148 % stieg; Tippen über `TapCatcher` in Solitär, Shisen-Sho und der Hand),
+  Einstellungen aufgeteilt (2; Mau Mau und Eins im Spiel, Mensch ärgere dich nicht mit eigenem Regel-Panel),
+  Debug-Log (8; Protokoll in den Einstellungen unter „Fehlersuche“, Kopieren in die Zwischenablage statt
+  Datei-Export), Mitspieler-Auswahl für Brettspiele, neue Spiele Memory, Leiterspiel, Reversi,
+  Mensch ärgere dich nicht, Mühle, Dame.
+- Offen: Mahjong-Regeln (3), Backgammon, Halma, Go mit Tutorial, Kniffel (4), Weitergeben bei den Kartenspielen (5),
+  Flipper ausbauen (6), Grafik (7).
+
 ## 1. Fehler zuerst
 
 - **Flipper:** Der Ball rollt aus dem Spielfeld zurück in die Startrampe. Lösung: eine Klappe, die nur in eine
