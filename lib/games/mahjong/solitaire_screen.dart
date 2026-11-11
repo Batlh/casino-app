@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/debug_log.dart';
 import '../../core/scope.dart';
 import '../../core/settings.dart';
 import '../../core/sfx.dart';
@@ -65,7 +66,8 @@ class _MahjongSolitaireScreenState extends State<MahjongSolitaireScreen> {
       _e = e;
       _penalty = d['penalty'] as int;
       _message = 'Spielstand geladen';
-    } catch (_) {
+    } catch (e, st) {
+      debugLog.error('mahjong.solitaer.spielstand', e, st);
       _app.settings.clearGame(_saveId);
     }
   }

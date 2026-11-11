@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/debug_log.dart';
 import '../../core/saves.dart';
 import '../../core/scope.dart';
 import '../../core/settings.dart';
@@ -104,7 +105,8 @@ class _SpiderScreenState extends State<SpiderScreen> {
       _paidRuns = d['paid'] as int;
       _clockBase = Duration(seconds: d['secs'] as int);
       _message = 'Spielstand geladen';
-    } catch (_) {
+    } catch (e, st) {
+      debugLog.error('spider.spielstand', e, st);
       _app.settings.clearGame(_saveId);
       _e = SpiderEngine(suits: _suits);
     }

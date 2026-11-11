@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/debug_log.dart';
 import '../../core/scope.dart';
 import '../../core/settings.dart';
 import '../../core/sfx.dart';
@@ -176,7 +177,8 @@ class _PikDameScreenState extends State<PikDameScreen> {
       _paidRound = game.phase == PdPhase.roundOver && d['paid'] == game.actionLog.length;
       _msg = 'Spielstand geladen';
       WidgetsBinding.instance.addPostFrameCallback((_) => _pump());
-    } catch (_) {
+    } catch (e, st) {
+      debugLog.error('pikdame.spielstand', e, st);
       _app.settings.clearGame(_saveId);
       _g = null;
     }

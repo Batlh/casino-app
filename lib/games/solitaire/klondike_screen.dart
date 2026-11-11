@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/debug_log.dart';
 import '../../core/saves.dart';
 import '../../core/scope.dart';
 import '../../core/settings.dart';
@@ -108,7 +109,8 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
       _paidCards.addAll(cardsFromCodes(d['paid'] as List));
       _clockBase = Duration(seconds: d['secs'] as int);
       _message = 'Spielstand geladen';
-    } catch (_) {
+    } catch (e, st) {
+      debugLog.error('klondike.spielstand', e, st);
       _app.settings.clearGame(_saveId);
       _e = KlondikeEngine(drawCount: _drawCount);
     }

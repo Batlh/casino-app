@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/debug_log.dart';
 import '../../core/scope.dart';
 import '../../core/settings.dart';
 import '../../core/sfx.dart';
@@ -75,7 +76,8 @@ class _RiichiScreenState extends State<RiichiScreen> {
       _earned = d['earned'] as int;
       _handPaid = g.phase == RPhase.handOver && d['paid'] == g.actionLog.length;
       return g;
-    } catch (_) {
+    } catch (e, st) {
+      debugLog.error('riichi.spielstand', e, st);
       _app.settings.clearGame(_saveId);
       _seed = math.Random.secure().nextInt(1 << 31);
       return null;

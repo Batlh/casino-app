@@ -314,9 +314,23 @@ class _BoardPainter extends CustomPainter {
       PachinkoBoard.lcdRight,
       PachinkoBoard.lcdBottom,
     );
+    final roof = Path()
+      ..moveTo(lcd.left + 0.05, lcd.top + 0.1)
+      ..lineTo(lcd.center.dx, lcd.top - PachinkoBoard.lcdRoof)
+      ..lineTo(lcd.right - 0.05, lcd.top + 0.1)
+      ..close();
+    canvas.drawPath(roof, Paint()..color = const Color(0xFF0A0618));
+    canvas.drawPath(
+      roof,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.08
+        ..strokeJoin = StrokeJoin.round
+        ..color = board.feverActive ? const Color(0xFFFF5EA8) : const Color(0xFFFFC95C),
+    );
     canvas.drawRRect(
       RRect.fromRectAndRadius(lcd, const Radius.circular(0.25)),
-      Paint()..color = const Color(0xE60A0618),
+      Paint()..color = const Color(0xFF0A0618),
     );
     canvas.drawRRect(
       RRect.fromRectAndRadius(lcd, const Radius.circular(0.25)),

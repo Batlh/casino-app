@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/debug_log.dart';
 import '../../core/scope.dart';
 import '../../core/settings.dart';
 import '../../core/sfx.dart';
@@ -120,7 +121,8 @@ class _ShisenScreenState extends State<ShisenScreen> {
       _e = _make()..cells = cells;
       _penalty = d['penalty'] as int;
       _message = 'Spielstand geladen';
-    } catch (_) {
+    } catch (e, st) {
+      debugLog.error('shisen.spielstand', e, st);
       _app.settings.clearGame(_saveId);
     }
   }

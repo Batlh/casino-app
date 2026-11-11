@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/debug_log.dart';
 import '../../core/scope.dart';
 import '../../core/settings.dart';
 import '../../core/sfx.dart';
@@ -71,7 +72,8 @@ class _HeartsScreenState extends State<HeartsScreen> {
         _rewardDone = d['paid'] == e.actionLog.length;
         WidgetsBinding.instance.addPostFrameCallback((_) => _pump());
         return;
-      } catch (_) {
+      } catch (e, st) {
+        debugLog.error('hearts.spielstand', e, st);
         _store.clearGame(_saveId);
       }
     }

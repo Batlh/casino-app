@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:forge2d/forge2d.dart';
 
+import '../../core/debug_log.dart';
+
 /// Pachinko-Brett auf Basis der Physik-Engine Forge2D. Die Datei kennt keine
 /// Oberfläche, damit sich das Brett in Tests ohne Bildschirm simulieren lässt.
 /// Einheiten: Das Brett ist zehn Einheiten breit und sechzehn hoch, y zeigt nach unten.
@@ -78,8 +80,11 @@ class PachinkoBoard {
   static const double lcdRight = 6.2;
   static const double lcdBottom = 6.3;
 
-  /// Früher ein Spitzdach über dem Anzeigefeld; das Feld hat keine Kollision mehr.
-  static const double lcdRoof = 0;
+  /// Steiles Spitzdach über dem Anzeigefeld (gut 45 Grad), damit kein Ball oben liegen bleibt.
+  static const double lcdRoof = 1.6;
+
+  /// Abstand der Nägel zum Anzeigefeld: breit genug, dass sich keine Kugel verkeilt.
+  static const double lcdClear = 0.55;
 
   List<int> reels = [7, 7, 7];
   bool reelsSpinning = false;
@@ -113,9 +118,7 @@ class PachinkoBoard {
   }
 
   bool _freeForPeg(double x, double y) {
-    if (x > lcdLeft - 0.35 && x < lcdRight + 0.35 && y > lcdTop - 0.35 && y < lcdBottom + 0.35) {
-      return false;
-    }
+    if (_lcdDistance(x, y) < lcdClear) return false;
     for (final s in _spinnerSpots) {
       if ((x - s.x) * (x - s.x) + (y - s.y) * (y - s.y) < 0.95 * 0.95) return false;
     }
@@ -125,6 +128,32 @@ class PachinkoBoard {
       }
     }
     return true;
+  }
+
+  static const _lcdShape = [
+    Point2(lcdLeft, lcdBottom),
+    Point2(lcdRight, lcdBottom),
+    Point2(lcdRight, lcdTop),
+    Point2((lcdLeft + lcdRight) / 2, lcdTop - lcdRoof),
+    Point2(lcdLeft, lcdTop),
+  ];
+
+  /// Abstand eines Punkts zum Anzeigefeld, 0 innerhalb.
+  static double _lcdDistance(double x, double y) {
+    var inside = false;
+    var best = double.infinity;
+    for (var i = 0; i < _lcdShape.length; i++) {
+      final a = _lcdShape[i];
+      final b = _lcdShape[(i + 1) % _lcdShape.length];
+      if ((a.y > y) != (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+      final dx = b.x - a.x;
+      final dy = b.y - a.y;
+      final t = (((x - a.x) * dx + (y - a.y) * dy) / (dx * dx + dy * dy)).clamp(0.0, 1.0);
+      final px = a.x + dx * t - x;
+      final py = a.y + dy * t - y;
+      best = min(best, sqrt(px * px + py * py));
+    }
+    return inside ? 0 : best;
   }
 
   static const _spinnerSpots = [Point2(2.2, 7.6), Point2(7.2, 7.6)];
@@ -150,8 +179,16 @@ class PachinkoBoard {
     // Abschussbahn
     _edge(ground, laneX, 16, laneX, 3.4, bounce: 0.1);
 
-    // Das Anzeigefeld hat keine Kollision: Die Kugeln fallen davor durch,
-    // so kann oben und an den Seiten keine mehr hängen bleiben.
+    // Anzeigefeld als fester Block mit Spitzdach
+    final lcd = PolygonShape()
+      ..set([
+        Vector2(lcdLeft, lcdBottom),
+        Vector2(lcdRight, lcdBottom),
+        Vector2(lcdRight, lcdTop),
+        Vector2((lcdLeft + lcdRight) / 2, lcdTop - lcdRoof),
+        Vector2(lcdLeft, lcdTop),
+      ]);
+    ground.createFixture(FixtureDef(lcd, friction: 0.05, restitution: 0.4));
 
     pockets
       ..add(const Pocket(1.1, 10.7, 2.1, 11.0, tulipPay, PocketKind.tulip))
@@ -276,8 +313,10 @@ class PachinkoBoard {
       // Alle 0,8 Sekunden Stillstand ein Schubs, nach 3,5 Sekunden erstatten
       if (still > 0.8 && (still / 0.8).floor() != ((still - dt) / 0.8).floor()) {
         b.applyLinearImpulse(Vector2((_rng.nextBool() ? 1 : -1) * 0.04, -0.03));
+        debugLog.detail('pachinko', 'Kugel steht bei (${x.toStringAsFixed(2)}, ${y.toStringAsFixed(2)}), Schubs');
       }
       if (still > 3.5) {
+        debugLog.warn('pachinko', 'Kugel steckt fest bei (${x.toStringAsFixed(2)}, ${y.toStringAsFixed(2)}), erstattet');
         ev = const PachinkoEvent(PachinkoEventKind.stuck, ballCost);
       } else if (y > 15.8) {
         // Zu schwacher Schuss landet wieder in der Bahn und zählt nicht

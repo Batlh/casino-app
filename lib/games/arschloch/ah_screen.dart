@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/debug_log.dart';
 import '../../core/scope.dart';
 import '../../core/settings.dart';
 import '../../core/sfx.dart';
@@ -95,7 +96,8 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
       _earned = d['earned'] as int;
       _paidRound = g.phase == AhPhase.roundOver && d['paid'] == g.actionLog.length;
       return g;
-    } catch (_) {
+    } catch (e, st) {
+      debugLog.error('arschloch.spielstand', e, st);
       _app.settings.clearGame(_saveId);
       _seed = math.Random.secure().nextInt(1 << 31);
       return null;

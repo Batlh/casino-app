@@ -182,6 +182,7 @@ class GameFrame extends StatefulWidget {
     required this.child,
     this.background,
     this.guide,
+    this.settings,
   });
 
   final String title;
@@ -190,6 +191,9 @@ class GameFrame extends StatefulWidget {
 
   /// Spielerklärung hinter dem Fragezeichen in der Kopfzeile.
   final GameGuide? guide;
+
+  /// Eigene Einstellungen des Spiels; ohne nur die allgemeinen.
+  final GameSettings? settings;
 
   @override
   State<GameFrame> createState() => _GameFrameState();
@@ -289,7 +293,7 @@ class _GameFrameState extends State<GameFrame> {
                       visualDensity: dense,
                       tooltip: 'Einstellungen',
                       icon: Icon(Icons.settings, color: p.ink),
-                      onPressed: () => showSettingsSheet(context),
+                      onPressed: () => showSettingsSheet(context, game: widget.settings),
                     ),
                     const BalanceBadge(),
                   ],

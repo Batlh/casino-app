@@ -7,6 +7,7 @@ import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guides.dart';
+import '../../ui/settings_sheet.dart';
 import '../../ui/widgets.dart';
 import '../cards/card_widgets.dart';
 import '../cards/rewards.dart';
@@ -776,6 +777,7 @@ class _EinsScreenState extends State<EinsScreen> {
   Widget build(BuildContext context) {
     final settings = _app.settings;
     return GameFrame(
+      settings: einsSettings,
       guide: einsGuide,
       title: _mode == EinsMode.classic ? 'Eins!' : 'Eins! ${modeName(_mode)}',
       child: ListenableBuilder(

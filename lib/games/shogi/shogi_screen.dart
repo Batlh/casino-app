@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/debug_log.dart';
 import '../../core/scope.dart';
 import '../../core/settings.dart';
 import '../../core/sfx.dart';
@@ -79,7 +80,8 @@ class _ShogiScreenState extends State<ShogiScreen> {
         g.make(m);
       }
       _g = g;
-    } catch (_) {
+    } catch (e, st) {
+      debugLog.error('shogi.spielstand', e, st);
       _app.settings.clearGame(_saveId);
     }
   }
@@ -204,7 +206,8 @@ class _ShogiScreenState extends State<ShogiScreen> {
     ShogiMove? m;
     try {
       m = await _think(copy, level, seed);
-    } catch (_) {
+    } catch (e, st) {
+      debugLog.error('shogi.bot', e, st);
       m = shogiBestMoveFor(copy, level, seed: seed);
     }
     await wait;
