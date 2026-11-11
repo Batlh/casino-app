@@ -4,6 +4,7 @@ import '../core/scope.dart';
 import '../core/settings.dart';
 import '../core/theme.dart';
 import '../games/cards/playing_card.dart';
+import 'backup_section.dart';
 import 'debug_screen.dart';
 
 /// Einstellungen öffnen. Aus einem Spiel heraus zeigt [game] zuerst die Einstellungen dieses Spiels,
@@ -159,6 +160,23 @@ Widget _general(BuildContext context) {
             onChanged: (v) => app.settings.cardScale = v,
           ),
           const SizedBox(height: 8),
+      const SizedBox(height: 8),
+      Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: EdgeInsets.zero,
+          expandedCrossAxisAlignment: CrossAxisAlignment.start,
+          iconColor: p.ink,
+          collapsedIconColor: p.ink,
+          title: Text('Spielstand sichern', style: TextStyle(color: p.ink, fontSize: 17)),
+          subtitle: Text(
+            'Als Datei speichern oder auf einem anderen Gerät laden',
+            style: TextStyle(color: p.inkSoft, fontSize: 14),
+          ),
+          children: const [BackupSection()],
+        ),
+      ),
       const SizedBox(height: 8),
       Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),

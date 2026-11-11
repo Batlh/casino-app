@@ -132,6 +132,15 @@ mit dem sich der Fehler nachstellen lässt.
   Fehler mit Stacktrace werden immer aufgezeichnet.
 - **Test:** Unit-Test für Ringpuffer und Rotation. Ein Test, der einen Fehler wirft und prüft, dass er im Log landet.
 
+## 9. Spielstand als Datei (Wunsch vom 11.11.2026)
+
+- In den allgemeinen Einstellungen unter „Spielstand sichern“: „Als Datei sichern“ und „Aus Datei laden“
+  (Paket `file_picker`: Android über das System-Dateifenster, PC über den Dateidialog), dazu als Ausweg
+  „In Zwischenablage“ und „Aus Zwischenablage laden“.
+- Die Datei (`gluckspfennig-spielstand-JJJJ-MM-TT.json`) enthält Münzen, Einstellungen und alle angefangenen Spiele,
+  nicht das Fehlerprotokoll. Vor dem Laden zeigt die App Münzen und Zahl der Spiele und fragt nach; danach wird die
+  App mit den geladenen Daten neu aufgebaut (`restartApp` in `lib/core/backup.dart`).
+
 ## Hinweis zum Kontingent
 
 Das Wochen-Kontingent ist knapp. Deshalb mehrere Punkte zusammen bauen und nur selten einen vollen Build starten.

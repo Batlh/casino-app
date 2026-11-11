@@ -10,6 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   audioplayers: ^6.1.0
+  # Spielstand als Datei sichern und laden (Android über das System-Dateifenster, PC über den Dateidialog)
+  file_picker: ^8.1.2
   # 0.15 ersetzt die reine Dart-Engine durch native Bindungen, darum bei 0.14 bleiben
   forge2d: ">=0.14.2 <0.15.0"
   shared_preferences: ^2.3.0

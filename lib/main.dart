@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'core/backup.dart';
 import 'core/debug_log.dart';
 import 'core/scope.dart';
 import 'core/settings.dart';
@@ -30,14 +31,43 @@ Future<void> main() async {
     final view = PlatformDispatcher.instance.implicitView;
     final size = view == null ? '?' : '${(view.physicalSize.width / view.devicePixelRatio).round()}×${(view.physicalSize.height / view.devicePixelRatio).round()}';
     debugLog.info('app', 'Start $appVersion auf ${defaultTargetPlatform.name}, Fenster $size');
-    runApp(
-      GluckspfennigApp(
-        wallet: Wallet(prefs),
-        sfx: Sfx(prefs),
-        settings: Settings(prefs),
-      ),
-    );
+    runApp(_Root(prefs));
   }, (error, stack) => debugLog.error('zone', error, stack));
+}
+
+class _Root extends StatefulWidget {
+  const _Root(this.prefs);
+  final SharedPreferences prefs;
+
+  @override
+  State<_Root> createState() => _RootState();
+}
+
+class _RootState extends State<_Root> {
+  late Wallet _wallet;
+  late Sfx _sfx;
+  late Settings _settings;
+  Key _key = UniqueKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    restartApp = () => setState(() {
+          _load();
+          _key = UniqueKey();
+          debugLog.info('app', 'Neu geladen nach Spielstand-Import');
+        });
+  }
+
+  void _load() {
+    _wallet = Wallet(widget.prefs);
+    _sfx = Sfx(widget.prefs);
+    _settings = Settings(widget.prefs);
+  }
+
+  @override
+  Widget build(BuildContext context) => GluckspfennigApp(key: _key, wallet: _wallet, sfx: _sfx, settings: _settings);
 }
 
 class GluckspfennigApp extends StatelessWidget {
