@@ -78,6 +78,38 @@ Jedes Spiel mit Erklärung und Tutorial wie die anderen, mit eigenen Einstellung
 Reihenfolge: Flipper und Pachinko, dann die Kartenspiele (Kartenbild, Tisch, Animationen beim Austeilen), dann die
 Lobby (Startbildschirm, Kacheln der Spiele).
 
+## 8. Debug-Log und Fehlerstapel (Wunsch vom 11.11.2026, für später)
+
+Ziel: Wenn etwas hakt (Kugel bleibt hängen, Tippen geht nicht, Absturz), soll der Nutzer ein Log schicken können,
+mit dem sich der Fehler nachstellen lässt.
+
+- **Fehler abfangen:** `FlutterError.onError`, `PlatformDispatcher.instance.onError` und eine `runZonedGuarded`-Zone
+  in `main`. Jeder Fehler landet mit vollständigem Stacktrace im Log. Die App stürzt dabei nicht ab, nur das Spiel
+  zeigt einen Hinweis „Fehler aufgezeichnet“.
+- **Log-Puffer:** Ringpuffer im Speicher (z. B. die letzten 2.000 Einträge), zusätzlich als Datei im App-Ordner
+  (`logs/debug.log`). Die Datei wird ab ca. 1 MB rotiert, es bleiben höchstens zwei alte Dateien. Jeder Eintrag hat
+  Zeit, Stufe (Info/Warnung/Fehler), Bereich (z. B. `pinball`, `mahjong.solitaire`, `saves`) und den Text.
+- **Was protokolliert wird:**
+  - App-Start mit Version, Build, Plattform und Bildschirmgröße
+  - Spiel geöffnet oder geschlossen, Spielstand geladen oder gespeichert (bei Fehler mit Grund)
+  - Die Spielaktionen, die es durch die Spielstände ohnehin gibt (Seed und Aktionsliste). Damit lässt sich eine
+    Partie Zug für Zug nachspielen.
+  - Tippen und Treffer in Mahjong Solitär, Shisen-Sho und in der Mahjong-Hand: Position, getroffener Stein oder
+    „kein Treffer“ (für den Tipp-Fehler aus 1)
+  - Flipper und Pachinko: Kugel steckt fest (Position, Dauer), Kugel verloren, Ball in der Startrampe
+- **Ansicht in der App:** In den allgemeinen Einstellungen ein Bereich „Fehlersuche“, standardmäßig aus.
+  Eingeschaltet zeigt er:
+  - das Log, filterbar nach Stufe und Bereich
+  - „Kopieren“ (Zwischenablage) und „Als Datei speichern/teilen“ (Android: Teilen-Menü, PC: Speichern-Dialog)
+  - „Log leeren“
+  - Schalter für Debug-Overlays: Kollisionsformen bei Flipper und Pachinko, Trefferflächen bei den Mahjong-Steinen,
+    FPS-Anzeige
+- **Datenschutz:** Das Log bleibt auf dem Gerät und verlässt es nur, wenn der Nutzer es selbst teilt. Es enthält
+  keine Namen außer den selbst eingegebenen Spielernamen.
+- **Aus im Release:** Ausführliche Einträge (Tippen, Physik) werden nur bei eingeschalteter Fehlersuche geschrieben.
+  Fehler mit Stacktrace werden immer aufgezeichnet.
+- **Test:** Unit-Test für Ringpuffer und Rotation. Ein Test, der einen Fehler wirft und prüft, dass er im Log landet.
+
 ## Hinweis zum Kontingent
 
 Das Wochen-Kontingent ist knapp. Deshalb mehrere Punkte zusammen bauen und nur selten einen vollen Build starten.
