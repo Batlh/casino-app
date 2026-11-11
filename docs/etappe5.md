@@ -14,6 +14,17 @@ Alle Antworten unten hat der Nutzer am 10.11.2026 gegeben.
 - Offen: Mahjong-Regeln (3), Backgammon, Halma, Go mit Tutorial, Kniffel (4), Weitergeben bei den Kartenspielen (5),
   Flipper ausbauen (6), Grafik (7).
 
+## Stand 11.11.2026 abends
+
+- Neu (noch nicht gebaut): Backgammon, Stern-Halma (2 bis 6), Go 9×9/13×13 mit Go-Schule (7 Aufgaben),
+  Weitergeben des Geräts bei Mau Mau, Pik Dame und Arschloch (`HandCover` in `lib/games/board/seats.dart`).
+- Backgammon und Halma haben die CI-Prüfung bestanden; Go und das Weitergeben sind noch ungeprüft, weil GitHub
+  Actions keine Läufe mehr startet (vermutlich Kontingent des privaten Repos aufgebraucht).
+- Offen: Weitergeben bei Eins (Glücksrad, Roulette und „am schnellsten“ brauchen eigene Lösungen),
+  Mahjong-Regeln (3), Flipper ausbauen (6), Grafik (7).
+- Hinweis: Die CI meldet `package:flutter/material.dart` als veraltet (neues Paket `material_ui`); nur Hinweise,
+  Umstellung später.
+
 ## 1. Fehler zuerst
 
 - **Flipper:** Der Ball rollt aus dem Spielfeld zurück in die Startrampe. Lösung: eine Klappe, die nur in eine
