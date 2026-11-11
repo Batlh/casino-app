@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gluckspfennig/games/backgammon/bg_engine.dart';
 import 'package:gluckspfennig/games/dame/dame_engine.dart';
+import 'package:gluckspfennig/games/halma/halma_engine.dart';
 import 'package:gluckspfennig/games/kniffel/kniffel_engine.dart';
 import 'package:gluckspfennig/games/ladder/ladder_engine.dart';
 import 'package:gluckspfennig/games/madn/madn_engine.dart';
@@ -400,6 +401,53 @@ void main() {
         expect(g.off[g.winner!], 15);
         final r = BgGame.fromJson(viaJson(g.toJson()));
         expect(r.counts, g.counts);
+      }
+    });
+  });
+
+  group('Halma', () {
+    test('Sternbrett: 121 Löcher, sechs Lager zu je 10', () {
+      final b = HalmaBoard.instance;
+      expect(b.cells.length, 121);
+      for (var c = 0; c < 6; c++) {
+        expect(b.campCells(c).length, 10);
+      }
+      final g = HalmaGame(6);
+      expect(g.board.where((v) => v >= 0).length, 60);
+    });
+
+    test('Springen über Figuren in Ketten', () {
+      final g = HalmaGame(2);
+      g.board.fillRange(0, g.board.length, -1);
+      final b = HalmaBoard.instance;
+      final a = b.index[(0, 0, 0)]!;
+      final m1 = b.index[(1, -1, 0)]!;
+      final m2 = b.index[(3, -3, 0)]!;
+      g.board[a] = 0;
+      g.board[m1] = 1;
+      g.board[m2] = 1;
+      final t = g.targets(a);
+      expect(t.contains(b.index[(2, -2, 0)]), isTrue);
+      expect(t.contains(b.index[(4, -4, 0)]), isTrue, reason: 'Doppelsprung');
+      expect(t.contains(b.index[(1, 0, -1)]), isTrue, reason: 'Schritt');
+    });
+
+    test('Computer spielen Partien zu Ende', () {
+      for (final n in [2, 3, 4, 6]) {
+        final rng = Random(n);
+        final g = HalmaGame(n);
+        var steps = 0;
+        while (!g.over && steps++ < 4000) {
+          final m = g.botMove(rng);
+          if (m == null) {
+            g.pass();
+          } else {
+            expect(g.play(m.$1, m.$2), isTrue);
+          }
+        }
+        expect(g.over, isTrue, reason: '$n Spieler nach $steps Zügen');
+        final r = HalmaGame.fromJson(viaJson(g.toJson()));
+        expect(r.board, g.board);
       }
     });
   });

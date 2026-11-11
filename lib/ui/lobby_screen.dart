@@ -46,6 +46,7 @@ import '../games/slots/slot_screen.dart';
 import '../games/slots/tiefsee_art.dart';
 import '../games/backgammon/bg_screen.dart';
 import '../games/dame/dame_screen.dart';
+import '../games/halma/halma_screen.dart';
 import '../games/kniffel/kniffel_screen.dart';
 import '../games/ladder/ladder_screen.dart';
 import '../games/madn/madn_screen.dart';
@@ -295,6 +296,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF6B2A4A),
         _MemoryArt.new,
         () => _open(const MemoryScreen()),
+      ),
+      _Game(
+        'Halma',
+        'Stern-Halma für zwei bis sechs: springen, Leitern bauen',
+        const Color(0xFF2F4F7F),
+        _HalmaArt.new,
+        () => _open(const HalmaScreen()),
       ),
       _Game(
         'Mensch ärgere dich nicht',
@@ -971,6 +979,38 @@ class _MuehleArt extends CustomPainter {
     stone(1, 5, false);
     stone(3, 4, false);
     stone(5, 5, false);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _HalmaArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = Offset(size.width / 2, size.height / 2);
+    final r = math.min(size.width, size.height) * 0.42;
+    final star = Path();
+    for (var i = 0; i < 12; i++) {
+      final a = -math.pi / 2 + i * math.pi / 6;
+      final rr = i.isEven ? r : r * 0.58;
+      final pt = c + Offset(math.cos(a), math.sin(a)) * rr;
+      if (i == 0) {
+        star.moveTo(pt.dx, pt.dy);
+      } else {
+        star.lineTo(pt.dx, pt.dy);
+      }
+    }
+    star.close();
+    canvas.drawPath(star, Paint()..color = const Color(0xFFE9D7B0));
+    const colors = [Color(0xFFD8402B), Color(0xFF2E9E57), Color(0xFFE8B923), Color(0xFF2F7FD0), Color(0xFF8E4FC9), Color(0xFFEE7F2D)];
+    for (var i = 0; i < 6; i++) {
+      final a = -math.pi / 2 + i * math.pi / 3;
+      for (var k = 0; k < 3; k++) {
+        final pt = c + Offset(math.cos(a), math.sin(a)) * (r * (0.82 - k * 0.14)) + Offset(math.cos(a + math.pi / 2), math.sin(a + math.pi / 2)) * ((k - 1) * r * 0.08);
+        canvas.drawCircle(pt, r * 0.07, Paint()..color = colors[i]);
+      }
+    }
   }
 
   @override
