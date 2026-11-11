@@ -46,6 +46,7 @@ import '../games/slots/slot_screen.dart';
 import '../games/slots/tiefsee_art.dart';
 import '../games/backgammon/bg_screen.dart';
 import '../games/dame/dame_screen.dart';
+import '../games/go/go_screen.dart';
 import '../games/halma/halma_screen.dart';
 import '../games/kniffel/kniffel_screen.dart';
 import '../games/ladder/ladder_screen.dart';
@@ -282,6 +283,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF5A3420),
         _BackgammonArt.new,
         () => _open(const BgScreen()),
+      ),
+      _Game(
+        'Go',
+        'Gebiet umschließen, mit Go-Schule und Aufgaben',
+        const Color(0xFF6B4A1F),
+        _GoArt.new,
+        () => _open(const GoScreen()),
       ),
       _Game(
         'Reversi',
@@ -916,6 +924,29 @@ class _BackgammonArt extends CustomPainter {
       canvas.drawCircle(o + Offset(cw * 4.5, r + k * r * 2), r, Paint()..color = const Color(0xFF2A2A30));
     }
     canvas.drawCircle(o + Offset(cw * 2.5, h - r), r, Paint()..color = const Color(0xFF2A2A30));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _GoArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final u = math.min(size.width, size.height) / 6;
+    final o = Offset(size.width / 2 - u * 2.5, size.height / 2 - u * 2.5);
+    canvas.drawRect((o & Size.square(u * 5)).inflate(u * 0.4), Paint()..color = const Color(0xFFDDB46B));
+    final line = Paint()
+      ..color = const Color(0xFF3A2410)
+      ..strokeWidth = 1.5;
+    for (var i = 0; i < 6; i++) {
+      canvas.drawLine(o + Offset(0, i * u), o + Offset(u * 5, i * u), line);
+      canvas.drawLine(o + Offset(i * u, 0), o + Offset(i * u, u * 5), line);
+    }
+    const stones = [(1, 1, 1), (2, 1, 2), (2, 2, 1), (3, 2, 2), (1, 3, 1), (3, 3, 2), (2, 4, 2), (4, 1, 1)];
+    for (final (x, y, v) in stones) {
+      canvas.drawCircle(o + Offset(x * u, y * u), u * 0.46, Paint()..color = v == 1 ? const Color(0xFF1A1A1A) : const Color(0xFFF4F1EA));
+    }
   }
 
   @override

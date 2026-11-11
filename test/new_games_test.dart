@@ -4,6 +4,8 @@ import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gluckspfennig/games/backgammon/bg_engine.dart';
 import 'package:gluckspfennig/games/dame/dame_engine.dart';
+import 'package:gluckspfennig/games/go/go_engine.dart';
+import 'package:gluckspfennig/games/go/go_screen.dart' show goLessons;
 import 'package:gluckspfennig/games/halma/halma_engine.dart';
 import 'package:gluckspfennig/games/kniffel/kniffel_engine.dart';
 import 'package:gluckspfennig/games/ladder/ladder_engine.dart';
@@ -449,6 +451,73 @@ void main() {
         final r = HalmaGame.fromJson(viaJson(g.toJson()));
         expect(r.board, g.board);
       }
+    });
+  });
+
+  group('Go', () {
+    test('Schlagen, Selbstmord, Ko', () {
+      final (g, _) = GoGame.fromDiagram(const [
+        '.........',
+        '.........',
+        '.........',
+        '...XO....',
+        '..XO.O...',
+        '...XO....',
+        '.........',
+        '.........',
+        '.........',
+      ]);
+      final ko = 4 * 9 + 4;
+      expect(g.play(ko), isTrue, reason: 'Schwarz schlägt im Ko');
+      expect(g.board[4 * 9 + 3], 0);
+      expect(g.captures[1], 1);
+      expect(g.isLegal(4 * 9 + 3), isFalse, reason: 'Weiß darf nicht sofort zurückschlagen');
+      g.play(0);
+      g.play(80);
+      expect(g.isLegal(4 * 9 + 3), isTrue, reason: 'nach einem anderen Zug schon');
+      // Selbstmord
+      final (s, _) = GoGame.fromDiagram(const ['.X.', 'X..', '...']);
+      s.current = 2;
+      expect(s.isLegal(0), isFalse);
+    });
+
+    test('Flächenwertung', () {
+      final (g, _) = GoGame.fromDiagram([for (var r = 0; r < 9; r++) '...XO....']);
+      // Schwarz: 4 Spalten, Weiß: 5 Spalten, Komi 7,5
+      expect(g.score(), 36 - 45 - 7.5);
+    });
+
+    test('Alle Aufgaben der Go-Schule sind lösbar', () {
+      for (final l in goLessons) {
+        final (g, answers) = GoGame.fromDiagram(l.diagram);
+        expect(answers, isNotEmpty, reason: l.title);
+        for (final a in answers) {
+          expect(g.isLegal(a), isTrue, reason: '${l.title}: $a');
+        }
+      }
+      final (cap, _) = GoGame.fromDiagram(goLessons[0].diagram);
+      cap.play(4 * 9 + 5);
+      expect(cap.board[4 * 9 + 4], 0, reason: 'Stein geschlagen');
+    });
+
+    test('Computer: leicht spielt zu Ende, mittel findet einen legalen Zug', () {
+      final rng = Random(4);
+      final g = GoGame(9);
+      var steps = 0;
+      while (!g.over && steps++ < 400) {
+        final m = goBotMove(g, 0, rng);
+        if (m < 0) {
+          g.pass();
+        } else {
+          expect(g.play(m), isTrue);
+        }
+      }
+      expect(g.over, isTrue);
+      final r = GoGame.fromJson(viaJson(g.toJson()));
+      expect(r.board, g.board);
+      final (atari, _) = GoGame.fromDiagram(goLessons[0].diagram);
+      final m = goBotMove(atari, 1, Random(1));
+      expect(m < 0 || atari.isLegal(m), isTrue);
     });
   });
 }
