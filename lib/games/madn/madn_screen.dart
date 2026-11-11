@@ -252,7 +252,7 @@ class _MadnScreenState extends State<MadnScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: i == g.current && g.phase != MadnPhase.over ? p.panel : Colors.transparent,
+                            color: i == g.current && g.phase != MadnPhase.over ? p.accent : Colors.black26,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: i == g.current && g.phase != MadnPhase.over ? p.accent : p.panelEdge),
                           ),
@@ -261,7 +261,7 @@ class _MadnScreenState extends State<MadnScreen> {
                             const SizedBox(width: 6),
                             Text(
                               '${_seats[i].name} · ${g.pieces[i].where((x) => x >= MadnGame.goalStart).length}/4',
-                              style: TextStyle(color: p.onFelt, fontWeight: FontWeight.w700),
+                              style: TextStyle(color: i == g.current && g.phase != MadnPhase.over ? p.onAccent : p.onFelt, fontWeight: FontWeight.w700),
                             ),
                           ]),
                         ),

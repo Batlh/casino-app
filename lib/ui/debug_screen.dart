@@ -31,7 +31,7 @@ class DebugSection extends StatelessWidget {
               onChanged: (v) => log.verbose = v,
             ),
             Text(
-              '${log.entries.length} Einträge, davon $errors Fehler · Version $appVersion',
+              '${log.entries.length} ${log.entries.length == 1 ? 'Eintrag' : 'Einträge'}, davon $errors Fehler · Version $appVersion',
               style: TextStyle(color: p.inkSoft, fontSize: 14),
             ),
             const SizedBox(height: 8),

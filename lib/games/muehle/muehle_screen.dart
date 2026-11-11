@@ -299,7 +299,7 @@ class _MuehleScreenState extends State<MuehleScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: g.current == color && !g.over ? p.panel : Colors.transparent,
+                            color: g.current == color && !g.over ? p.accent : Colors.black26,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: g.current == color && !g.over ? p.accent : p.panelEdge),
                           ),
@@ -309,7 +309,7 @@ class _MuehleScreenState extends State<MuehleScreen> {
                             Text(
                               '${_name(color)} · ${g.count(color)} auf dem Brett'
                               '${g.toPlace[color - 1] > 0 ? ', ${g.toPlace[color - 1]} zu setzen' : ''}',
-                              style: TextStyle(color: p.onFelt, fontWeight: FontWeight.w700),
+                              style: TextStyle(color: g.current == color && !g.over ? p.onAccent : p.onFelt, fontWeight: FontWeight.w700),
                             ),
                           ]),
                         ),

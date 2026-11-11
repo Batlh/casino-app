@@ -280,7 +280,7 @@ class _DameScreenState extends State<DameScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: g.current == side && !g.over ? p.panel : Colors.transparent,
+                            color: g.current == side && !g.over ? p.accent : Colors.black26,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: g.current == side && !g.over ? p.accent : p.panelEdge),
                           ),
@@ -288,7 +288,7 @@ class _DameScreenState extends State<DameScreen> {
                             CircleAvatar(radius: 8, backgroundColor: side == 1 ? Colors.white : Colors.black),
                             const SizedBox(width: 6),
                             Text('${_name(side)} · ${g.count(side)} Steine',
-                                style: TextStyle(color: p.onFelt, fontWeight: FontWeight.w700)),
+                                style: TextStyle(color: g.current == side && !g.over ? p.onAccent : p.onFelt, fontWeight: FontWeight.w700)),
                           ]),
                         ),
                     ],

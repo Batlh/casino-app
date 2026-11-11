@@ -244,7 +244,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: i == g.current && !g.over ? p.panel : Colors.transparent,
+                            color: i == g.current && !g.over ? p.accent : Colors.black26,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: i == g.current && !g.over ? p.accent : p.panelEdge),
                           ),
@@ -255,7 +255,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
                               _seats.length == 1
                                   ? 'Züge: ${g.turns[0]} · Paare: ${g.scores[0]}/${g.pairs}'
                                   : '${_seats[i].name} · ${g.scores[i]}',
-                              style: TextStyle(color: p.onFelt, fontWeight: FontWeight.w700),
+                              style: TextStyle(color: i == g.current && !g.over ? p.onAccent : p.onFelt, fontWeight: FontWeight.w700),
                             ),
                           ]),
                         ),
@@ -305,8 +305,8 @@ class _MemoryScreenState extends State<MemoryScreen> {
                         duration: const Duration(milliseconds: 220),
                         transitionBuilder: (child, a) => ScaleTransition(scale: a, child: child),
                         child: g.open.contains(i)
-                            ? KeyedSubtree(key: ValueKey('f$i'), child: _face(g.cards[i], w))
-                            : KeyedSubtree(key: ValueKey('b$i'), child: _back(w)),
+                            ? SizedBox.expand(key: ValueKey('f$i'), child: _face(g.cards[i], w))
+                            : SizedBox.expand(key: ValueKey('b$i'), child: _back(w)),
                       ),
                     ),
             ),
