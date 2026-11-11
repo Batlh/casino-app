@@ -90,7 +90,7 @@ jobs:
           sed -i "s#^distributionUrl=.*#distributionUrl=file\\://$FILE#" "$WRAP"
           cat "$WRAP"
           mkdir -p ~/.gradle/init.d
-          cp ci/maven-mirror.gradle ~/.gradle/init.d/
+          cp ci/maven-mirror.gradle ci/compile-sdk.gradle ~/.gradle/init.d/
       - name: APK bauen
         run: |
           # Der Gradle-Download bricht manchmal mit 504 ab, dann neu versuchen
