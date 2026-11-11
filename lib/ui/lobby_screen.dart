@@ -45,6 +45,7 @@ import '../games/slots/slot_games.dart';
 import '../games/slots/slot_screen.dart';
 import '../games/slots/tiefsee_art.dart';
 import '../games/ladder/ladder_screen.dart';
+import '../games/madn/madn_screen.dart';
 import '../games/memory/memory_screen.dart';
 import '../games/reversi/reversi_screen.dart';
 import '../games/solitaire/klondike_screen.dart';
@@ -269,6 +270,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF6B2A4A),
         _MemoryArt.new,
         () => _open(const MemoryScreen()),
+      ),
+      _Game(
+        'Mensch ärgere dich nicht',
+        'Rauswerfen, heimbringen, Hausregeln einstellbar',
+        const Color(0xFF8E1B2C),
+        _MadnArt.new,
+        () => _open(const MadnScreen()),
       ),
       _Game(
         'Leiterspiel',
@@ -827,6 +835,32 @@ class _MemoryArt extends CustomPainter {
         ..strokeWidth = 2
         ..color = const Color(0xFFF6E7C8));
       canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _MadnArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final u = math.min(size.width, size.height) / 5.5;
+    final c = Offset(size.width / 2, size.height / 2);
+    canvas.drawCircle(c, u * 2.4, Paint()..color = const Color(0xFFF3E3B8));
+    const colors = [Color(0xFFD8402B), Color(0xFF2F7FD0), Color(0xFF2E9E57), Color(0xFFE8B923)];
+    for (var i = 0; i < 4; i++) {
+      final a = math.pi / 4 + i * math.pi / 2;
+      final o = c + Offset(math.cos(a), math.sin(a)) * (u * 1.5);
+      // Spielfigur: Kopf und Körper
+      canvas.drawCircle(o + Offset(u * 0.05, u * 0.1), u * 0.45, Paint()..color = Colors.black26);
+      final body = Path()
+        ..moveTo(o.dx - u * 0.38, o.dy + u * 0.45)
+        ..quadraticBezierTo(o.dx, o.dy - u * 0.5, o.dx + u * 0.38, o.dy + u * 0.45)
+        ..close();
+      canvas.drawPath(body, Paint()..color = colors[i]);
+      canvas.drawCircle(o - Offset(0, u * 0.25), u * 0.22, Paint()..color = colors[i]);
+      canvas.drawCircle(o - Offset(u * 0.07, u * 0.32), u * 0.07, Paint()..color = Colors.white54);
     }
   }
 
