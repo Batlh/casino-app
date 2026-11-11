@@ -94,7 +94,7 @@ class Shape {
   /// tanki, kanchan, penchan, ryanmen, shanpon oder special.
   final String wait;
 
-  /// sevenPairs, orphans, knitted, knittedGreater, pairsPung oder leer.
+  /// sevenPairs, orphans, knitted, knittedGreater, knittedStraight, pairsPung oder leer.
   final String special;
   final int jokers;
 
@@ -177,6 +177,52 @@ List<Shape> shapesOf(List<int> closed, List<Meld> melds, WinInfo w, {required in
       final h = knittedHonors(c);
       if (h == 7) out.add(Shape(pair: -1, groups: const [], all: closed, concealed: true, wait: 'special', special: 'knittedGreater'));
       if (h >= 5 && h < 7) out.add(Shape(pair: -1, groups: const [], all: closed, concealed: true, wait: 'special', special: 'knitted'));
+    }
+  }
+  // Verbundene Straße: neun verschiedene Steine plus eine Figur und ein Paar
+  if (knitted && j == 0 && melds.length <= 1 && sets == 4) {
+    for (final ks in knittedStraights(c)) {
+      final rest = [...c];
+      for (final t in ks) {
+        rest[t]--;
+      }
+      for (final (pair, groupsClosed, _) in decompositionsJ(rest, 0, limit: 20)) {
+        if (groupsClosed.length + melds.length != 1) continue;
+        final groups = <Group>[];
+        var wait = 'special';
+        for (final g in groupsClosed) {
+          // Bei Ron ist ein mit dem Gewinnstein fertiger Pung offen
+          final byRon = !w.tsumo && !g.seq && g.first == w.winTile && !ks.contains(w.winTile) && pair != w.winTile;
+          groups.add(byRon ? Group(false, g.first, open: true) : g);
+        }
+        groups.addAll(meldGroups);
+        if (!ks.contains(w.winTile)) {
+          if (pair == w.winTile) {
+            wait = 'tanki';
+          } else {
+            final g = groupsClosed.isEmpty ? null : groupsClosed.first;
+            if (g != null && g.seq) {
+              final pos = w.winTile - g.first;
+              final n = numberOf(g.first);
+              wait = pos == 1
+                  ? 'kanchan'
+                  : (pos == 2 && n == 1) || (pos == 0 && n == 7)
+                      ? 'penchan'
+                      : 'ryanmen';
+            } else if (g != null) {
+              wait = 'shanpon';
+            }
+          }
+        }
+        out.add(Shape(
+          pair: pair,
+          groups: groups,
+          all: [...closed, ...meldTiles],
+          concealed: !open,
+          wait: wait,
+          special: 'knittedStraight',
+        ));
+      }
     }
   }
   if (pairsPung && melds.isEmpty && sets == 5 && j == 0 && isPairsPlusPung(c)) {

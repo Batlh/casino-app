@@ -2,6 +2,7 @@ import 'dart:math';
 
 import '../riichi_hand.dart';
 import '../tiles.dart';
+import 'mj_hand.dart';
 import 'mj_shape.dart';
 
 /// Wertet eine Zerlegung aus. Der beste Wert über alle Zerlegungen gewinnt.
@@ -187,14 +188,26 @@ MjScore scoreTaiwan(Shape s, WinInfo w) {
 
 class _Mcr {
   final fans = <Fan>[];
-  final excluded = <String>{};
+  final _excl = <List<String>>[];
   void add(String n, int v, [List<String> excl = const []]) {
     fans.add(Fan(n, v));
-    excluded.addAll(excl);
+    _excl.add(excl);
   }
 
+  /// Höhere Muster schließen niedrigere aus. Ein selbst ausgeschlossenes Muster schließt nichts aus
+  /// (offizielle Regel: „Nicht-Wiederholungs-Prinzip“).
   MjScore finish(int flowers) {
-    final kept = fans.where((f) => !excluded.contains(f.name)).toList();
+    final order = [for (var i = 0; i < fans.length; i++) i]
+      ..sort((a, b) => fans[b].value != fans[a].value ? fans[b].value - fans[a].value : a - b);
+    final blocked = <String>{};
+    final keptIdx = <int>[];
+    for (final i in order) {
+      if (blocked.contains(fans[i].name)) continue;
+      keptIdx.add(i);
+      blocked.addAll(_excl[i]);
+    }
+    keptIdx.sort();
+    final kept = [for (final i in keptIdx) fans[i]];
     if (kept.isEmpty) kept.add(const Fan('Hühnerhand', 8));
     if (flowers > 0) kept.add(Fan('Blumen', flowers));
     final total = kept.fold(0, (a, f) => a + f.value);
@@ -218,6 +231,8 @@ const _allChows = 'Nur Folgen';
 const _allSimples = 'Nur Mittelsteine';
 const _oneVoid = 'Eine Farbe fehlt';
 const _dragonPung = 'Drachen-Pung';
+const _fullyConcealed = 'Ganz verdeckt';
+const _knittedStraight = 'Verbundene Straße';
 
 MjScore scoreMcr(Shape s, WinInfo w) {
   final m = _Mcr();
@@ -226,11 +241,15 @@ MjScore scoreMcr(Shape s, WinInfo w) {
 
   // Sonderhände
   if (sp == 'orphans') {
-    m.add('Dreizehn Waisen', 88, ['Alle Sorten', _concealed, _single]);
+    m.add('Dreizehn Waisen', 88, ['Alle Sorten', _concealed, _fullyConcealed, _single]);
   } else if (sp == 'knittedGreater') {
-    m.add('Große Ehren und Verbundene', 24, ['Alle Sorten', _concealed]);
+    m.add('Große Ehren und Verbundene', 24, ['Alle Sorten', _concealed, _fullyConcealed, _single, 'Kleine Ehren und Verbundene']);
   } else if (sp == 'knitted') {
-    m.add('Kleine Ehren und Verbundene', 12, ['Alle Sorten', _concealed]);
+    m.add('Kleine Ehren und Verbundene', 12, ['Alle Sorten', _concealed, _fullyConcealed, _single]);
+    // Mit nur fünf Ehrensteinen ist die verbundene Straße komplett und zählt mit
+    if (knittedStraights(s.counts).isNotEmpty) m.add(_knittedStraight, 12);
+  } else if (sp == 'knittedStraight') {
+    m.add(_knittedStraight, 12);
   } else if (sp == 'sevenPairs') {
     final firstPair = s.counts.indexWhere((n) => n >= 2);
     var shifted = s.fullFlush && firstPair >= 0;
@@ -241,9 +260,9 @@ MjScore scoreMcr(Shape s, WinInfo w) {
       }
     }
     if (shifted) {
-      m.add('Sieben verschobene Paare', 88, [_fullFlush, 'Sieben Paare', _concealed, _single]);
+      m.add('Sieben verschobene Paare', 88, [_fullFlush, 'Sieben Paare', _concealed, _fullyConcealed, _single]);
     } else {
-      m.add('Sieben Paare', 24, [_concealed, _single]);
+      m.add('Sieben Paare', 24, [_concealed, _fullyConcealed, _single]);
     }
   }
 
@@ -259,7 +278,7 @@ MjScore scoreMcr(Shape s, WinInfo w) {
   if (winds == 3 && s.windPair) m.add('Vier kleine Winde', 64, ['Drei große Winde', _ptoh]);
   if (dragons == 2 && s.dragonPair) m.add('Drei kleine Drachen', 64, [_dragonPung, 'Zwei Drachen-Pungs']);
   if (s.allHonors) m.add('Nur Ehrensteine', 64, [_allPungs, _outside, _ptoh, 'Nur End- und Ehrensteine']);
-  if (sp.isEmpty && s.concealedTrips == 4) m.add('Vier verdeckte Pungs', 64, [_allPungs, 'Drei verdeckte Pungs', 'Zwei verdeckte Pungs', _concealed, 'Ganz verdeckt']);
+  if (sp.isEmpty && s.concealedTrips == 4) m.add('Vier verdeckte Pungs', 64, [_allPungs, 'Drei verdeckte Pungs', 'Zwei verdeckte Pungs', _concealed, _fullyConcealed]);
 
   // Folgen in einer Farbe
   for (var suit = 0; suit < 3; suit++) {
@@ -292,7 +311,7 @@ MjScore scoreMcr(Shape s, WinInfo w) {
       if (t % 9 + 2 * step > 6) continue;
       if (s.hasSeq(t) && s.hasSeq(t + step) && s.hasSeq(t + 2 * step)) {
         if (t % 9 + 3 * step <= 6 && s.hasSeq(t + 3 * step)) {
-          m.add('Vier verschobene Folgen', 32, ['Drei verschobene Folgen']);
+          m.add('Vier verschobene Folgen', 32, ['Drei verschobene Folgen', _shortStraight, _twoTermChows]);
         } else {
           m.add('Drei verschobene Folgen', 16);
         }
@@ -301,7 +320,7 @@ MjScore scoreMcr(Shape s, WinInfo w) {
       }
     }
   }
-  if (s.kans.length == 3) m.add('Drei Kans', 32);
+  if (s.kans.length == 3) m.add('Drei Kans', 32, ['Zwei offene Kans', 'Zwei verdeckte Kans', 'Offener Kan', 'Verdeckter Kan']);
   if (s.allTermHonor && !s.allTerminals && !s.allHonors) m.add('Nur End- und Ehrensteine', 32, [_allPungs, _outside, _ptoh]);
 
   if (sp.isEmpty && s.allTrip && s.all.every((t) => t < 27 && numberOf(t).isEven)) {
@@ -330,7 +349,7 @@ MjScore scoreMcr(Shape s, WinInfo w) {
 
   if (s.all.every((t) => t < 27 && numberOf(t) >= 6)) m.add('Obere Vier', 12, [_noHonors]);
   if (s.all.every((t) => t < 27 && numberOf(t) <= 4)) m.add('Untere Vier', 12, [_noHonors]);
-  if (winds == 3) m.add('Drei große Winde', 12);
+  if (winds == 3) m.add('Drei große Winde', 12, [_ptoh]);
 
   // Gemischte Muster über drei Farben
   for (final p in const [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]) {
@@ -377,7 +396,7 @@ MjScore scoreMcr(Shape s, WinInfo w) {
   if (dragons == 2) m.add('Zwei Drachen-Pungs', 6, [_dragonPung]);
 
   if (s.outside) m.add(_outside, 4);
-  if (s.concealed && w.tsumo) m.add('Ganz verdeckt', 4, [_selfDrawn, _concealed]);
+  if (s.concealed && w.tsumo) m.add(_fullyConcealed, 4, [_selfDrawn, _concealed]);
   if (openKans == 2) m.add('Zwei offene Kans', 4, ['Offener Kan']);
 
   for (var k = 0; k < dragons; k++) {
@@ -386,7 +405,7 @@ MjScore scoreMcr(Shape s, WinInfo w) {
   if (s.hasTrip(w.roundWind)) m.add('Rundenwind', 2);
   if (s.hasTrip(w.seatWind)) m.add('Sitzwind', 2);
   if (s.concealed && !w.tsumo) m.add(_concealed, 2);
-  if (s.allSeq && !s.hasHonor) m.add(_allChows, 2);
+  if (s.allSeq && !s.hasHonor) m.add(_allChows, 2, [_noHonors]);
   final kanTiles = {for (final g in s.kans) g.first};
   for (var t = 0; t < tileKinds; t++) {
     if (s.counts[t] == 4 && !kanTiles.contains(t)) m.add('Vierer ohne Kan', 2);
@@ -413,9 +432,12 @@ MjScore scoreMcr(Shape s, WinInfo w) {
   if (openKans == 1) m.add('Offener Kan', 1);
   if (s.suits.length == 2) m.add(_oneVoid, 1);
   if (!s.hasHonor) m.add(_noHonors, 1);
-  if (s.wait == 'penchan') m.add('Randwartung', 1);
-  if (s.wait == 'kanchan') m.add('Mittelwartung', 1);
-  if (s.wait == 'tanki') m.add(_single, 1);
+  // Wartungen zählen nur, wenn genau dieser eine Stein die Hand fertig machen konnte
+  if (const {'penchan', 'kanchan', 'tanki'}.contains(s.wait) && _onlyWait(s, w.winTile)) {
+    if (s.wait == 'penchan') m.add('Randwartung', 1);
+    if (s.wait == 'kanchan') m.add('Mittelwartung', 1);
+    if (s.wait == 'tanki') m.add(_single, 1);
+  }
   if (w.tsumo) m.add(_selfDrawn, 1);
   return m.finish(flowers);
 }
@@ -703,3 +725,21 @@ MjScore scoreVietnam(Shape s, WinInfo w) {
 
 /// Nur zur Anzeige: wie viele Gruppen ein Meld hat.
 int meldTileCount(Meld m) => m.tiles.length;
+
+/// War [win] der einzige Stein, auf den die Hand gewartet hat? Kans zählen wie Pungs.
+bool _onlyWait(Shape s, int win) {
+  final c = countsPlain(s.all);
+  for (final g in s.kans) {
+    c[g.first]--;
+  }
+  if (c[win] == 0) return true;
+  c[win]--;
+  for (var t = 0; t < tileKinds; t++) {
+    if (t == win || c[t] >= 4) continue;
+    c[t]++;
+    final done = decompositionsJ(c, 0, limit: 1).isNotEmpty || isSevenPairs(c, 0) || isThirteenOrphans(c) || knittedHonors(c) >= 5 || isKnittedStraightHand(c, 0);
+    c[t]--;
+    if (done) return false;
+  }
+  return true;
+}

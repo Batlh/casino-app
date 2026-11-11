@@ -140,6 +140,32 @@ void main() {
       expect(s, isNotNull);
       expect(s!.fans.first.name, 'Große Ehren und Verbundene');
     });
+    test('MCR: Verbundene Straße mit Drachen-Pung', () {
+      final s = score(MjVariant.mcr, '147m258p369s55511z', 0)!;
+      expect(s.fans.map((f) => f.name), containsAll(['Verbundene Straße', 'Drachen-Pung']));
+    });
+    test('MCR: Verbundene Straße mit aufgedecktem Pung', () {
+      final s = score(MjVariant.mcr, '147m258p369s11z', 27, melds: [Meld(MeldKind.pon, h('555z'))]);
+      expect(s, isNotNull);
+      expect(s!.fans.map((f) => f.name), contains('Verbundene Straße'));
+    });
+    test('MCR: Kleine Ehren mit kompletter Straße zählen beides', () {
+      final s = score(MjVariant.mcr, '147m258p369s12345z', 31)!;
+      expect(s.fans.map((f) => f.name), containsAll(['Kleine Ehren und Verbundene', 'Verbundene Straße']));
+      expect(s.core, 24);
+    });
+    test('MCR: Wartung zählt nur, wenn sie die einzige war', () {
+      final one = score(MjVariant.mcr, '123m456p789s123s11z', 19)!;
+      expect(one.fans.map((f) => f.name), contains('Mittelwartung'));
+      final two = score(MjVariant.mcr, '123m456p789s23455s', 22)!;
+      expect(two.fans.map((f) => f.name), isNot(contains('Einzelwartung')));
+    });
+    test('MCR: Sieben Paare selbst gezogen behält „Selbst gezogen“', () {
+      final s = score(MjVariant.mcr, '1133m2277p4499s11z', 27, tsumo: true)!;
+      final names = s.fans.map((f) => f.name);
+      expect(names, containsAll(['Sieben Paare', 'Selbst gezogen']));
+      expect(names, isNot(contains('Ganz verdeckt')));
+    });
     test('Taiwan: 17 Steine mit fünf Gruppen', () {
       final s = score(MjVariant.taiwan, '123m456m789m123p456p55s', 4)!;
       expect(s.fans.map((f) => f.name), contains('Verdeckte Hand'));

@@ -242,3 +242,26 @@ int knittedHonors(List<int> c) {
   }
   return honors;
 }
+
+const _knitPerms = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
+
+/// Verbundene Straße (MCR, Knitted Straight): 1-4-7, 2-5-8 und 3-6-9 in je einer anderen Farbe.
+/// Liefert für jede passende Farbverteilung die neun Steine.
+List<List<int>> knittedStraights(List<int> c) => [
+      for (final p in _knitPerms)
+        if ([for (var k = 0; k < 3; k++) for (var n = k; n < 9; n += 3) p[k] * 9 + n].every((t) => c[t] > 0))
+          [for (var k = 0; k < 3; k++) for (var n = k; n < 9; n += 3) p[k] * 9 + n],
+    ];
+
+/// Fertige Hand mit verbundener Straße: die neun Steine plus eine Figur (darf aufgedeckt sein) und ein Paar.
+bool isKnittedStraightHand(List<int> c, int meldCount) {
+  if (meldCount > 1) return false;
+  for (final ks in knittedStraights(c)) {
+    final rest = [...c];
+    for (final t in ks) {
+      rest[t]--;
+    }
+    if (decompositionsJ(rest, 0, limit: 20).any((d) => d.$2.length + meldCount == 1)) return true;
+  }
+  return false;
+}

@@ -368,7 +368,7 @@ class MjGame with ActionLog {
     final c = countsPlain(closed);
     final j = jokersIn(closed);
     if (shantenN(c, pl.meldCount, rules.sets, jokers: j, sevenPairs: rules.sevenPairs, orphans: rules.orphans) != -1 &&
-        !(rules.knitted && knittedHonors(c) >= 5) &&
+        !(rules.knitted && (knittedHonors(c) >= 5 || isKnittedStraightHand(c, pl.meldCount))) &&
         !(rules.pairsPung && isPairsPlusPung(c))) {
       return null;
     }
