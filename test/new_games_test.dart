@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gluckspfennig/games/arschloch/ah_engine.dart';
 import 'package:gluckspfennig/games/backgammon/bg_engine.dart';
 import 'package:gluckspfennig/games/dame/dame_engine.dart';
 import 'package:gluckspfennig/games/go/go_engine.dart';
@@ -12,6 +13,7 @@ import 'package:gluckspfennig/games/ladder/ladder_engine.dart';
 import 'package:gluckspfennig/games/madn/madn_engine.dart';
 import 'package:gluckspfennig/games/memory/memory_engine.dart';
 import 'package:gluckspfennig/games/muehle/muehle_engine.dart';
+import 'package:gluckspfennig/games/pikdame/pd_engine.dart';
 import 'package:gluckspfennig/games/reversi/reversi_engine.dart';
 
 Map<String, dynamic> viaJson(Map<String, Object?> m) => jsonDecode(jsonEncode(m)) as Map<String, dynamic>;
@@ -520,4 +522,51 @@ void main() {
       expect(m < 0 || atari.isLegal(m), isTrue);
     });
   });
+
+  group('Mehrere Menschen an einem Gerät', () {
+    test('Arschloch: alle vier Menschen, Tausch durch die Menschen, Nachspielen', () {
+      final g = AhGame(rng: Random(5), names: const ['A', 'B', 'C', 'D'], humans: const [true, true, true, true])..start();
+      var steps = 0;
+      while (g.phase != AhPhase.gameOver && steps++ < 2000) {
+        switch (g.phase) {
+          case AhPhase.exchange:
+            expect(g.pendingGive, isNotEmpty);
+            final p = (g.pendingGive.toList()..sort()).first;
+            g.giveBack(p, sortAh(g.players[p].hand).take(g.gives(p)).toList());
+          case AhPhase.roundOver:
+            g.nextRound();
+          case AhPhase.play:
+            final m = ahBotMove(g, g.current);
+            if (m == null) {
+              g.pass(g.current);
+            } else {
+              g.play(g.current, m);
+            }
+          case AhPhase.gameOver:
+            break;
+        }
+      }
+      expect(g.phase, AhPhase.gameOver);
+      expect(g.actionLog.any((a) => a.first == 'G'), isTrue, reason: 'auch andere Plätze tauschen');
+      final r = AhGame(rng: Random(5), names: const ['A', 'B', 'C', 'D'], humans: const [true, true, true, true])..start();
+      for (final a in viaJson2(g.actionLog)) {
+        ahApply(r, a as List);
+      }
+      expect(r.phase, g.phase);
+      for (var p = 0; p < 4; p++) {
+        expect(r.players[p].points, g.players[p].points);
+      }
+    });
+
+    test('Pik Dame: zwei Menschen werden mit Namen angesprochen', () {
+      final g = PdGame(const PdOptions(players: 3), rng: Random(2), names: const ['Anna', 'Oma Erna', 'Ben'], humans: const [true, false, true])
+        ..start();
+      expect(g.players.where((x) => x.human).length, 2);
+      expect(g.who(0), 'Anna');
+      final solo = PdGame(const PdOptions(players: 3), rng: Random(2))..start();
+      expect(solo.who(0), 'Du');
+    });
+  });
 }
+
+List<dynamic> viaJson2(List<List<Object?>> log) => jsonDecode(jsonEncode(log)) as List<dynamic>;

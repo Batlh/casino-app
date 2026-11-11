@@ -24,9 +24,9 @@ class AhPlayer {
 enum AhPhase { exchange, play, roundOver, gameOver }
 
 class AhGame with ActionLog {
-  AhGame({Random? rng, this.rounds = 6, List<String> names = const ['Du', 'Kalle', 'Uschi', 'Bernd']})
+  AhGame({Random? rng, this.rounds = 6, List<String> names = const ['Du', 'Kalle', 'Uschi', 'Bernd'], List<bool>? humans})
       : _rng = rng ?? Random.secure(),
-        players = [for (var i = 0; i < 4; i++) AhPlayer(names[i], human: i == 0)];
+        players = [for (var i = 0; i < 4; i++) AhPlayer(names[i], human: humans == null ? i == 0 : humans[i])];
 
   final Random _rng;
   final List<AhPlayer> players;
@@ -47,8 +47,14 @@ class AhGame with ActionLog {
   /// Tausch: wer wem wie viele Karten gibt. (Geber, Empfänger, Anzahl, beste Karten?)
   List<(int, int, int, bool)> exchanges = [];
 
+  /// Karten, die jeder Spieler beim Tausch bekommen hat.
+  List<List<PlayingCard>> receivedBy = [[], [], [], []];
+
   /// Karten, die Spieler 0 beim Tausch bekommen hat.
-  List<PlayingCard> received = [];
+  List<PlayingCard> get received => receivedBy[0];
+
+  /// Menschen, die beim Tausch noch Karten zurückgeben müssen.
+  final Set<int> pendingGive = {};
 
   int get activeCount => 4 - finished.length;
   bool active(int p) => !finished.contains(p);
@@ -68,7 +74,8 @@ class AhGame with ActionLog {
     top = [];
     topPlayer = -1;
     _passes = 0;
-    received = [];
+    receivedBy = [[], [], [], []];
+    pendingGive.clear();
     lastEvent = '';
     if (players.every((p) => p.title != null)) {
       final byTitle = [for (var t = 0; t < 4; t++) players.indexWhere((p) => p.title == t)];
@@ -78,12 +85,16 @@ class AhGame with ActionLog {
         final give = sortAh(players[e.$1].hand).reversed.take(e.$3).toList();
         _move(e.$1, e.$2, give);
       }
-      // Bots geben die schlechtesten zurück, der Mensch wählt selbst
+      // Computer geben die schlechtesten zurück, Menschen wählen selbst
       phase = AhPhase.exchange;
       for (final e in exchanges) {
-        if (e.$2 != 0) _move(e.$2, e.$1, sortAh(players[e.$2].hand).take(e.$3).toList());
+        if (players[e.$2].human) {
+          pendingGive.add(e.$2);
+        } else {
+          _move(e.$2, e.$1, sortAh(players[e.$2].hand).take(e.$3).toList());
+        }
       }
-      if (!exchanges.any((e) => e.$2 == 0)) _startPlay(byTitle[3]);
+      if (pendingGive.isEmpty) _startPlay(byTitle[3]);
     } else {
       exchanges = [];
       // Erste Runde: Kreuz 7 fängt an
@@ -98,19 +109,27 @@ class AhGame with ActionLog {
     }
     players[from].hand = sortAh(players[from].hand);
     players[to].hand = sortAh(players[to].hand);
-    if (to == 0) received = [...received, ...cards];
+    if (phase == AhPhase.exchange || exchanges.isNotEmpty) receivedBy[to] = [...receivedBy[to], ...cards];
   }
 
+  /// Wie viele Karten Spieler [p] zurückgeben muss.
+  int gives(int p) => exchanges.where((e) => e.$2 == p).fold(0, (a, e) => a + e.$3);
+
   /// Wie viele Karten Spieler 0 zurückgeben muss.
-  int get humanGives => exchanges.where((e) => e.$2 == 0).fold(0, (a, e) => a + e.$3);
+  int get humanGives => gives(0);
 
-  void humanGiveBack(List<PlayingCard> cards) => record(['g', for (final c in cards) cardCode(c)], () => _humanGiveBackImpl(cards));
+  void humanGiveBack(List<PlayingCard> cards) => record(['g', for (final c in cards) cardCode(c)], () => _giveBackImpl(0, cards));
 
-  void _humanGiveBackImpl(List<PlayingCard> cards) {
-    if (phase != AhPhase.exchange || cards.length != humanGives || !cards.every(players[0].hand.contains)) return;
-    final e = exchanges.firstWhere((e) => e.$2 == 0);
-    _move(0, e.$1, cards);
-    _startPlay(players.indexWhere((p) => p.title == 3));
+  /// Ein Mensch auf Platz [p] gibt Karten zurück.
+  void giveBack(int p, List<PlayingCard> cards) =>
+      p == 0 ? humanGiveBack(cards) : record(['G', p, for (final c in cards) cardCode(c)], () => _giveBackImpl(p, cards));
+
+  void _giveBackImpl(int p, List<PlayingCard> cards) {
+    if (phase != AhPhase.exchange || !pendingGive.contains(p) || cards.length != gives(p) || !cards.every(players[p].hand.contains)) return;
+    final e = exchanges.firstWhere((e) => e.$2 == p);
+    _move(p, e.$1, cards);
+    pendingGive.remove(p);
+    if (pendingGive.isEmpty) _startPlay(players.indexWhere((x) => x.title == 3));
   }
 
   void _startPlay(int first) {
@@ -251,6 +270,8 @@ void ahApply(AhGame g, List<dynamic> a) {
   switch (a[0] as String) {
     case 'g':
       g.humanGiveBack([for (final x in a.sublist(1)) cardFromCode(x as String)]);
+    case 'G':
+      g.giveBack(a[1] as int, [for (final x in a.sublist(2)) cardFromCode(x as String)]);
     case 'p':
       g.play(a[1] as int, [for (final x in a.sublist(2)) cardFromCode(x as String)]);
     case 'x':

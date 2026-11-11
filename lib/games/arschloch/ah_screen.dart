@@ -9,6 +9,7 @@ import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
 import '../../ui/widgets.dart';
+import '../board/seats.dart';
 import '../cards/card_widgets.dart';
 import '../cards/playing_card.dart';
 import 'ah_engine.dart';
@@ -72,7 +73,18 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
     super.initState();
     _store = AppScope.of(context).settings;
     _seed = widget.seed ?? math.Random.secure().nextInt(1 << 31);
+    final saved = widget.seed == null ? _store.loadGame('seats.arschloch') : null;
+    if (saved != null) {
+      try {
+        final list = [for (final j in saved['seats'] as List) Seat.fromJson(j as Map<String, dynamic>)];
+        if (list.length == 4 && list.any((x) => x.human)) _seats = list;
+      } catch (_) {
+        // Standard behalten
+      }
+    }
     _g = _restore() ?? _make();
+    _viewer = _g.players.indexWhere((x) => x.human);
+    _syncViewer();
     WidgetsBinding.instance.addPostFrameCallback((_) => _pump());
   }
 
@@ -80,7 +92,39 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
   static const _saveId = 'arschloch';
   bool get _saving => widget.seed == null;
 
-  AhGame _make() => AhGame(rng: math.Random(_seed))..start();
+  /// Plätze am Tisch (immer vier); mehrere Menschen geben das Gerät weiter.
+  List<Seat> _seats = const [Seat('Du', human: true), Seat('Kalle'), Seat('Uschi'), Seat('Bernd')];
+  int _viewer = 0;
+  bool _covered = false;
+
+  AhGame _make() {
+    const bots = ['Kalle', 'Uschi', 'Bernd', 'Gerda'];
+    var b = 0;
+    final single = _seats.where((x) => x.human).length == 1 && _seats[0].human;
+    return AhGame(
+      rng: math.Random(_seed),
+      names: [for (final x in _seats) x.human ? (single ? 'Du' : x.name) : bots[b++]],
+      humans: [for (final x in _seats) x.human],
+    )..start();
+  }
+
+  int get _humans => _g.players.where((x) => x.human).length;
+  bool get _vsComputer => _g.players.any((x) => !x.human);
+
+  /// Wer muss gerade am Gerät sein? Beim Tausch der erste Mensch, der zurückgeben muss, sonst wer dran ist.
+  int? get _actor {
+    if (_g.phase == AhPhase.exchange) return _g.pendingGive.isEmpty ? null : (_g.pendingGive.toList()..sort()).first;
+    if (_g.phase == AhPhase.play && _g.players[_g.current].human) return _g.current;
+    return null;
+  }
+
+  void _syncViewer() {
+    final a = _actor;
+    if (a == null || a == _viewer) return;
+    _viewer = a;
+    _covered = _humans > 1;
+    _sel.clear();
+  }
 
   /// Gespeicherte Partie nachspielen.
   AhGame? _restore() {
@@ -89,6 +133,7 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
     if (d == null) return null;
     try {
       _seed = d['seed'] as int;
+      if (d['seats'] != null) _seats = [for (final j in d['seats'] as List) Seat.fromJson(j as Map<String, dynamic>)];
       final g = _make();
       for (final a in d['log'] as List) {
         ahApply(g, a as List);
@@ -123,10 +168,17 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
       s.clearGame(_saveId);
       return;
     }
-    s.saveGame(_saveId, {'seed': _seed, 'log': _g.actionLog, 'earned': _earned, 'paid': _paidRound ? _g.actionLog.length : -1});
+    s.saveGame(_saveId, {
+      'seed': _seed,
+      'seats': [for (final x in _seats) x.toJson()],
+      'log': _g.actionLog,
+      'earned': _earned,
+      'paid': _paidRound ? _g.actionLog.length : -1,
+    });
   }
 
-  bool get _myTurn => !_running && _g.phase == AhPhase.play && _g.current == 0;
+  bool get _myTurn => !_running && !_covered && _g.phase == AhPhase.play && _g.current == _viewer && _g.players[_viewer].human;
+  bool get _myExchange => !_covered && _g.phase == AhPhase.exchange && _g.pendingGive.contains(_viewer);
 
   Future<void> _pump() async {
     if (_running) return;
@@ -136,7 +188,7 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
         _pay();
         break;
       }
-      if (_g.phase != AhPhase.play || _g.current == 0) break;
+      if (_g.phase != AhPhase.play || _g.players[_g.current].human) break;
       await Future<void>.delayed(_app.settings.botDelay(700));
       if (!mounted) return;
       final p = _g.current;
@@ -151,13 +203,23 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
       setState(() {});
     }
     _running = false;
-    if (mounted) setState(() {});
+    if (mounted) setState(_syncViewer);
+  }
+
+  /// Bester Platz eines Menschen; Münzen gibt es nur, wenn ein Computer mitspielt.
+  int _bestHumanPlace(List<int> order) {
+    var best = 99;
+    for (var p = 0; p < 4; p++) {
+      if (_g.players[p].human) best = math.min(best, order.indexOf(p));
+    }
+    return best;
   }
 
   void _pay() {
+    if (!_vsComputer) return;
     if (!_paidRound) {
       _paidRound = true;
-      final place = _g.finished.indexOf(0);
+      final place = _bestHumanPlace(_g.finished);
       final coins = ahRoundCoins[place];
       if (coins > 0) {
         _earned += coins;
@@ -167,7 +229,7 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
     }
     if (_g.phase == AhPhase.gameOver && !_paidGame) {
       _paidGame = true;
-      final coins = ahGameCoins[_g.ranking().indexOf(0)];
+      final coins = ahGameCoins[_bestHumanPlace(_g.ranking())];
       if (coins > 0) {
         _earned += coins;
         _app.wallet.credit(coins);
@@ -177,12 +239,12 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
   }
 
   void _toggle(PlayingCard c) {
-    final exchange = _g.phase == AhPhase.exchange;
+    final exchange = _myExchange;
     if (!_myTurn && !exchange) return;
     setState(() {
       if (_sel.remove(c)) return;
       if (exchange) {
-        if (_sel.length < _g.humanGives) _sel.add(c);
+        if (_sel.length < _g.gives(_viewer)) _sel.add(c);
         return;
       }
       // Nur gleiche Werte zusammen auswählen
@@ -193,24 +255,27 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
 
   void _play() {
     final cards = _sel.toList();
-    if (!_g.canPlay(0, cards)) return;
-    _g.play(0, cards);
+    if (!_g.canPlay(_viewer, cards)) return;
+    _g.play(_viewer, cards);
     _app.sfx.play(Sound.card);
     setState(_sel.clear);
     _pump();
   }
 
   void _pass() {
-    _g.pass(0);
+    _g.pass(_viewer);
     _app.sfx.play(Sound.tick);
     setState(_sel.clear);
     _pump();
   }
 
   void _giveBack() {
-    _g.humanGiveBack(_sel.toList());
+    _g.giveBack(_viewer, _sel.toList());
     _app.sfx.play(Sound.card);
-    setState(_sel.clear);
+    setState(() {
+      _sel.clear();
+      _syncViewer();
+    });
     _pump();
   }
 
@@ -219,11 +284,15 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
     setState(() {
       _paidRound = false;
       _sel.clear();
+      _syncViewer();
     });
     _pump();
   }
 
-  void _newGame() {
+  Future<void> _newGame() async {
+    final seats = await showSeatSetup(context, gameId: 'arschloch', title: 'Arschloch', minSeats: 4, maxSeats: 4);
+    if (seats == null || !mounted) return;
+    _seats = seats;
     _seed = math.Random.secure().nextInt(1 << 31);
     setState(() {
       _g = _make();
@@ -231,21 +300,30 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
       _paidGame = false;
       _earned = 0;
       _sel.clear();
+      _viewer = _g.players.indexWhere((x) => x.human);
+      _covered = false;
+      _syncViewer();
     });
     _pump();
   }
 
+  String get _you => _humans > 1 ? _g.players[_viewer].name : 'Du';
+
   String get _status {
+    if (_covered) return 'Gib das Gerät an ${_g.players[_viewer].name}';
     if (_g.phase == AhPhase.exchange) {
-      final got = _g.received.map((c) => c.spokenName).join(', ');
-      return 'Du hast $got bekommen. Gib ${_g.humanGives} Karte${_g.humanGives > 1 ? 'n' : ''} zurück.';
+      if (!_myExchange) return 'Tausch läuft';
+      final got = _g.receivedBy[_viewer].map((c) => c.spokenName).join(', ');
+      final n = _g.gives(_viewer);
+      return '$_you: $got bekommen. Gib $n Karte${n > 1 ? 'n' : ''} zurück.';
     }
     if (_g.phase == AhPhase.roundOver || _g.phase == AhPhase.gameOver) {
-      final place = _g.finished.indexOf(0);
+      if (_humans > 1) return 'König: ${_g.players[_g.finished.first].name}';
+      final place = _g.finished.indexOf(_viewer);
       return 'Du bist ${ahTitles[place]}';
     }
     if (_myTurn) {
-      if (_g.leading) return 'Du spielst aus: eine Karte oder mehrere gleiche';
+      if (_g.leading) return '$_you: Spiel aus, eine Karte oder mehrere gleiche';
       return '${_g.lastEvent}. Lege ${_g.top.length} höhere oder passe';
     }
     return _g.lastEvent.isEmpty ? '${_g.players[_g.current].name} ist dran' : _g.lastEvent;
@@ -280,7 +358,7 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      for (final p in [1, 2, 3])
+                      for (final p in [for (var k = 1; k < 4; k++) (_viewer + k) % 4])
                         OpponentBadge(
                           name: _g.players[p].name,
                           cardCount: _g.players[p].hand.length,
@@ -307,14 +385,14 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                _g.topPlayer == 0 ? 'von dir' : 'von ${_g.players[_g.topPlayer].name}',
+                                _g.topPlayer == _viewer && _humans == 1 ? 'von dir' : 'von ${_g.players[_g.topPlayer].name}',
                                 style: const TextStyle(color: Color(0xFFF6E7C8)),
                               ),
                             ],
                           ),
                   ),
                 ),
-                Text('Runde ${_g.round} von ${_g.rounds} · Du: ${_detail(0)}', style: const TextStyle(color: Color(0xFFFFC95C), fontWeight: FontWeight.w700)),
+                Text('Runde ${_g.round} von ${_g.rounds} · $_you: ${_detail(_viewer)}', style: const TextStyle(color: Color(0xFFFFC95C), fontWeight: FontWeight.w700)),
                 Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: ResultBanner(text: _status, maxLines: 2)),
                 SizedBox(
                   height: 46,
@@ -322,10 +400,10 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
                     child: Wrap(
                       spacing: 8,
                       children: [
-                        if (_g.phase == AhPhase.exchange)
-                          ActionButton(primary: true, label: 'Zurückgeben', onPressed: _sel.length == _g.humanGives ? _giveBack : null),
+                        if (_myExchange)
+                          ActionButton(primary: true, label: 'Zurückgeben', onPressed: _sel.length == _g.gives(_viewer) ? _giveBack : null),
                         if (_myTurn) ...[
-                          ActionButton(primary: true, label: 'Spielen', onPressed: _g.canPlay(0, _sel.toList()) ? _play : null),
+                          ActionButton(primary: true, label: 'Spielen', onPressed: _g.canPlay(_viewer, _sel.toList()) ? _play : null),
                           if (!_g.leading) ActionButton(label: 'Passen', onPressed: _pass),
                         ],
                       ],
@@ -334,13 +412,15 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 2, 8, 10),
-                  child: HandFan(
-                    cards: _g.players[0].hand,
-                    maxCardWidth: math.min(80, w / 7),
-                    isRaised: _sel.contains,
-                    isEnabled: (c) => _g.phase == AhPhase.exchange || !_myTurn || _g.leading || c.rank > _g.top.first.rank,
-                    onTap: _toggle,
-                  ),
+                  child: _covered
+                      ? HandCover(name: _g.players[_viewer].name, onReveal: () => setState(() => _covered = false))
+                      : HandFan(
+                          cards: _g.players[_viewer].hand,
+                          maxCardWidth: math.min(80, w / 7),
+                          isRaised: _sel.contains,
+                          isEnabled: (c) => _g.phase == AhPhase.exchange || !_myTurn || _g.leading || c.rank > _g.top.first.rank,
+                          onTap: _toggle,
+                        ),
                 ),
               ],
             ),
@@ -362,7 +442,7 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
                           for (var i = 0; i < 4; i++)
                             Text(
                               '${ahTitles[i]}: ${_g.players[_g.finished[i]].name}',
-                              style: TextStyle(color: pal.ink, fontWeight: _g.finished[i] == 0 ? FontWeight.w800 : FontWeight.w500),
+                              style: TextStyle(color: pal.ink, fontWeight: _g.players[_g.finished[i]].human ? FontWeight.w800 : FontWeight.w500),
                             ),
                           const SizedBox(height: 6),
                           Text('Punkte: ${[for (final p in _g.players) '${p.name} ${p.points}'].join(' · ')}', textAlign: TextAlign.center, style: TextStyle(color: pal.inkSoft)),

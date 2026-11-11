@@ -9,6 +9,7 @@ import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
 import '../../ui/widgets.dart';
+import '../board/seats.dart';
 import '../cards/card_widgets.dart';
 import 'pd_engine.dart';
 
@@ -126,7 +127,11 @@ class _PikDameScreenState extends State<PikDameScreen> {
   String _msg = '';
 
   // Einstellungen für das nächste Spiel
-  int _players = 3;
+  List<Seat> _seats = const [Seat('Du', human: true), Seat('Oma Erna'), Seat('Opa Karl')];
+
+  /// Wessen Hand gezeigt wird, und ob sie beim Weitergeben verdeckt ist.
+  int _viewer = 0;
+  bool _covered = false;
   int _target = 1000;
   int _jokerValue = 25;
   int _maxJokers = 1;
@@ -145,6 +150,15 @@ class _PikDameScreenState extends State<PikDameScreen> {
   void initState() {
     super.initState();
     _store = AppScope.of(context).settings;
+    final saved = _store.loadGame('seats.pikdame');
+    if (saved != null) {
+      try {
+        final list = [for (final j in saved['seats'] as List) Seat.fromJson(j as Map<String, dynamic>)];
+        if (list.length >= 2 && list.length <= 4 && list.any((x) => x.human)) _seats = list;
+      } catch (_) {
+        // Standard behalten
+      }
+    }
     _rng = widget.seed == null ? math.Random.secure() : math.Random(widget.seed);
     _seed = widget.seed ?? math.Random.secure().nextInt(1 << 31);
     if (widget.options != null) {
@@ -160,6 +174,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
     final d = _app.settings.loadGame(_saveId);
     if (d == null) return;
     try {
+      final seats = d['seats'] == null ? null : [for (final j in d['seats'] as List) Seat.fromJson(j as Map<String, dynamic>)];
       final o = PdOptions(
         players: d['players'] as int,
         target: d['target'] as int,
@@ -168,11 +183,14 @@ class _PikDameScreenState extends State<PikDameScreen> {
         firstMeld50: d['first50'] as bool,
       );
       _seed = d['seed'] as int;
-      final game = PdGame(o, rng: math.Random(_seed))..start();
+      final game = _makeGame(o, seats)..start();
       for (final a in d['log'] as List) {
         pdApply(game, a as List);
       }
       _g = game;
+      _viewer = game.players.indexWhere((x) => x.human);
+      _covered = false;
+      _syncViewer();
       _earned = d['earned'] as int;
       _paidRound = game.phase == PdPhase.roundOver && d['paid'] == game.actionLog.length;
       _msg = 'Spielstand geladen';
@@ -214,14 +232,44 @@ class _PikDameScreenState extends State<PikDameScreen> {
       'maxJokers': o.maxJokers,
       'first50': o.firstMeld50,
       'log': game.actionLog,
+      'seats': [for (var i = 0; i < game.n; i++) Seat(game.players[i].name, human: game.players[i].human).toJson()],
       'earned': _earned,
       'paid': _paidRound ? game.actionLog.length : -1,
     });
   }
 
+  /// Spiel mit den gewählten Plätzen; Computer behalten ihre bekannten Namen.
+  PdGame _makeGame(PdOptions o, List<Seat>? seats) {
+    if (seats == null || seats.length != o.players) return PdGame(o, rng: math.Random(_seed));
+    const bots = ['Oma Erna', 'Opa Karl', 'Tante Gisela'];
+    var b = 0;
+    return PdGame(
+      o,
+      rng: math.Random(_seed),
+      names: [for (final s in seats) s.human ? s.name : bots[b++ % bots.length]],
+      humans: [for (final s in seats) s.human],
+    );
+  }
+
+  int get _humans => g.players.where((x) => x.human).length;
+
+  /// Ist ein anderer Mensch dran, wird die Hand verdeckt, bis er das Gerät hat.
+  void _syncViewer() {
+    final game = _g;
+    if (game == null) return;
+    if (game.phase != PdPhase.draw && game.phase != PdPhase.play) return;
+    if (!game.players[game.current].human || game.current == _viewer) return;
+    _viewer = game.current;
+    _covered = _humans > 1;
+    _sel.clear();
+  }
+
   void _start(PdOptions o) {
     if (_saving) _seed = math.Random.secure().nextInt(1 << 31);
-    _g = PdGame(o, rng: math.Random(_seed))..start();
+    _g = _makeGame(o, widget.options != null ? null : _seats)..start();
+    _viewer = _g!.players.indexWhere((x) => x.human);
+    _covered = false;
+    _syncViewer();
     _sel.clear();
     _paidRound = false;
     _paidGame = false;
@@ -231,7 +279,8 @@ class _PikDameScreenState extends State<PikDameScreen> {
   }
 
   PdGame get g => _g!;
-  bool get _myTurn => !_running && g.current == 0 && (g.phase == PdPhase.draw || g.phase == PdPhase.play);
+  bool get _myTurn =>
+      !_running && !_covered && g.current == _viewer && g.players[g.current].human && (g.phase == PdPhase.draw || g.phase == PdPhase.play);
 
   Future<void> _pump() async {
     if (_running || _g == null) return;
@@ -241,7 +290,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
         _pay();
         break;
       }
-      if (g.current == 0) break;
+      if (g.players[g.current].human) break;
       await Future<void>.delayed(_app.settings.botDelay(900));
       if (!mounted) return;
       pdBotTurn(g, g.current, _rng);
@@ -249,14 +298,14 @@ class _PikDameScreenState extends State<PikDameScreen> {
       setState(() {});
     }
     _running = false;
-    if (mounted) setState(() {});
+    if (mounted) setState(_syncViewer);
   }
 
   void _pay() {
     final r = g.result;
     if (!_paidRound && r != null) {
       _paidRound = true;
-      if (r.winner == 0) {
+      if (g.players[r.winner].human && g.players.any((x) => !x.human)) {
         final coins = pdRoundWinReward * (r.hand ? 2 : 1);
         _earned += coins;
         _app.wallet.credit(coins);
@@ -265,8 +314,11 @@ class _PikDameScreenState extends State<PikDameScreen> {
     }
     if (g.phase == PdPhase.gameOver && !_paidGame) {
       _paidGame = true;
-      final place = g.ranking().indexOf(0);
-      final coins = pdPlaceRewards(g.n)[place];
+      // Allein: Münzen nach Platz; mehrere Menschen: nur für einen menschlichen Sieger gegen Computer
+      final order = g.ranking();
+      final human = g.players.indexWhere((x) => x.human);
+      final place = _humans == 1 ? order.indexOf(human) : (g.players[order.first].human && g.players.any((x) => !x.human) ? 0 : -1);
+      final coins = place < 0 ? 0 : pdPlaceRewards(g.n)[place];
       if (coins > 0) {
         _earned += coins;
         _app.wallet.credit(coins);
@@ -286,38 +338,38 @@ class _PikDameScreenState extends State<PikDameScreen> {
   }
 
   void _drawStack() {
-    g.drawStack(0);
+    g.drawStack(_viewer);
     _app.sfx.play(Sound.card);
     setState(_sel.clear);
     if (g.phase == PdPhase.roundOver || g.phase == PdPhase.gameOver) _pump();
   }
 
   void _takeOpen() {
-    g.takeOpen(0);
+    g.takeOpen(_viewer);
     _app.sfx.play(Sound.card);
     setState(_sel.clear);
   }
 
   void _takePile() {
     final cards = _sel.toList();
-    if (!g.canTakePile(0, cards)) {
+    if (!g.canTakePile(_viewer, cards)) {
       setState(() => _msg = 'Wähle Karten, die mit der obersten Ablagekarte eine Auslage bilden');
       return;
     }
-    g.takePile(0, cards);
+    g.takePile(_viewer, cards);
     _app.sfx.play(Sound.chip);
     setState(_sel.clear);
   }
 
   void _meld() {
     final cards = _sel.toList();
-    if (!g.canMeld(0, cards)) {
+    if (!g.canMeld(_viewer, cards)) {
       setState(() => _msg = cards.length < 3
           ? 'Eine Auslage braucht mindestens drei Karten'
           : 'Das ist weder ein Satz noch eine Folge (oder es bliebe keine Karte zum Abwerfen)');
       return;
     }
-    g.meld(0, cards);
+    g.meld(_viewer, cards);
     _app.sfx.play(Sound.chip);
     setState(_sel.clear);
   }
@@ -328,11 +380,11 @@ class _PikDameScreenState extends State<PikDameScreen> {
       return;
     }
     final c = _sel.first;
-    if (g.canSwapJoker(0, index, c)) {
-      g.swapJoker(0, index, c);
+    if (g.canSwapJoker(_viewer, index, c)) {
+      g.swapJoker(_viewer, index, c);
       _msg = 'Joker zurück auf die Hand';
-    } else if (g.canExtend(0, index, c)) {
-      g.extend(0, index, c);
+    } else if (g.canExtend(_viewer, index, c)) {
+      g.extend(_viewer, index, c);
       _msg = '';
     } else {
       setState(() => _msg = 'Diese Karte passt nicht an die Auslage');
@@ -356,12 +408,12 @@ class _PikDameScreenState extends State<PikDameScreen> {
       setState(() => _msg = 'Wähle genau eine Karte zum Abwerfen');
       return;
     }
-    final block = g.discardBlocker(0);
+    final block = g.discardBlocker(_viewer);
     if (block != null) {
       setState(() => _msg = block);
       return;
     }
-    g.discard(0, _sel.first);
+    g.discard(_viewer, _sel.first);
     _app.sfx.play(Sound.card);
     setState(_sel.clear);
     _pump();
@@ -382,11 +434,12 @@ class _PikDameScreenState extends State<PikDameScreen> {
   String get _status {
     if (_msg.isNotEmpty) return _msg;
     if (g.phase == PdPhase.roundOver || g.phase == PdPhase.gameOver) return g.result?.text ?? '';
+    if (_covered) return 'Gib das Gerät an ${g.players[g.current].name}';
     if (!_myTurn) return g.lastEvent.isNotEmpty ? g.lastEvent : '${g.players[g.current].name} ist dran';
     if (g.phase == PdPhase.draw) {
       return g.firstTurn ? 'Ziehe vom Stapel oder nimm die offene Karte' : 'Ziehe vom Stapel oder nimm die Ablage mit passenden Karten';
     }
-    final first = !g.me.hasMelded && g.options.firstMeld50 ? ' · Erste Auslage ${g.turnMeldPoints}/50' : '';
+    final first = !g.players[_viewer].hasMelded && g.options.firstMeld50 ? ' · Erste Auslage ${g.turnMeldPoints}/50' : '';
     if (g.mustUse != null) return 'Lege die ${g.mustUse!.name} aus$first';
     return 'Auslegen, anlegen, dann eine Karte abwerfen$first';
   }
@@ -432,7 +485,24 @@ class _PikDameScreenState extends State<PikDameScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text('Neues Spiel', style: Theme.of(context).textTheme.titleLarge),
-              row('Mitspieler', [for (final n in [2, 3, 4]) ('${n - 1} Computer', _players == n, () => _players = n)]),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(children: [
+                  Expanded(
+                    child: Text(
+                      'Mitspieler: ${_seats.map((x) => x.human ? x.name : 'Computer').join(', ')}',
+                      style: TextStyle(color: p.ink, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      final seats = await showSeatSetup(context, gameId: 'pikdame', title: 'Pik Dame', minSeats: 2, maxSeats: 4);
+                      if (seats != null && mounted) setState(() => _seats = seats);
+                    },
+                    child: const Text('Ändern'),
+                  ),
+                ]),
+              ),
               row('Ziel', [for (final t in [500, 1000]) ('$t Punkte', _target == t, () => _target = t)]),
               row('Joker zählt', [for (final v in [25, 20, 15]) ('$v Punkte', _jokerValue == v, () => _jokerValue = v)]),
               row('Joker je Auslage', [
@@ -447,7 +517,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
               ActionButton(
                 primary: true,
                 label: 'Los geht’s',
-                onPressed: () => setState(() => _start(PdOptions(players: _players, target: _target, jokerValue: _jokerValue, maxJokers: _maxJokers, firstMeld50: _first50))),
+                onPressed: () => setState(() => _start(PdOptions(players: _seats.length, target: _target, jokerValue: _jokerValue, maxJokers: _maxJokers, firstMeld50: _first50))),
               ),
             ],
           ),
@@ -497,7 +567,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
     final small = math.min(34.0, w / 22);
     final overlay = g.phase == PdPhase.roundOver || g.phase == PdPhase.gameOver;
     final pal = Palette.of(context);
-    final myMelds = [for (var i = 0; i < g.melds.length; i++) if (g.melds[i].owner == 0) i];
+    final myMelds = [for (var i = 0; i < g.melds.length; i++) if (g.melds[i].owner == _viewer) i];
     return Stack(
       children: [
         Column(
@@ -508,7 +578,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
                 spacing: 12,
                 runSpacing: 6,
                 alignment: WrapAlignment.center,
-                children: [for (var p = 1; p < g.n; p++) _opponent(p, small)],
+                children: [for (var k = 1; k < g.n; k++) _opponent((_viewer + k) % g.n, small)],
               ),
             ),
             Expanded(
@@ -532,7 +602,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text('Du · ${g.me.score} Punkte', style: const TextStyle(color: Color(0xFFFFC95C), fontWeight: FontWeight.w700)),
+                      Text('${_humans > 1 ? g.players[_viewer].name : 'Du'} · ${g.players[_viewer].score} Punkte', style: const TextStyle(color: Color(0xFFFFC95C), fontWeight: FontWeight.w700)),
                       const SizedBox(height: 4),
                       Wrap(
                         spacing: 16,
@@ -549,8 +619,10 @@ class _PikDameScreenState extends State<PikDameScreen> {
             _actions(),
             Padding(
               padding: const EdgeInsets.fromLTRB(6, 2, 6, 8),
-              child: CardFan<PdCard>(
-                items: [...g.me.hand]..sort(_order),
+              child: _covered
+                  ? HandCover(name: g.players[g.current].name, onReveal: () => setState(() => _covered = false))
+                  : CardFan<PdCard>(
+                items: [...g.players[_viewer].hand]..sort(_order),
                 maxCardWidth: math.min(70, w / 9),
                 cardBuilder: (c, cw, raised) => PdCardView(card: c, width: cw, highlighted: raised),
                 isRaised: _sel.contains,
@@ -575,9 +647,9 @@ class _PikDameScreenState extends State<PikDameScreen> {
     final b = <Widget>[];
     if (_myTurn && g.phase == PdPhase.draw) {
       b.add(ActionButton(primary: true, label: 'Vom Stapel', onPressed: _drawStack));
-      if (g.canTakeOpen(0)) b.add(ActionButton(label: 'Offene Karte', onPressed: _takeOpen));
+      if (g.canTakeOpen(_viewer)) b.add(ActionButton(label: 'Offene Karte', onPressed: _takeOpen));
       if (g.pile.isNotEmpty && !g.firstTurn) {
-        b.add(ActionButton(label: 'Ablage nehmen', onPressed: g.canTakePile(0, _sel.toList()) ? _takePile : null));
+        b.add(ActionButton(label: 'Ablage nehmen', onPressed: g.canTakePile(_viewer, _sel.toList()) ? _takePile : null));
       }
     } else if (_myTurn && g.phase == PdPhase.play) {
       b.add(ActionButton(label: 'Auslegen', onPressed: _sel.length >= 3 ? _meld : null));
@@ -599,13 +671,13 @@ class _PikDameScreenState extends State<PikDameScreen> {
       for (var p = 0; p < g.n; p++)
         Text(
           '${g.players[p].name}: ${r == null ? '' : '${r.changes[p] >= 0 ? '+' : '−'}${r.changes[p].abs()} → '}${g.players[p].score}',
-          style: TextStyle(color: pal.ink, fontSize: 15, fontWeight: p == 0 ? FontWeight.w700 : FontWeight.w500),
+          style: TextStyle(color: pal.ink, fontSize: 15, fontWeight: g.players[p].human ? FontWeight.w700 : FontWeight.w500),
         ),
-      if (r?.winner == 0) Text('+${pdRoundWinReward * (r!.hand ? 2 : 1)} Münzen', style: const TextStyle(color: Color(0xFFFFC95C), fontWeight: FontWeight.w700)),
+      if (r != null && g.players[r.winner].human && g.players.any((x) => !x.human)) Text('+${pdRoundWinReward * (r!.hand ? 2 : 1)} Münzen', style: const TextStyle(color: Color(0xFFFFC95C), fontWeight: FontWeight.w700)),
     ];
     if (over) {
       final order = g.ranking();
-      final place = order.indexOf(0);
+      final place = _humans == 1 ? order.indexOf(g.players.indexWhere((x) => x.human)) : -1;
       c.addAll([
         const SizedBox(height: 8),
         Text(place == 0 ? 'Du hast gewonnen!' : 'Gewonnen hat ${g.players[order.first].name}', style: Theme.of(context).textTheme.titleLarge),

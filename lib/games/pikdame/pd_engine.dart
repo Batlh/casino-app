@@ -164,9 +164,9 @@ class PdRoundResult {
 }
 
 class PdGame with ActionLog {
-  PdGame(this.options, {Random? rng, List<String> names = const ['Du', 'Oma Erna', 'Opa Karl', 'Tante Gisela']})
+  PdGame(this.options, {Random? rng, List<String> names = const ['Du', 'Oma Erna', 'Opa Karl', 'Tante Gisela'], List<bool>? humans})
       : _rng = rng ?? Random.secure(),
-        players = [for (var i = 0; i < options.players; i++) PdPlayer(names[i], human: i == 0)];
+        players = [for (var i = 0; i < options.players; i++) PdPlayer(names[i], human: humans == null ? i == 0 : humans[i])];
 
   final PdOptions options;
   final Random _rng;
@@ -243,7 +243,7 @@ class PdGame with ActionLog {
     _turnMelds.clear();
     result = null;
     round++;
-    lastEvent = cutCard == null ? '' : '${who(cutter)} ${cutter == 0 ? 'hebst' : 'hebt'} ${cutCard!.name} ab und ${cutter == 0 ? 'behältst' : 'behält'} sie';
+    lastEvent = cutCard == null ? '' : '${who(cutter)} ${_du(cutter) ? 'hebst' : 'hebt'} ${cutCard!.name} ab und ${_du(cutter) ? 'behältst' : 'behält'} sie';
   }
 
   int value(PdCard c) => pdValue(c, options);
@@ -264,7 +264,10 @@ class PdGame with ActionLog {
   int meldPoints(int p) => melds.where((m) => m.owner == p).fold(0, (a, m) => a + m.points(options));
   List<PdMeld> meldsOf(int p) => melds.where((m) => m.owner == p).toList();
 
-  String who(int p) => p == 0 ? 'Du' : players[p].name;
+  String who(int p) => _du(p) ? 'Du' : players[p].name;
+
+  /// Nur ein Mensch am Tisch (Platz 0): der wird mit „Du“ angesprochen.
+  bool _du(int p) => p == 0 && players[0].human && players.where((x) => x.human).length == 1;
 
   // ---------- Ziehen ----------
 
@@ -321,7 +324,7 @@ class PdGame with ActionLog {
     firstTurn = false;
     phase = PdPhase.play;
     mustUse = top;
-    lastEvent = '${who(p)} ${p == 0 ? 'nimmst' : 'nimmt'} den Ablagestapel';
+    lastEvent = '${who(p)} ${_du(p) ? 'nimmst' : 'nimmt'} den Ablagestapel';
     meld(p, [...with_, top]);
   }
 
@@ -441,7 +444,7 @@ class PdGame with ActionLog {
       return;
     }
     pile.add(c);
-    lastEvent = '${who(p)} ${p == 0 ? 'wirfst' : 'wirft'} ${c.name} ab';
+    lastEvent = '${who(p)} ${_du(p) ? 'wirfst' : 'wirft'} ${c.name} ab';
     _turnMelds.clear();
     _snap = null;
     current = (current + 1) % n;
@@ -466,7 +469,7 @@ class PdGame with ActionLog {
     }
     final text = winner == null
         ? 'Der Stapel ist leer, die Runde endet'
-        : '${who(winner)} ${winner == 0 ? 'machst' : 'macht'} aus${hand ? ' – mit Hand!' : ''}';
+        : '${who(winner)} ${_du(winner) ? 'machst' : 'macht'} aus${hand ? ' – mit Hand!' : ''}';
     result = PdRoundResult(winner ?? -1, hand, changes, text);
     phase = players.any((pl) => pl.score >= options.target) ? PdPhase.gameOver : PdPhase.roundOver;
   }
