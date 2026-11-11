@@ -602,6 +602,8 @@ void main() {
     expect(fixDu('Du (Weiß) beginnt'), 'Du (Weiß) beginnst');
     expect(fixDu('Ben ist dran'), 'Ben ist dran');
     expect(fixDu('Du bist König'), 'Du bist König');
+    // schon richtige Sätze bleiben unangetastet, auch wenn danach jemand anderes etwas tut
+    expect(fixDu('Du legst +2 und Otto zieht'), 'Du legst +2 und Otto zieht');
   });
 }
 

@@ -516,10 +516,16 @@ String fixDu(String text) {
   final sentences = text.split(RegExp(r'(?<=[.!?:]) '));
   return [
     for (final s in sentences)
-      s.startsWith('Du ') || s.startsWith('Du (')
+      _wrongDu(s)
           ? s.replaceAllMapped(RegExp(r'\b(\p{L}+)\b', unicode: true), (m) => _duVerbs[m[1]] ?? m[1]!)
           : s,
   ].join(' ');
+}
+
+/// Nur Sätze, deren erstes Verb nach „Du“ in der er-Form steht, werden angepasst.
+bool _wrongDu(String s) {
+  final m = RegExp(r'^Du (?:\([^)]*\) )?(\p{L}+)', unicode: true).firstMatch(s);
+  return m != null && _duVerbs.containsKey(m[1]);
 }
 
 class ResultBanner extends StatelessWidget {

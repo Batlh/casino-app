@@ -383,4 +383,20 @@ void main() {
       });
     }
   }
+
+  test('Mehrere Menschen: Meldungen nennen Namen statt „Du“', () {
+    for (final humans in [1, 2]) {
+      final e = EinsEngine(
+        players: [for (var i = 0; i < 3; i++) EinsPlayer('P$i', human: i < humans)],
+        mode: EinsMode.noMercy,
+        rng: Random(1),
+        challengeRule: false,
+      )..start();
+      setTop(e, n(red, 5));
+      final seven = n(red, 7);
+      e.players[0].hand = [seven, n(blue, 3), n(green, 4)];
+      e.play(seven, target: 1);
+      expect(e.lastEvent, humans == 1 ? 'Du tauschst die Hand mit P1' : 'P0 tauscht die Hand mit P1');
+    }
+  });
 }

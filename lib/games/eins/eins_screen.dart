@@ -9,6 +9,7 @@ import '../../core/theme.dart';
 import '../../ui/guides.dart';
 import '../../ui/settings_sheet.dart';
 import '../../ui/widgets.dart';
+import '../board/seats.dart';
 import '../cards/card_widgets.dart';
 import '../cards/rewards.dart';
 import 'eins_card.dart';
@@ -124,7 +125,15 @@ class EinsScreen extends StatefulWidget {
 
 class _EinsScreenState extends State<EinsScreen> {
   final _rng = math.Random.secure();
-  int _opponents = 2;
+  /// Plätze am Tisch; mehrere Menschen geben das Gerät weiter.
+  List<Seat> _seats = const [Seat('Du', human: true), Seat('Helga'), Seat('Otto')];
+  int get _opponents => _seats.length - 1;
+  int get _humans => _seats.where((s) => s.human).length;
+  int get _bots => _seats.length - _humans;
+
+  /// Wessen Hand gezeigt wird, und ob sie gerade verdeckt ist (Gerät wird weitergegeben).
+  int _viewer = 0;
+  bool _covered = false;
   int _round = 0;
   late EinsMode _mode;
   late EinsEngine _e;
@@ -143,23 +152,29 @@ class _EinsScreenState extends State<EinsScreen> {
   Completer<int>? _race;
 
   AppScope get _app => AppScope.of(context);
-  bool get _humanOut => _e.out[0];
+  /// Alle Menschen sind mit 25 Karten raus.
+  bool get _humanOut => [
+        for (var i = 0; i < _e.count; i++)
+          if (_e.players[i].human) _e.out[i],
+      ].every((x) => x);
   bool get _over => _e.finished || _humanOut;
 
   double get _factor => einsModeFactor(_mode, expansion: _e.expansion);
-  int get _winReward => (einsRewardPerOpponent * _opponents * _factor).round();
+  int get _winReward => (einsRewardPerOpponent * _bots * _factor).round();
 
   /// Trostpreis: je Gegner mit mehr Karten oder schon ausgeschieden.
   int get _placeReward {
-    if (_humanOut) return 0;
-    final mine = _e.players[0].hand.length;
+    if (_humanOut || _humans != 1) return 0;
+    final me = _seats.indexWhere((x) => x.human);
+    final mine = _e.players[me].hand.length;
     var beaten = 0;
-    for (var i = 1; i < _e.players.length; i++) {
-      if (_e.out[i] || _e.players[i].hand.length > mine) beaten++;
+    for (var i = 0; i < _e.players.length; i++) {
+      if (i != me && (_e.out[i] || _e.players[i].hand.length > mine)) beaten++;
     }
     return placeReward(beaten, factor: _factor);
   }
-  bool get _myTurn => !_over && _e.actor.human && !_running && !_spinning;
+  bool get _myTurn =>
+      !_over && _e.actor.human && !_running && !_spinning && !_covered && _e.current == _viewer;
 
   @override
   void didChangeDependencies() {
@@ -167,17 +182,27 @@ class _EinsScreenState extends State<EinsScreen> {
     if (_started) return;
     _started = true;
     _mode = widget.mode ?? _app.settings.einsMode;
+    final saved = _app.settings.loadGame('seats.eins');
+    if (saved != null) {
+      try {
+        final list = [for (final j in saved['seats'] as List) Seat.fromJson(j as Map<String, dynamic>)];
+        if (list.length >= 2 && list.any((x) => x.human)) _seats = list;
+      } catch (_) {
+        // Standard behalten
+      }
+    }
     _setup();
   }
 
   void _setup() {
     final offset = _rng.nextInt(_names.length);
     final settings = _app.settings;
+    var bot = 0;
     final expansion = _mode == EinsMode.noMercy && settings.einsExpansion;
     _e = EinsEngine(
       players: [
-        EinsPlayer('Du', human: true),
-        for (var i = 0; i < _opponents; i++) EinsPlayer(_names[(offset + i) % _names.length]),
+        for (final seat in _seats)
+          seat.human ? EinsPlayer(seat.name, human: true) : EinsPlayer(_names[(offset + bot++) % _names.length]),
       ],
       mode: _mode,
       rng: _rng,
@@ -185,28 +210,41 @@ class _EinsScreenState extends State<EinsScreen> {
       callRequired: settings.einsCallRequired,
       challengeRule: settings.einsChallenge,
       expansion: expansion,
-    )..start(startPlayer: _round % (_opponents + 1));
+    )..start(startPlayer: _round % _seats.length);
     if (expansion) WidgetsBinding.instance.addPostFrameCallback((_) => _askCoin());
     _rewarded = false;
     _called = false;
     _wheelVisible = false;
     _spinning = false;
     _race = null;
+    _viewer = _seats.indexWhere((x) => x.human);
+    _covered = false;
+    _syncViewer();
+  }
+
+  /// Ist ein anderer Mensch dran, wird die Hand verdeckt, bis er das Gerät hat.
+  void _syncViewer() {
+    if (_over || !_e.actor.human || _e.current == _viewer) return;
+    _viewer = _e.current;
+    _covered = _humans > 1;
   }
 
   /// Gnadenlos-Erweiterung: Seite der eigenen Münze zu Rundenbeginn festlegen.
   Future<void> _askCoin() async {
-    if (!mounted) return;
-    final pick = await showChoiceSheet(
-      context,
-      title: 'Welche Seite deiner Münze?',
-      options: const [
-        'Gnade: einmal die ganze Hand gegen sieben neue tauschen',
-        'Keine Gnade: einmal eine Plus-Karte verdoppeln',
-      ],
-    );
-    if (!mounted || pick == null) return;
-    setState(() => _e.coins[0] = pick == 0 ? EinsCoin.mercy : EinsCoin.noMercy);
+    for (var i = 0; i < _e.count; i++) {
+      if (!mounted) return;
+      if (!_e.players[i].human) continue;
+      final pick = await showChoiceSheet(
+        context,
+        title: _humans > 1 ? '${_e.players[i].name}: Welche Seite deiner Münze?' : 'Welche Seite deiner Münze?',
+        options: const [
+          'Gnade: einmal die ganze Hand gegen sieben neue tauschen',
+          'Keine Gnade: einmal eine Plus-Karte verdoppeln',
+        ],
+      );
+      if (!mounted || pick == null) continue;
+      setState(() => _e.coins[i] = pick == 0 ? EinsCoin.mercy : EinsCoin.noMercy);
+    }
   }
 
   void _newRound() {
@@ -219,13 +257,9 @@ class _EinsScreenState extends State<EinsScreen> {
   }
 
   Future<void> _askOpponents() async {
-    final i = await showChoiceSheet(
-      context,
-      title: 'Wie viele Gegner?',
-      options: const ['Ein Gegner', 'Zwei Gegner', 'Drei Gegner'],
-    );
-    if (i == null || !mounted) return;
-    _opponents = i + 1;
+    final seats = await showSeatSetup(context, gameId: 'eins', title: 'Eins!', minSeats: 2, maxSeats: 4);
+    if (seats == null || !mounted) return;
+    _seats = seats;
     _newRound();
   }
 
@@ -285,7 +319,7 @@ class _EinsScreenState extends State<EinsScreen> {
     if (!_myTurn || !_e.canPlay(c)) return;
     final f = _e.face(c);
     var flex = false;
-    if (_e.canUseFlex(0, c)) {
+    if (_e.canUseFlex(_e.current, c)) {
       final pick = await showChoiceSheet(
         context,
         title: 'Kraft nutzen?',
@@ -356,7 +390,7 @@ class _EinsScreenState extends State<EinsScreen> {
       called: _called,
     );
     _called = false;
-    if (callBonus && !_e.finished) _app.wallet.credit(callReward);
+    if (callBonus && !_e.finished && _bots > 0) _app.wallet.credit(callReward);
     _app.sfx.play(Sound.card);
     setState(() {});
     _after();
@@ -366,7 +400,7 @@ class _EinsScreenState extends State<EinsScreen> {
     if (!_myTurn || !_e.canChallenge) return;
     _e.challenge();
     _app.sfx.play(Sound.chip);
-    if (_e.lastChallengeWon) _app.wallet.credit(challengeReward);
+    if (_e.lastChallengeWon && _bots > 0) _app.wallet.credit(challengeReward);
     setState(() {});
     _after();
   }
@@ -559,10 +593,10 @@ class _EinsScreenState extends State<EinsScreen> {
     final race = Completer<int>();
     setState(() => _race = race);
     final bots = [
-      for (var i = 1; i < _e.count; i++)
-        if (!_e.out[i]) i,
+      for (var i = 0; i < _e.count; i++)
+        if (!_e.out[i] && !_e.players[i].human) i,
     ];
-    var fastest = bots.isEmpty ? 0 : bots.first;
+    var fastest = bots.isEmpty ? -1 : bots.first;
     var best = 99999;
     for (final b in bots) {
       final t = 450 + _rng.nextInt(900);
@@ -571,24 +605,27 @@ class _EinsScreenState extends State<EinsScreen> {
         fastest = b;
       }
     }
-    Future<void>.delayed(_app.settings.botDelay(best), () {
-      if (!race.isCompleted) race.complete(fastest);
-    });
+    if (fastest >= 0) {
+      Future<void>.delayed(_app.settings.botDelay(best), () {
+        if (!race.isCompleted) race.complete(fastest);
+      });
+    }
     final w = await race.future;
     if (!mounted) return;
     int? discardId;
-    if (w == 0 && _e.players[0].hand.length > 1) {
-      final hand = sortedEins(_e, _e.players[0].hand);
+    final winner = _e.players[w];
+    if (winner.human && winner.hand.length > 1) {
+      final hand = sortedEins(_e, winner.hand);
       final i = await showChoiceSheet(
         context,
-        title: 'Gewonnen! Welche Karte abwerfen?',
+        title: _humans > 1 ? '${winner.name} war am schnellsten! Welche Karte abwerfen?' : 'Gewonnen! Welche Karte abwerfen?',
         options: [for (final x in hand) _e.face(x).spokenName],
       );
       if (!mounted) return;
       if (i != null) discardId = hand[i].id;
     }
     _e.resolveRace(w, discardId: discardId);
-    _app.sfx.play(w == 0 ? Sound.win : Sound.card);
+    _app.sfx.play(winner.human ? Sound.win : Sound.card);
     setState(() {
       _race = null;
       _wheelVisible = false;
@@ -596,9 +633,9 @@ class _EinsScreenState extends State<EinsScreen> {
     await Future<void>.delayed(_app.settings.botDelay(700));
   }
 
-  void _raceTap() {
+  void _raceTap(int player) {
     final r = _race;
-    if (r != null && !r.isCompleted) r.complete(0);
+    if (r != null && !r.isCompleted) r.complete(player);
   }
 
   void _keep() {
@@ -615,6 +652,7 @@ class _EinsScreenState extends State<EinsScreen> {
   }
 
   void _after() {
+    if (mounted) setState(_syncViewer);
     if (_over) {
       _finish();
     } else {
@@ -711,7 +749,10 @@ class _EinsScreenState extends State<EinsScreen> {
     }
     _running = false;
     if (!mounted) return;
-    setState(() => _called = false);
+    setState(() {
+      _called = false;
+      _syncViewer();
+    });
     if (_over) _finish();
   }
 
@@ -719,7 +760,7 @@ class _EinsScreenState extends State<EinsScreen> {
     if (_rewarded) return;
     _rewarded = true;
     if (_e.finished && _e.winner!.human) {
-      _app.wallet.credit(_winReward);
+      if (_winReward > 0) _app.wallet.credit(_winReward);
       _app.sfx.play(Sound.win);
     } else {
       if (_placeReward > 0) _app.wallet.credit(_placeReward);
@@ -729,39 +770,52 @@ class _EinsScreenState extends State<EinsScreen> {
   }
 
   String get _status {
-    if (_humanOut) return 'Du hast 25 Karten und bist raus';
+    final multi = _humans > 1;
+    if (_humanOut) return multi ? 'Alle Spieler haben 25 Karten und sind raus' : 'Du hast 25 Karten und bist raus';
     if (_e.finished) {
       return _e.winner!.human
-          ? 'Gewonnen! +${formatCoins(_winReward)} Münzen'
+          ? (multi
+              ? '${_e.winner!.name} gewinnt!${_winReward > 0 ? ' +${formatCoins(_winReward)} Münzen' : ''}'
+              : 'Gewonnen! +${formatCoins(_winReward)} Münzen')
           : '${_e.winner!.name} gewinnt die Runde'
               '${_placeReward > 0 ? '. Trostpreis +${formatCoins(_placeReward)} Münzen' : ''}';
     }
     if (_race != null) return 'Wettrennen! Schnell drücken';
-    if (_spinning) return '${_e.actor.human ? 'Du drehst' : '${_e.actor.name} dreht'} am Glücksrad';
-    if (_e.actor.human) {
-      final prefix = _e.lastEvent.isNotEmpty ? '${_e.lastEvent}. ' : '';
-      if (_e.mustSpin) return 'Dreh am Glücksrad!';
-      if (_e.canChallenge) {
-        final who = _e.players[_e.challengeOffender!].name;
-        final what = _e.forcedColorDraw != null ? 'Ziehen bis zur Farbe' : '+${_e.pendingDraw}';
-        return '$who legt $what. Annehmen oder anzweifeln?';
-      }
-      if (_e.extraPlay) return 'Du darfst noch eine Karte legen oder bist fertig';
-      if (_e.mustChooseRoulette) return '${prefix}Sag eine Farbe an, du ziehst bis sie kommt';
-      if (_e.forcedColorDraw != null) return 'Du musst ziehen, bis ${colorName(_e.forcedColorDraw!)} kommt';
-      if (_e.pendingDraw > 0) {
-        return _e.stackDraws
-            ? 'Lege eine Plus-Karte mit mindestens +${_e.pendingValue} oder zieh ${_e.pendingDraw}'
-            : 'Du musst ${_e.pendingDraw} ziehen';
-      }
-      if (_e.drewThisTurn) {
-        return _mode == EinsMode.noMercy
-            ? 'Du musst die gezogene Karte legen'
-            : 'Gezogene Karte legen oder behalten';
-      }
-      return '${prefix}Du bist dran';
+    if (_spinning) return '${_e.actor.human && !multi ? 'Du drehst' : '${_e.actor.name} dreht'} am Glücksrad';
+    if (_e.actor.human && _covered) return 'Gib das Gerät an ${_e.actor.name}';
+    if (_e.actor.human && multi) {
+      final text = _humanStatus;
+      // „… Du bist dran“ wird zu „… Ben ist dran“, sonst spricht die Meldung die Person mit Namen an
+      if (text.endsWith('Du bist dran')) return '${text.substring(0, text.length - 12)}${_e.actor.name} ist dran';
+      return '${_e.actor.name}: $text';
     }
+    if (_e.actor.human) return _humanStatus;
     return _e.lastEvent.isNotEmpty ? _e.lastEvent : '${_e.actor.name} ist dran';
+  }
+
+  /// Meldung für den Menschen am Zug.
+  String get _humanStatus {
+    final prefix = _e.lastEvent.isNotEmpty ? '${_e.lastEvent}. ' : '';
+    if (_e.mustSpin) return 'Dreh am Glücksrad!';
+    if (_e.canChallenge) {
+      final who = _e.players[_e.challengeOffender!].name;
+      final what = _e.forcedColorDraw != null ? 'Ziehen bis zur Farbe' : '+${_e.pendingDraw}';
+      return '$who legt $what. Annehmen oder anzweifeln?';
+    }
+    if (_e.extraPlay) return 'Du darfst noch eine Karte legen oder bist fertig';
+    if (_e.mustChooseRoulette) return '${prefix}Sag eine Farbe an, du ziehst bis sie kommt';
+    if (_e.forcedColorDraw != null) return 'Du musst ziehen, bis ${colorName(_e.forcedColorDraw!)} kommt';
+    if (_e.pendingDraw > 0) {
+      return _e.stackDraws
+          ? 'Lege eine Plus-Karte mit mindestens +${_e.pendingValue} oder zieh ${_e.pendingDraw}'
+          : 'Du musst ${_e.pendingDraw} ziehen';
+    }
+    if (_e.drewThisTurn) {
+      return _mode == EinsMode.noMercy
+          ? 'Du musst die gezogene Karte legen'
+          : 'Gezogene Karte legen oder behalten';
+    }
+    return '${prefix}Du bist dran';
   }
 
   String get _drawLabel {
@@ -823,7 +877,7 @@ class _EinsScreenState extends State<EinsScreen> {
   }
 
   Widget _layout(BoxConstraints box, double scale) {
-    final me = _e.players.first;
+    final me = _e.players[_viewer];
     final w = box.maxWidth;
     final h = box.maxHeight;
     final landscape = w > h * 1.3;
@@ -841,7 +895,8 @@ class _EinsScreenState extends State<EinsScreen> {
     final opponents = Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        for (var i = 1; i < _e.players.length; i++)
+        for (var k = 1; k < _e.players.length; k++)
+          for (final i in [(_viewer + k) % _e.players.length])
           Opacity(
             opacity: _e.out[i] ? 0.45 : 1,
             child: OpponentBadge(
@@ -874,12 +929,18 @@ class _EinsScreenState extends State<EinsScreen> {
           ? [
               ActionButton(primary: true, label: 'Neue Runde', onPressed: _newRound),
               ActionButton(label: 'Spielweise', onPressed: _askMode),
-              ActionButton(label: 'Gegner wählen', onPressed: _askOpponents),
+              ActionButton(label: 'Mitspieler wählen', onPressed: _askOpponents),
             ]
           : [
               if (_race != null)
-                ActionButton(primary: true, label: 'Erster!', onPressed: _raceTap)
-              else
+                for (var i = 0; i < _e.count; i++)
+                  if (_e.players[i].human && !_e.out[i])
+                    ActionButton(
+                      primary: true,
+                      label: _humans > 1 ? '${_e.players[i].name}!' : 'Erster!',
+                      onPressed: () => _raceTap(i),
+                    ),
+              if (_race == null)
                 ActionButton(
                   primary: _myTurn && (special || _e.playableCards().isEmpty),
                   label: _drawLabel,
@@ -888,7 +949,7 @@ class _EinsScreenState extends State<EinsScreen> {
               if (_myTurn && _e.canChallenge) ActionButton(label: 'Anzweifeln', onPressed: _challengeTap),
               if (_myTurn && _e.drewThisTurn && _mode != EinsMode.noMercy && !special && !_e.extraPlay)
                 ActionButton(label: 'Behalten', onPressed: _keep),
-              if (_myTurn && _e.expansion && _e.coins[0] == EinsCoin.mercy && !_e.mustSpin)
+              if (_myTurn && _e.expansion && _e.coins[_e.current] == EinsCoin.mercy && !_e.mustSpin)
                 ActionButton(label: 'Gnade-Münze', onPressed: _mercyTap),
               if (canCall)
                 ActionButton(
@@ -899,7 +960,9 @@ class _EinsScreenState extends State<EinsScreen> {
               if (_mode == EinsMode.flex) _powerChip(),
             ],
     );
-    final hand = CardFan<EinsCard>(
+    final Widget hand = _covered
+        ? HandCover(name: _e.actor.name, onReveal: () => setState(() => _covered = false))
+        : CardFan<EinsCard>(
       items: sortedEins(_e, me.hand),
       maxCardWidth: handW,
       cardBuilder: (c, width, raised) => _cardView(c, width, highlighted: raised),
@@ -955,7 +1018,7 @@ class _EinsScreenState extends State<EinsScreen> {
   }
 
   Widget _powerChip() {
-    final on = _e.power[0];
+    final on = _e.power[_viewer];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(

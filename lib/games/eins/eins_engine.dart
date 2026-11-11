@@ -690,9 +690,11 @@ class EinsEngine {
 
   List<EinsCard> playableCards() => actor.hand.where(canPlay).toList();
 
-  String _who(EinsPlayer p, String du, String er) => p.human ? 'Du $du' : '${p.name} $er';
-  String _name(EinsPlayer p) => p.human ? 'Du' : p.name;
-  String _dat(EinsPlayer p) => p.human ? 'dir' : p.name;
+  /// „Du“ nur, wenn genau ein Mensch mitspielt; sonst der Name.
+  bool _du(EinsPlayer p) => p.human && players.where((x) => x.human).length == 1;
+  String _who(EinsPlayer p, String du, String er) => _du(p) ? 'Du $du' : '${p.name} $er';
+  String _name(EinsPlayer p) => _du(p) ? 'Du' : p.name;
+  String _dat(EinsPlayer p) => _du(p) ? 'dir' : p.name;
   static String _cards(int n) => n == 1 ? 'eine Karte' : '$n Karten';
 
   /// Darf die Kraftseite dieser Aktions- oder Farbwahlkarte genutzt werden?
@@ -848,7 +850,7 @@ class EinsEngine {
         final victim = nextPlayer;
         final got = press(victim) + press(victim);
         steps = 2;
-        lastEvent = '${_name(victim)} ${victim.human ? 'drückst' : 'drückt'} zweimal: ${_cards(got)}';
+        lastEvent = '${_name(victim)} ${_du(victim) ? 'drückst' : 'drückt'} zweimal: ${_cards(got)}';
       case EinsKind.extremeHit:
         final t = players[targetIndex];
         final got = press(t) + press(t);
@@ -861,7 +863,7 @@ class EinsEngine {
           for (final i in opponentsOfActor) {
             if (players[i] != victim) _give(players[i], 5);
           }
-          lastEvent = 'Finaler Angriff mit $n Sonderkarten: ${_name(victim)} zieht 25, alle anderen 5';
+          lastEvent = 'Finaler Angriff mit $n Sonderkarten: ${_who(victim, 'ziehst', 'zieht')} 25, alle anderen 5';
         } else {
           _give(victim, n);
           lastEvent = 'Finaler Angriff: ${_who(victim, 'ziehst', 'zieht')} ${_cards(n)}';
@@ -958,7 +960,7 @@ class EinsEngine {
         drawnCard = null;
         return;
       }
-      final spinner = nextPlayer.human ? 'Du drehst' : '${nextPlayer.name} dreht';
+      final spinner = _du(nextPlayer) ? 'Du drehst' : '${nextPlayer.name} dreht';
       lastEvent = '${lastEvent.isEmpty ? '' : '$lastEvent. '}$spinner am Glücksrad';
     }
     // Glücksrad neu, Feld 2×: nach einer Zahlenkarte darf eine zweite folgen
@@ -1252,7 +1254,7 @@ class EinsEngine {
         if (w == null) {
           lastEvent = 'Duell fällt aus, niemand hat Zahlen';
         } else {
-          lastEvent = '${_name(players[w])} ${players[w].human ? 'gewinnst' : 'gewinnt'} das Duell';
+          lastEvent = '${_name(players[w])} ${_du(players[w]) ? 'gewinnst' : 'gewinnt'} das Duell';
           if (players[w].hand.isEmpty) {
             winner = players[w];
             return space;
@@ -1330,7 +1332,7 @@ class EinsEngine {
       discard.add(pick);
       color = face(pick).color ?? favoriteColor(this, w.hand);
     }
-    lastEvent = '${_name(w)} ${w.human ? 'warst' : 'war'} am schnellsten';
+    lastEvent = '${_name(w)} ${_du(w) ? 'warst' : 'war'} am schnellsten';
     if (w.hand.isEmpty) {
       winner = w;
       return;
@@ -1444,13 +1446,13 @@ class EinsEngine {
       if (out[i] || players[i].hand.length < 25) continue;
       if (coins[i] == EinsCoin.mercy) {
         _mercyCoin(i);
-        lastEvent = '$lastEvent. Die Gnade-Münze rettet ${players[i].human ? 'dich' : players[i].name}';
+        lastEvent = '$lastEvent. Die Gnade-Münze rettet ${_du(players[i]) ? 'dich' : players[i].name}';
         continue;
       }
       out[i] = true;
       setAside.addAll(players[i].hand);
       players[i].hand = [];
-      lastEvent = '${_name(players[i])} ${players[i].human ? 'bist' : 'ist'} mit 25 Karten raus';
+      lastEvent = '${_name(players[i])} ${_du(players[i]) ? 'bist' : 'ist'} mit 25 Karten raus';
     }
     if (activeCount == 1) {
       winner = players[out.indexOf(false)];
