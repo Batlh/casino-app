@@ -487,6 +487,41 @@ class ActionButton extends StatelessWidget {
 }
 
 /// Ergebniszeile. Reserviert ihre Höhe, damit der Tisch nicht springt.
+const _duVerbs = {
+  'ist': 'bist',
+  'hat': 'hast',
+  'kann': 'kannst',
+  'wird': 'wirst',
+  'würfelt': 'würfelst',
+  'gewinnt': 'gewinnst',
+  'beginnt': 'beginnst',
+  'zieht': 'ziehst',
+  'schlägt': 'schlägst',
+  'findet': 'findest',
+  'gibt': 'gibst',
+  'macht': 'machst',
+  'überlegt': 'überlegst',
+  'schließt': 'schließt',
+  'nimmt': 'nimmst',
+  'wirft': 'wirfst',
+  'setzt': 'setzt',
+  'drückt': 'drückst',
+  'dreht': 'drehst',
+};
+
+/// Meldungen der Brett- und Kartenspiele nennen Spieler beim Namen. Heißt der Spieler „Du“, wird das Verb angepasst:
+/// „Du ist dran“ wird zu „Du bist dran“.
+String fixDu(String text) {
+  if (!text.contains('Du ')) return text;
+  final sentences = text.split(RegExp(r'(?<=[.!?:]) '));
+  return [
+    for (final s in sentences)
+      s.startsWith('Du ') || s.startsWith('Du (')
+          ? s.replaceAllMapped(RegExp(r'\b(\p{L}+)\b', unicode: true), (m) => _duVerbs[m[1]] ?? m[1]!)
+          : s,
+  ].join(' ');
+}
+
 class ResultBanner extends StatelessWidget {
   const ResultBanner({super.key, required this.text, this.highlight = false, this.maxLines = 1});
   final String text;
@@ -502,7 +537,7 @@ class ResultBanner extends StatelessWidget {
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
           child: Text(
-            text,
+            fixDu(text),
             key: ValueKey(text),
             maxLines: maxLines,
             textAlign: TextAlign.center,

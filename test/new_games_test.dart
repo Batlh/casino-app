@@ -19,6 +19,7 @@ import 'package:gluckspfennig/games/memory/memory_engine.dart';
 import 'package:gluckspfennig/games/muehle/muehle_engine.dart';
 import 'package:gluckspfennig/games/pikdame/pd_engine.dart';
 import 'package:gluckspfennig/games/reversi/reversi_engine.dart';
+import 'package:gluckspfennig/ui/widgets.dart' show fixDu;
 
 Map<String, dynamic> viaJson(Map<String, Object?> m) => jsonDecode(jsonEncode(m)) as Map<String, dynamic>;
 
@@ -592,6 +593,15 @@ void main() {
       expect(tileHintLabel(30), 'N');
       expect(tileHintLabel(33), 'Rot');
     });
+  });
+
+  test('Meldungen mit „Du“ bekommen die richtige Verbform', () {
+    expect(fixDu('Du ist dran'), 'Du bist dran');
+    expect(fixDu('Ben würfelt 4. Du ist dran'), 'Ben würfelt 4. Du bist dran');
+    expect(fixDu('Du hat beim Auswürfeln gewonnen und beginnt mit 3 und 2'), 'Du hast beim Auswürfeln gewonnen und beginnst mit 3 und 2');
+    expect(fixDu('Du (Weiß) beginnt'), 'Du (Weiß) beginnst');
+    expect(fixDu('Ben ist dran'), 'Ben ist dran');
+    expect(fixDu('Du bist König'), 'Du bist König');
   });
 }
 
