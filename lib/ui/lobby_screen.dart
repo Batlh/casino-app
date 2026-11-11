@@ -44,6 +44,7 @@ import '../games/slots/kosmos_art.dart';
 import '../games/slots/slot_games.dart';
 import '../games/slots/slot_screen.dart';
 import '../games/slots/tiefsee_art.dart';
+import '../games/dame/dame_screen.dart';
 import '../games/ladder/ladder_screen.dart';
 import '../games/madn/madn_screen.dart';
 import '../games/memory/memory_screen.dart';
@@ -257,6 +258,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF5A3420),
         _ShogiArt.new,
         () => _open(const ShogiScreen()),
+      ),
+      _Game(
+        'Dame',
+        'Deutsch 8×8 oder international 10×10, Schlagen ist Pflicht',
+        const Color(0xFF3A2116),
+        _DameArt.new,
+        () => _open(const DameScreen()),
       ),
       _Game(
         'Mühle',
@@ -844,6 +852,37 @@ class _MemoryArt extends CustomPainter {
         ..color = const Color(0xFFF6E7C8));
       canvas.restore();
     }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _DameArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final u = math.min(size.width, size.height) / 5;
+    final o = Offset(size.width / 2 - u * 2, size.height / 2 - u * 2);
+    for (var i = 0; i < 16; i++) {
+      final r = i ~/ 4;
+      final c = i % 4;
+      canvas.drawRect(
+        Rect.fromLTWH(o.dx + c * u, o.dy + r * u, u, u),
+        Paint()..color = (r + c).isOdd ? const Color(0xFF7A4A2A) : const Color(0xFFF0DDB8),
+      );
+    }
+    void stone(int r, int c, bool white, {bool king = false}) {
+      final center = o + Offset((c + 0.5) * u, (r + 0.5) * u);
+      canvas.drawCircle(center, u * 0.4, Paint()..color = white ? const Color(0xFFF4F1EA) : const Color(0xFF1E1E22));
+      if (king) canvas.drawCircle(center, u * 0.16, Paint()..color = const Color(0xFFE8B923));
+    }
+
+    stone(0, 1, false);
+    stone(0, 3, false);
+    stone(1, 2, false);
+    stone(2, 1, true, king: true);
+    stone(3, 0, true);
+    stone(3, 2, true);
   }
 
   @override

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gluckspfennig/games/dame/dame_engine.dart';
 import 'package:gluckspfennig/games/ladder/ladder_engine.dart';
 import 'package:gluckspfennig/games/madn/madn_engine.dart';
 import 'package:gluckspfennig/games/memory/memory_engine.dart';
@@ -235,6 +236,63 @@ void main() {
         expect(r.board, g.board);
       }
       expect(strongWins, greaterThanOrEqualTo(2));
+    });
+  });
+
+  group('Dame', () {
+    test('Aufstellung und erste Züge', () {
+      final de = DameGame(DameVariant.german);
+      expect(de.count(1), 12);
+      expect(de.count(-1), 12);
+      expect(de.moves().length, 7);
+      final intl = DameGame(DameVariant.international);
+      expect(intl.count(1), 20);
+      expect(intl.moves().length, 9);
+    });
+
+    test('Schlagpflicht, Mehrfachschlag, Mehrheit international', () {
+      final g = DameGame(DameVariant.international);
+      g.board.fillRange(0, 100, 0);
+      // Weißer Stein auf 6/1 (Reihe 6, Spalte 1), schwarze Steine schräg davor
+      g.board[6 * 10 + 1] = 1;
+      g.board[5 * 10 + 2] = -1;
+      g.board[3 * 10 + 4] = -1;
+      g.board[5 * 10 + 0] = -1;
+      g.board[9 * 10 + 0] = -1;
+      final ms = g.moves();
+      expect(ms, isNotEmpty);
+      expect(ms.every((m) => m.captured.length == 2), isTrue, reason: 'Mehrheit: Doppelsprung');
+      expect(g.play(ms.first), isTrue);
+      expect(g.count(-1), 2);
+    });
+
+    test('Dame zieht weit und wird beim Erreichen der Grundreihe gekrönt', () {
+      final g = DameGame(DameVariant.german);
+      g.board.fillRange(0, 64, 0);
+      g.board[1 * 8 + 2] = 1;
+      g.board[7 * 8 + 6] = -1;
+      final m = g.moves().firstWhere((m) => m.to == 0 * 8 + 1);
+      expect(g.play(m), isTrue);
+      expect(g.board[1], 2);
+      g.current = 1;
+      final far = g.moves().where((m) => m.from == 1).map((m) => m.to).toList();
+      expect(far.length, greaterThan(2), reason: 'fliegende Dame');
+    });
+
+    test('Computer gegen Computer endet', () {
+      for (final v in DameVariant.values) {
+        for (var seed = 0; seed < 2; seed++) {
+          final rng = Random(seed);
+          final g = DameGame(v);
+          var steps = 0;
+          while (!g.over && steps++ < 300) {
+            final m = dameBotMove(g.copy(), steps.isEven ? 1 : 0, rng);
+            expect(g.play(m), isTrue, reason: '$v Zug $m');
+          }
+          final r = DameGame.fromJson(viaJson(g.toJson()));
+          expect(r.board, g.board);
+        }
+      }
     });
   });
 }
