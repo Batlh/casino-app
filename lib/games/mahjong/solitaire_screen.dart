@@ -10,6 +10,7 @@ import '../../ui/widgets.dart';
 import '../cards/card_widgets.dart';
 import 'solitaire_engine.dart';
 import 'tiles.dart';
+import '../../ui/tap_catcher.dart';
 
 const mahjongSolitaireReward = 300;
 const mahjongHintCost = 30;
@@ -266,9 +267,9 @@ class _MahjongSolitaireScreenState extends State<MahjongSolitaireScreen> {
 
   Widget _board(BoxConstraints b) {
     final m = _Metrics.fit(b.maxWidth, b.maxHeight, _e.slots);
-    return GestureDetector(
-      onTapUp: (d) {
-        final i = m.hit(_e, d.localPosition);
+    return TapCatcher(
+      onTap: (pos) {
+        final i = m.hit(_e, pos);
         if (i != null) _tap(i);
       },
       child: CustomPaint(
@@ -316,11 +317,23 @@ class _Metrics {
       );
 
   int? hit(MahjongSolitaire e, Offset p) {
-    final order = drawOrder(e).reversed;
+    final order = drawOrder(e).reversed.toList();
     for (final i in order) {
       if (face(e.slots[i]).contains(p)) return i;
     }
-    return null;
+    // Daneben getippt, etwa auf die Kante: der nächste Stein, wenn er nah genug ist
+    int? best;
+    var bestD = double.infinity;
+    for (final i in order) {
+      final r = face(e.slots[i]).inflate(depth);
+      if (!r.contains(p)) continue;
+      final d = (r.center - p).distanceSquared;
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    return best;
   }
 
   List<int> drawOrder(MahjongSolitaire e) {

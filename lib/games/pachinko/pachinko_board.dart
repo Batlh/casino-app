@@ -78,8 +78,8 @@ class PachinkoBoard {
   static const double lcdRight = 6.2;
   static const double lcdBottom = 6.3;
 
-  /// Spitzdach über dem Anzeigefeld, damit kein Ball oben liegen bleibt.
-  static const double lcdRoof = 0.55;
+  /// Früher ein Spitzdach über dem Anzeigefeld; das Feld hat keine Kollision mehr.
+  static const double lcdRoof = 0;
 
   List<int> reels = [7, 7, 7];
   bool reelsSpinning = false;
@@ -150,16 +150,8 @@ class PachinkoBoard {
     // Abschussbahn
     _edge(ground, laneX, 16, laneX, 3.4, bounce: 0.1);
 
-    // Anzeigefeld als fester Block mit Spitzdach
-    final lcd = PolygonShape()
-      ..set([
-        Vector2(lcdLeft, lcdBottom),
-        Vector2(lcdRight, lcdBottom),
-        Vector2(lcdRight, lcdTop),
-        Vector2((lcdLeft + lcdRight) / 2, lcdTop - lcdRoof),
-        Vector2(lcdLeft, lcdTop),
-      ]);
-    ground.createFixture(FixtureDef(lcd, friction: 0.05, restitution: 0.4));
+    // Das Anzeigefeld hat keine Kollision: Die Kugeln fallen davor durch,
+    // so kann oben und an den Seiten keine mehr hängen bleiben.
 
     pockets
       ..add(const Pocket(1.1, 10.7, 2.1, 11.0, tulipPay, PocketKind.tulip))
@@ -281,10 +273,11 @@ class PachinkoBoard {
       // Notlösung gegen hängende Bälle: erst anstupsen, später erstatten
       final still = b.linearVelocity.length < 0.25 ? (_still[b] ?? 0) + dt : 0.0;
       _still[b] = still;
-      if (still > 1.2 && still - dt <= 1.2) {
-        b.applyLinearImpulse(Vector2((_rng.nextBool() ? 1 : -1) * 0.03, -0.02));
+      // Alle 0,8 Sekunden Stillstand ein Schubs, nach 3,5 Sekunden erstatten
+      if (still > 0.8 && (still / 0.8).floor() != ((still - dt) / 0.8).floor()) {
+        b.applyLinearImpulse(Vector2((_rng.nextBool() ? 1 : -1) * 0.04, -0.03));
       }
-      if (still > 5) {
+      if (still > 3.5) {
         ev = const PachinkoEvent(PachinkoEventKind.stuck, ballCost);
       } else if (y > 15.8) {
         // Zu schwacher Schuss landet wieder in der Bahn und zählt nicht

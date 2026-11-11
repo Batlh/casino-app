@@ -95,4 +95,30 @@ void main() {
       expect(t.score, greaterThan(0), reason: 'Seed $seed');
     }
   });
+
+  test('Klappe: Kugel rollt nicht zurück in die Abschussbahn', () {
+    for (var seed = 0; seed < 6; seed++) {
+      final rng = Random(seed + 40);
+      final t = PinballTable(rng: rng);
+      var seconds = 0.0;
+      var closedSeen = false;
+      while (!t.gameOver && seconds < 200) {
+        if (t.ballInLane) {
+          t.charge = 0.3 + rng.nextDouble() * 0.7;
+          t.launch();
+        }
+        run(t, 0.1, each: (_) {
+          final b = t.ball;
+          t.leftPressed = b != null && b.y > 14.4 && b.x < 4.6;
+          t.rightPressed = b != null && b.y > 14.4 && b.x >= 4.6;
+          if (t.gateClosed) {
+            closedSeen = true;
+            expect(b == null || b.x < PinballTable.fieldRight + 0.05, isTrue, reason: 'seed $seed: Kugel in der Bahn bei x ${b?.x}, y ${b?.y}');
+          }
+        });
+        seconds += 0.1;
+      }
+      expect(closedSeen, isTrue);
+    }
+  });
 }

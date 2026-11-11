@@ -13,6 +13,7 @@ import 'riichi_bot.dart';
 import 'riichi_engine.dart';
 import 'riichi_hand.dart';
 import 'tiles.dart';
+import '../../ui/tap_catcher.dart';
 
 /// Münzen je Platz am Ende der Ostrunde.
 const riichiPlaceRewards = [300, 120, 40, 0];
@@ -496,8 +497,8 @@ class _RiichiScreenState extends State<RiichiScreen> {
     Widget tile(int t) {
       final enabled = _myTurn && _g.canDiscard(0, t) && (riichiOk == null || riichiOk.contains(t));
       final sel = _selected == t;
-      return GestureDetector(
-        onTap: () => _tapTile(t),
+      return TapCatcher(
+        onTap: (_) => _tapTile(t),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           margin: EdgeInsets.only(bottom: sel ? 10 : 0, top: sel ? 0 : 10),

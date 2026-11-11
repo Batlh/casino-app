@@ -12,6 +12,7 @@ import '../cards/card_widgets.dart';
 import 'mahjong_tutorial.dart';
 import 'shisen_engine.dart';
 import 'tiles.dart';
+import '../../ui/tap_catcher.dart';
 
 const shisenHintCost = 30;
 const shisenShuffleCost = 50;
@@ -299,7 +300,16 @@ class _ShisenScreenState extends State<ShisenScreen> {
     final h = th * (_e.rows + 1);
     Offset center(math.Point<int> p) => Offset((p.x + 1) * tw, (p.y + 1) * th);
     return Center(
-      child: SizedBox(
+      child: TapCatcher(
+        onTap: (pos) {
+          // Feld aus der Position, die Lücken zwischen den Steinen zählen mit
+          final c = (pos.dx / tw - 0.5).floor();
+          final r = (pos.dy / th - 0.5).floor();
+          if (c < 0 || r < 0 || c >= _e.cols || r >= _e.rows) return;
+          final i = r * _e.cols + c;
+          if (_e.cells[i] >= 0) _tap(i);
+        },
+        child: SizedBox(
         width: w,
         height: h,
         child: Stack(
@@ -309,8 +319,7 @@ class _ShisenScreenState extends State<ShisenScreen> {
                 Positioned(
                   left: (i % _e.cols + 0.5) * tw,
                   top: (i ~/ _e.cols + 0.5) * th,
-                  child: GestureDetector(
-                    onTap: () => _tap(i),
+                  child: IgnorePointer(
                     child: TileView(
                       tile: _e.cells[i],
                       width: tw - 1,
@@ -324,6 +333,7 @@ class _ShisenScreenState extends State<ShisenScreen> {
               ),
           ],
         ),
+      ),
       ),
     );
   }

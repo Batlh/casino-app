@@ -16,6 +16,7 @@ import 'mj_engine.dart';
 import 'mj_hand.dart';
 import 'mj_rules.dart';
 import 'mj_shape.dart';
+import '../../../ui/tap_catcher.dart';
 
 const suitNames = ['Zeichen', 'Kreise', 'Bambus'];
 
@@ -586,8 +587,8 @@ class _MjScreenState extends State<MjScreen> {
       final enabled = exchanging || (_myTurn && _g.canDiscard(0, t));
       final sel = exchanging ? _exchangePick.contains(index) : _selected == t;
       final voidTile = _me.voidSuit != null && t < 27 && suitOf(t) == _me.voidSuit;
-      return GestureDetector(
-        onTap: () => _tapTile(t, index),
+      return TapCatcher(
+        onTap: (_) => _tapTile(t, index),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           margin: EdgeInsets.only(bottom: sel ? 10 : 0, top: sel ? 0 : 10),

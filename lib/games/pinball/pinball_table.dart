@@ -61,6 +61,13 @@ class PinballTable {
   late final RevoluteJoint _leftJoint;
   late final RevoluteJoint _rightJoint;
   Body? _ball;
+  late final Body _ground;
+  Fixture? _gate;
+
+  /// Klappe zwischen Abschussbahn und Spielfeld: von der Bahn ins Feld offen,
+  /// zurück geschlossen, sobald die Kugel im Feld ist.
+  static const gate = [Pt(fieldRight, 1.9), Pt(fieldRight, 4.6)];
+  bool get gateClosed => _gate != null;
 
   final List<List<Pt>> walls = [];
   final List<Bumper> bumpers = [];
@@ -105,6 +112,7 @@ class PinballTable {
 
   void _build() {
     final ground = _world.createBody(BodyDef());
+    _ground = ground;
 
     // Außenrand: oben rechts ein Bogen, der den Ball aus der Bahn nach links lenkt,
     // oben links eine Schräge, die ihn zurück ins Feld wirft
@@ -211,9 +219,18 @@ class PinballTable {
       FixtureDef(CircleShape()..radius = ballRadius, density: 1, friction: 0.08, restitution: 0.3),
     );
     _ball = b;
+    _openGate();
     ballInLane = true;
     charge = 0;
     _still = 0;
+  }
+
+  void _openGate() {
+    final g = _gate;
+    if (g != null) {
+      _ground.destroyFixture(g);
+      _gate = null;
+    }
   }
 
   /// Ball abschießen, sofern er in der Bahn liegt.
@@ -260,6 +277,12 @@ class PinballTable {
     if (b == null || gameOver) return;
     final x = b.position.x;
     final y = b.position.y;
+
+    // Ist die Kugel im Feld, schließt die Klappe zur Abschussbahn
+    if (_gate == null && !ballInLane && x < fieldRight - 0.6) {
+      final shape = EdgeShape()..set(Vector2(gate[0].x, gate[0].y), Vector2(gate[1].x, gate[1].y));
+      _gate = _ground.createFixture(FixtureDef(shape, friction: 0.1, restitution: 0.35));
+    }
 
     // Liegt der Ball wieder in der Bahn, darf er neu abgeschossen werden
     if (!ballInLane && x > fieldRight && y > 16.8 && b.linearVelocity.length < 0.5) {

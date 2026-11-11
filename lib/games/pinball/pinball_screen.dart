@@ -409,7 +409,15 @@ class _TablePainter extends CustomPainter {
       canvas.drawPath(path, glow);
       canvas.drawPath(path, neon);
     }
-    // Gassenlichter
+    if (t.gateClosed) {
+      final g = PinballTable.gate;
+      final path = Path()
+        ..moveTo(g[0].x, g[0].y)
+        ..lineTo(g[1].x, g[1].y);
+      canvas.drawPath(path, glow);
+      canvas.drawPath(path, neon);
+    }
+        // Gassenlichter
     for (var i = 0; i < 3; i++) {
       canvas.drawCircle(
         Offset(PinballTable.laneX[i], 3.25),
