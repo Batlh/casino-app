@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gluckspfennig/games/dame/dame_engine.dart';
+import 'package:gluckspfennig/games/kniffel/kniffel_engine.dart';
 import 'package:gluckspfennig/games/ladder/ladder_engine.dart';
 import 'package:gluckspfennig/games/madn/madn_engine.dart';
 import 'package:gluckspfennig/games/memory/memory_engine.dart';
@@ -292,6 +293,43 @@ void main() {
           final r = DameGame.fromJson(viaJson(g.toJson()));
           expect(r.board, g.board);
         }
+      }
+    });
+  });
+
+  group('Kniffel', () {
+    test('Wertung', () {
+      expect(kniffelScore(5, [6, 6, 6, 2, 1]), 18);
+      expect(kniffelScore(6, [6, 6, 6, 2, 1]), 21);
+      expect(kniffelScore(7, [6, 6, 6, 2, 1]), 0);
+      expect(kniffelScore(8, [3, 3, 2, 2, 2]), 25);
+      expect(kniffelScore(8, [3, 3, 3, 3, 3]), 0);
+      expect(kniffelScore(9, [1, 2, 3, 4, 6]), 30);
+      expect(kniffelScore(9, [1, 2, 3, 5, 6]), 0);
+      expect(kniffelScore(10, [2, 3, 4, 5, 6]), 40);
+      expect(kniffelScore(11, [4, 4, 4, 4, 4]), 50);
+      expect(kniffelScore(12, [1, 2, 3, 4, 6]), 16);
+    });
+
+    test('Computer spielen 13 Runden, Bonus und Summe stimmen', () {
+      for (var seed = 0; seed < 8; seed++) {
+        final g = KniffelGame(3, rng: Random(seed));
+        var steps = 0;
+        while (!g.over && steps++ < 1000) {
+          if (!g.rolled || (!g.botStop() && g.rollsLeft > 0)) {
+            if (g.rolled) g.held = g.botHolds();
+            expect(g.roll(), isTrue);
+          } else {
+            expect(g.score(g.botCategory()), isTrue);
+          }
+        }
+        expect(g.over, isTrue);
+        for (var p = 0; p < 3; p++) {
+          expect(g.total(p), g.upper(p) + g.bonus(p) + g.lower(p) + g.extra[p]);
+          expect(g.total(p), greaterThan(100), reason: 'Computer spielt brauchbar');
+        }
+        final r = KniffelGame.fromJson(viaJson(g.toJson()));
+        expect(r.scores, g.scores);
       }
     });
   });

@@ -45,6 +45,7 @@ import '../games/slots/slot_games.dart';
 import '../games/slots/slot_screen.dart';
 import '../games/slots/tiefsee_art.dart';
 import '../games/dame/dame_screen.dart';
+import '../games/kniffel/kniffel_screen.dart';
 import '../games/ladder/ladder_screen.dart';
 import '../games/madn/madn_screen.dart';
 import '../games/memory/memory_screen.dart';
@@ -293,6 +294,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF8E1B2C),
         _MadnArt.new,
         () => _open(const MadnScreen()),
+      ),
+      _Game(
+        'Kniffel',
+        'Fünf Würfel, drei Würfe, 13 Zeilen zum Füllen',
+        const Color(0xFF14506E),
+        _KniffelArt.new,
+        () => _open(const KniffelScreen()),
       ),
       _Game(
         'Leiterspiel',
@@ -941,6 +949,36 @@ class _MadnArt extends CustomPainter {
       canvas.drawCircle(o - Offset(0, u * 0.25), u * 0.22, Paint()..color = colors[i]);
       canvas.drawCircle(o - Offset(u * 0.07, u * 0.32), u * 0.07, Paint()..color = Colors.white54);
     }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _KniffelArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final u = math.min(size.width / 4.4, size.height / 2.6);
+    void die(Offset c, double angle, int v) {
+      canvas.save();
+      canvas.translate(c.dx, c.dy);
+      canvas.rotate(angle);
+      final r = Rect.fromCenter(center: Offset.zero, width: u, height: u);
+      canvas.drawRRect(RRect.fromRectAndRadius(r.shift(const Offset(2, 3)), Radius.circular(u * 0.18)), Paint()..color = Colors.black38);
+      canvas.drawRRect(RRect.fromRectAndRadius(r, Radius.circular(u * 0.18)), Paint()..color = const Color(0xFFFFF8E8));
+      const spots = {
+        5: [(-1, -1), (1, -1), (0, 0), (-1, 1), (1, 1)],
+        6: [(-1, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (1, 1)],
+      };
+      for (final (x, y) in spots[v]!) {
+        canvas.drawCircle(Offset(x * u * 0.27, y * u * 0.27), u * 0.09, Paint()..color = const Color(0xFF2A160E));
+      }
+      canvas.restore();
+    }
+
+    die(Offset(size.width * 0.3, size.height * 0.55), -0.2, 6);
+    die(Offset(size.width * 0.52, size.height * 0.45), 0.1, 6);
+    die(Offset(size.width * 0.73, size.height * 0.58), 0.3, 5);
   }
 
   @override
