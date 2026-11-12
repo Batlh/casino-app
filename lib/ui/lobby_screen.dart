@@ -148,8 +148,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
         () => _open(const KenoScreen()),
       ),
       _Game(
-        'Neon Pachinko',
-        'Kugeln, Tulpen und das Fieber-Tor',
+        'Pachinko',
+        'Fünf Maschinen mit Tulpen und Fieber-Tor',
         const Color(0xFF2B0B45),
         _PachinkoArt.new,
         () => _open(const PachinkoScreen()),

@@ -73,15 +73,23 @@ const omahaGuide = GameGuide('Omaha', [
   ),
 ]);
 
-const pachinkoGuide = GameGuide('Neon Pachinko', [
+const pachinkoGuide = GameGuide('Pachinko', [
   GuideSection(
     'Ziel',
-    'Schieß Kugeln ins Brett. Sie fallen durch die Nägel; landen sie in einer Tasche, gibt es Münzen. Jede Kugel kostet 10.',
+    'Schieß Kugeln ins Brett. Sie fallen durch die Nägel; landen sie in einer Tasche, gibt es Münzen. Jede Kugel kostet 10. '
+        'Fünf Maschinen stehen zur Wahl: Neon Pachinko, Meer und Fische, Drache und Tempel, Kirschblüten und Retro-Spielhalle.',
   ),
   GuideSection(
     'Taschen',
-    'Die Tulpen zahlen 25. Die Starttasche in der Mitte zahlt 30 und lässt die Ziffern im Anzeigefeld laufen. '
-        'Zeigen sie drei gleiche Ziffern, beginnt das Fieber: Das Tor unten öffnet sich und zahlt 150 pro Kugel. Bei drei Siebenen dauert das Fieber länger.',
+    'Die Tulpen zahlen den Betrag, der darauf steht. Die Starttasche in der Mitte zahlt 30 und lässt die Walzen im '
+        'Anzeigefeld laufen. Zeigen sie drei gleiche Zeichen, beginnt das Fieber: Das Tor unten öffnet sich und zahlt 150 pro '
+        'Kugel. Bei drei Siebenen dauert das Fieber länger.',
+  ),
+  GuideSection(
+    'Die Maschinen',
+    'Neon Pachinko ist die klassische. Meer und Fische hat ein welliges Nagelbild. Drache und Tempel hat einen großen Tempel, '
+        'ein Drachenrad und das längste Fieber. Kirschblüten hat keine Windräder, dafür fünf Tulpen. Die Retro-Spielhalle hat '
+        'das häufigste, aber kürzeste Fieber.',
   ),
   GuideSection('Stärke', 'Mit dem Regler stellst du ein, wie kräftig geschossen wird. Zu schwache Schüsse rollen zurück, du bekommst die Kugel erstattet.'),
 ]);

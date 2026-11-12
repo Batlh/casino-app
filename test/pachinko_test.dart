@@ -16,7 +16,8 @@ void main() {
         final balls = m.id == 'classic' ? 2500 : 1600;
         var launched = 0;
         var t = 0.0;
-        while (launched < balls || board.ballsInPlay > 0) {
+        var steps = 0;
+        while ((launched < balls || board.ballsInPlay > 0) && steps++ < 600000) {
           if (launched < balls && t >= 0.6) {
             t = 0;
             board.launch(power);
@@ -32,6 +33,7 @@ void main() {
           board.events.clear();
           expect(board.ballsInPlay, lessThan(60), reason: 'Bälle bleiben hängen');
         }
+        expect(board.ballsInPlay, 0, reason: 'Simulation endet nicht');
         final refund = counts[PachinkoEventKind.refund] ?? 0;
         final rtp = paid / spent;
         // ignore: avoid_print

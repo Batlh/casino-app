@@ -62,6 +62,11 @@ class PachinkoBoard {
   /// Wie lange ein Ball schon fast stillsteht.
   final Map<Body, double> _still = {};
 
+  /// Wie lange ein Ball schon unterwegs ist; nach [maxBallSeconds] wird er erstattet (zum Beispiel, wenn er an einem
+  /// Windrad endlos mitfährt).
+  final Map<Body, double> _age = {};
+  static const double maxBallSeconds = 20;
+
   final List<Point2> pegs = [];
   final List<Point2> arc = [];
   final List<Pocket> pockets = [];
@@ -334,7 +339,12 @@ class PachinkoBoard {
         b.applyLinearImpulse(Vector2((_rng.nextBool() ? 1 : -1) * 0.04, -0.03));
         debugLog.detail('pachinko', 'Kugel steht bei (${x.toStringAsFixed(2)}, ${y.toStringAsFixed(2)}), Schubs');
       }
-      if (still > 3.5) {
+      final age = (_age[b] ?? 0) + dt;
+      _age[b] = age;
+      if (age > maxBallSeconds) {
+        debugLog.warn('pachinko', 'Kugel seit $maxBallSeconds s unterwegs bei (${x.toStringAsFixed(2)}, ${y.toStringAsFixed(2)}), erstattet');
+        ev = const PachinkoEvent(PachinkoEventKind.stuck, ballCost);
+      } else if (still > 3.5) {
         debugLog.warn('pachinko', 'Kugel steckt fest bei (${x.toStringAsFixed(2)}, ${y.toStringAsFixed(2)}), erstattet');
         ev = const PachinkoEvent(PachinkoEventKind.stuck, ballCost);
       } else if (y > 15.8) {
@@ -363,6 +373,7 @@ class PachinkoBoard {
         _world.destroyBody(b);
         _balls.remove(b);
         _still.remove(b);
+        _age.remove(b);
       }
     }
   }
