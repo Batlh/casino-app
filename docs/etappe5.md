@@ -31,7 +31,7 @@ Alle Antworten unten hat der Nutzer am 10.11.2026 gegeben.
   Spielstand als Datei, Mahjong-Steinkunde mit Hilfszahlen, Übungen für alle Mahjong-Varianten.
 - Neu in 0.8.5: Weitergeben auch bei Eins! (beim Wettrennen hat jeder Mensch einen eigenen Knopf, Münzseite fragt
   jeden einzeln). Mahjong-Regeln (3) für MCR, Korea und Philippinen, Quellen siehe unten.
-- Offen: Grafik der Kartenspiele und der Lobby (7).
+- Etappe 5 ist damit abgeschlossen; offen bleibt nur, was der Nutzer neu wünscht (zum Beispiel Grafik von GPT).
 - Neu in 0.8.6: Vietnam mit acht Joker-Arten, Kaiser und Kaiserin, Joker ablegen, Phán und Mủn; Flipper-Fehler am Drehpunkt behoben.
 
 ## 1. Fehler zuerst
@@ -159,6 +159,14 @@ Umgesetzt 12.11.2026 (Version 0.9.0):
 
 Reihenfolge: Flipper und Pachinko, dann die Kartenspiele (Kartenbild, Tisch, Animationen beim Austeilen), dann die
 Lobby (Startbildschirm, Kacheln der Spiele).
+
+Umgesetzt 12.11.2026 (0.9.1/0.9.2):
+- Karten: Zahlenkarten mit Symbolbild, Bildkarten mit gezeichneter, gespiegelter Figur (König mit Krone, Bart und
+  Schwert, Dame mit Diadem und Blume, Bube mit Federmütze und Hellebarde), Ass mit Schmuckring
+  (lib/ui/card_art.dart). Drei Kartenrücken in den Einstellungen: 70er, Klassisch, Neon. Karten drehen sich beim
+  Aufdecken um, beim Austeilen fliegen sie gedreht herein. Filzstruktur auf dem Standard-Spieltisch.
+- Lobby: „Zuletzt gespielt“ (vier Spiele), Sprungknöpfe zu den Bereichen, Kacheln mit Glasglanz, wachsen unter der
+  Maus und geben beim Drücken nach; eigene Bilder für Hold'em, Omaha und Caribbean Stud.
 
 ## 8. Debug-Log und Fehlerstapel (Wunsch vom 11.11.2026, für später)
 

@@ -1827,7 +1827,7 @@ class _GlassPainter extends CustomPainter {
       ..lineTo(size.width * 0.5, size.height * 0.12)
       ..quadraticBezierTo(size.width * 0.2, size.height * 0.16, size.width * 0.14, size.height * 0.55)
       ..close();
-    canvas.drawPath(shine, Paint()..color = Colors.white.withValues(alpha: 0.13));
+    canvas.drawPath(shine, Paint()..color = Colors.white.withValues(alpha: 0.07));
     final rect = Offset.zero & size;
     canvas.drawRect(
       rect,

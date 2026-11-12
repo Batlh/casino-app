@@ -102,8 +102,8 @@ class CardFacePainter extends CustomPainter {
   }
 
   void _pipsLayout(Canvas canvas, double w, double h, int rank) {
-    final area = Rect.fromLTRB(w * 0.3, h * 0.17, w * 0.7, h * 0.83);
-    final size = w * (rank >= 9 ? 0.19 : 0.21);
+    final area = Rect.fromLTRB(w * 0.36, h * 0.2, w * 0.64, h * 0.8);
+    final size = w * (rank >= 9 ? 0.17 : 0.19);
     for (final (x, y) in _pips[rank]!) {
       final c = Offset(area.left + x * area.width, area.top + y * area.height);
       _suit(canvas, c, size, flip: y > 0.5);
