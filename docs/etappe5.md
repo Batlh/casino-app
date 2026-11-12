@@ -31,7 +31,7 @@ Alle Antworten unten hat der Nutzer am 10.11.2026 gegeben.
   Spielstand als Datei, Mahjong-Steinkunde mit Hilfszahlen, Übungen für alle Mahjong-Varianten.
 - Neu in 0.8.5: Weitergeben auch bei Eins! (beim Wettrennen hat jeder Mensch einen eigenen Knopf, Münzseite fragt
   jeden einzeln). Mahjong-Regeln (3) für MCR, Korea und Philippinen, Quellen siehe unten.
-- Offen: Flipper ausbauen (6), Grafik (7).
+- Offen: Grafik der Kartenspiele und der Lobby (7).
 - Neu in 0.8.6: Vietnam mit acht Joker-Arten, Kaiser und Kaiserin, Joker ablegen, Phán und Mủn; Flipper-Fehler am Drehpunkt behoben.
 
 ## 1. Fehler zuerst
@@ -141,6 +141,19 @@ Umsetzung Flipper (Reihenfolge):
 
 Behoben 12.11.: Kugel blieb in einer Mulde zwischen Schienenende und Flipper-Drehpunkt liegen; ein Test wirft dafür
 900 Kugeln mit verschiedenem Flippern auf den Tisch.
+
+Umgesetzt 12.11.2026 (Version 0.9.0):
+- Flipper: Tische als Daten (lib/games/pinball/pinball_layout.dart, erzeugt aus scratchpad/tables/gen.py nach
+  pinball_tables.dart). Engine mit Rampen (Eingang als Sensor, Fahrt als Animation über dem Tisch), Spinnern,
+  Fallzielen, stehenden Zielbänken, Kickout-Löchern mit Lock, Multiball mit drei Kugeln und Jackpot, Missionen mit
+  Extra-Kugel, Gassenwechsel mit den Flippern. Sechs Tische: Neon Nacht, Weltraumstation, Piratenbucht, Spukschloss,
+  Rennstrecke, Neonstadt (nach dem Entwurf, ohne Markennamen). Punktanzeige als Laufschrift mit Meldungen, Motive je
+  Tisch, Funken bei Treffern, blinkende Pfeile zur aktuellen Mission. Rekord je Tisch. Auszahlung höchstens 400.
+  Unterer Teil ist bei allen Tischen gleich (geprüft); Test: 240 Kugeln je Tisch, keine hängt, keine fliegt raus.
+- Pachinko: Maschinen als Daten (pachinko_machines.dart): Neon Pachinko, Meer und Fische, Drache und Tempel,
+  Kirschblüten, Retro-Spielhalle; eigene Nagelbilder, Taschen, Windräder, Anzeigefeld, Walzen-Symbole und
+  Animationen. Kugeln nach 20 s erstattet. Quoten je Maschine zwischen 60 und 120 % geprüft.
+- Später möglich: obere Flipper, Kickback, Video-Modi, eigene Klänge je Tisch.
 
 ## 7. Grafik verbessern
 
