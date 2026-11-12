@@ -3,6 +3,9 @@ import 'dart:math';
 import 'package:forge2d/forge2d.dart';
 
 import '../../core/debug_log.dart';
+import 'pachinko_machines.dart';
+
+export 'pachinko_machines.dart';
 
 /// Pachinko-Brett auf Basis der Physik-Engine Forge2D. Die Datei kennt keine
 /// Oberfläche, damit sich das Brett in Tests ohne Bildschirm simulieren lässt.
@@ -13,21 +16,6 @@ class Point2 {
   final double y;
 }
 
-class Pocket {
-  const Pocket(this.left, this.top, this.right, this.bottom, this.payout, this.kind);
-  final double left;
-  final double top;
-  final double right;
-  final double bottom;
-  final int payout;
-  final PocketKind kind;
-
-  bool contains(double x, double y) =>
-      x >= left && x <= right && y >= top && y <= bottom;
-}
-
-enum PocketKind { tulip, start, gate }
-
 enum PachinkoEventKind { tulip, start, gate, fever, lost, refund, stuck, reelsDone }
 
 class PachinkoEvent {
@@ -37,9 +25,13 @@ class PachinkoEvent {
 }
 
 class PachinkoBoard {
-  PachinkoBoard({Random? rng}) : _rng = rng ?? Random.secure() {
+  PachinkoBoard({Random? rng, MachineSpec? spec})
+      : _rng = rng ?? Random.secure(),
+        spec = spec ?? classicMachine {
     _build();
   }
+
+  final MachineSpec spec;
 
   static const double boardWidth = 10;
   static const double boardHeight = 16;
@@ -50,14 +42,14 @@ class PachinkoBoard {
   static const int tulipPay = 25;
   static const int startPay = 30;
   static const int gatePay = 150;
-  static const double feverSeconds = 14;
+  double get feverSeconds => spec.feverSeconds;
   static const double reelSeconds = 1.8;
   static const int maxQueuedSpins = 4;
 
   static const int reelSymbols = 7;
 
   /// Chance je Ziffernlauf auf drei gleiche Ziffern.
-  static const double feverChance = 0.04;
+  double get feverChance => spec.feverChance;
 
   /// Chance auf zwei gleiche Ziffern ohne Fieber, für die Spannung.
   static const double nearMissChance = 0.25;
@@ -74,7 +66,7 @@ class PachinkoBoard {
   final List<Point2> arc = [];
   final List<Pocket> pockets = [];
 
-  /// Mitte des Anzeigefelds.
+  /// Anzeigefeld der klassischen Maschine (für Tests); jede Maschine hat ihr eigenes, siehe [lcd].
   static const double lcdLeft = 3.2;
   static const double lcdTop = 3.3;
   static const double lcdRight = 6.2;
@@ -82,6 +74,10 @@ class PachinkoBoard {
 
   /// Steiles Spitzdach über dem Anzeigefeld (knapp 40 Grad), damit kein Ball oben liegen bleibt.
   static const double lcdRoof = 1.2;
+
+  /// Anzeigefeld dieser Maschine: links, oben, rechts, unten, Dachhöhe.
+  ({double left, double top, double right, double bottom, double roof}) get lcd =>
+      (left: spec.lcdLeft, top: spec.lcdTop, right: spec.lcdRight, bottom: spec.lcdBottom, roof: spec.lcdRoof);
 
   /// Abstand der Nägel zum Anzeigefeld: breit genug, dass sich keine Kugel verkeilt.
   static const double lcdClear = 0.45;
@@ -119,8 +115,8 @@ class PachinkoBoard {
 
   bool _freeForPeg(double x, double y) {
     if (_lcdDistance(x, y) < lcdClear) return false;
-    for (final s in _spinnerSpots) {
-      if ((x - s.x) * (x - s.x) + (y - s.y) * (y - s.y) < 0.95 * 0.95) return false;
+    for (final (sx, sy) in spec.spinners) {
+      if ((x - sx) * (x - sx) + (y - sy) * (y - sy) < 0.95 * 0.95) return false;
     }
     for (final p in pockets) {
       if (x > p.left - 0.3 && x < p.right + 0.3 && y > p.top - 0.5 && y < p.bottom + 0.3) {
@@ -130,16 +126,16 @@ class PachinkoBoard {
     return true;
   }
 
-  static const _lcdShape = [
-    Point2(lcdLeft, lcdBottom),
-    Point2(lcdRight, lcdBottom),
-    Point2(lcdRight, lcdTop),
-    Point2((lcdLeft + lcdRight) / 2, lcdTop - lcdRoof),
-    Point2(lcdLeft, lcdTop),
+  late final List<Point2> _lcdShape = [
+    Point2(spec.lcdLeft, spec.lcdBottom),
+    Point2(spec.lcdRight, spec.lcdBottom),
+    Point2(spec.lcdRight, spec.lcdTop),
+    Point2((spec.lcdLeft + spec.lcdRight) / 2, spec.lcdTop - spec.lcdRoof),
+    Point2(spec.lcdLeft, spec.lcdTop),
   ];
 
   /// Abstand eines Punkts zum Anzeigefeld, 0 innerhalb.
-  static double _lcdDistance(double x, double y) {
+  double _lcdDistance(double x, double y) {
     var inside = false;
     var best = double.infinity;
     for (var i = 0; i < _lcdShape.length; i++) {
@@ -155,8 +151,6 @@ class PachinkoBoard {
     }
     return inside ? 0 : best;
   }
-
-  static const _spinnerSpots = [Point2(2.2, 7.6), Point2(7.2, 7.6)];
 
   void _build() {
     final ground = _world.createBody(BodyDef());
@@ -180,21 +174,10 @@ class PachinkoBoard {
     _edge(ground, laneX, 16, laneX, 3.4, bounce: 0.1);
 
     // Anzeigefeld als fester Block mit Spitzdach
-    final lcd = PolygonShape()
-      ..set([
-        Vector2(lcdLeft, lcdBottom),
-        Vector2(lcdRight, lcdBottom),
-        Vector2(lcdRight, lcdTop),
-        Vector2((lcdLeft + lcdRight) / 2, lcdTop - lcdRoof),
-        Vector2(lcdLeft, lcdTop),
-      ]);
+    final lcd = PolygonShape()..set([for (final p in _lcdShape) Vector2(p.x, p.y)]);
     ground.createFixture(FixtureDef(lcd, friction: 0.05, restitution: 0.4));
 
-    pockets
-      ..add(const Pocket(1.1, 10.7, 2.1, 11.0, tulipPay, PocketKind.tulip))
-      ..add(const Pocket(7.2, 10.7, 8.2, 11.0, tulipPay, PocketKind.tulip))
-      ..add(const Pocket(4.2, 11.7, 5.2, 12.0, startPay, PocketKind.start))
-      ..add(const Pocket(3.0, 13.6, 6.4, 14.1, gatePay, PocketKind.gate));
+    pockets.addAll(spec.pockets);
 
     // Tulpen und Starttasche haben seitliche Leitstifte
     for (final p in pockets.where((p) => p.kind != PocketKind.gate)) {
@@ -206,7 +189,7 @@ class PachinkoBoard {
     for (var row = 0; row < 15; row++) {
       final y = 2.2 + row * 0.8;
       for (var col = 0; col < 10; col++) {
-        final x = 0.75 + col * 0.92 + (row.isOdd ? 0.46 : 0);
+        final x = 0.75 + col * 0.92 + (row.isOdd ? 0.46 : 0) + _patternShift(row);
         if (x > laneX - 0.35) continue;
         // Bogen freihalten
         final dx = (x - cx) / rx;
@@ -216,11 +199,13 @@ class PachinkoBoard {
       }
     }
 
+    _extraPegs(ground);
+
     // Windräder
-    for (var i = 0; i < _spinnerSpots.length; i++) {
-      final s = _spinnerSpots[i];
+    for (var i = 0; i < spec.spinners.length; i++) {
+      final (sx, sy) = spec.spinners[i];
       final body = _world.createBody(
-        BodyDef(type: BodyType.kinematic, position: Vector2(s.x, s.y)),
+        BodyDef(type: BodyType.kinematic, position: Vector2(sx, sy)),
       );
       body.angularVelocity = i.isEven ? 2.4 : -2.4;
       body.createFixture(
@@ -238,6 +223,40 @@ class PachinkoBoard {
         ),
       );
       _spinners.add(body);
+    }
+  }
+
+  /// Seitliche Verschiebung einer Nagelreihe je nach Nagelbild.
+  double _patternShift(int row) => switch (spec.pattern) {
+        'wave' => 0.22 * sin(row * 0.9),
+        'retro' => (row ~/ 2).isOdd ? 0.12 : -0.12,
+        _ => 0,
+      };
+
+  /// Zusätzliche Nägel: Blütenkränze über den Tulpen, Tempelstufen neben dem Anzeigefeld.
+  void _extraPegs(Body ground) {
+    void add(double x, double y) {
+      if (x < 0.4 || x > laneX - 0.35) return;
+      for (final p in pegs) {
+        if ((p.x - x) * (p.x - x) + (p.y - y) * (p.y - y) < 0.45 * 0.45) return;
+      }
+      if (_lcdDistance(x, y) < lcdClear) return;
+      _peg(ground, x, y);
+    }
+
+    switch (spec.pattern) {
+      case 'blossom':
+        for (final p in pockets.where((p) => p.kind == PocketKind.tulip)) {
+          final cx = (p.left + p.right) / 2;
+          for (final a in [-2.4, -1.57, -0.74]) {
+            add(cx + cos(a) * 0.75, p.top - 0.15 + sin(a) * 0.75);
+          }
+        }
+      case 'temple':
+        for (var k = 0; k < 3; k++) {
+          add(spec.lcdLeft - 0.6 - k * 0.5, spec.lcdBottom + 0.5 + k * 0.5);
+          add(spec.lcdRight + 0.6 + k * 0.5, spec.lcdBottom + 0.5 + k * 0.5);
+        }
     }
   }
 
