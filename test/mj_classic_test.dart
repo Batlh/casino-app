@@ -64,6 +64,8 @@ void step(MjGame g, Random rng) {
           g.tsumo(p);
         case MjBotKan(:final tile):
           g.kan(p, tile);
+        case MjBotJoker(:final tile):
+          g.declareJoker(p, tile);
         case MjBotDiscard(:final tile):
           g.discard(p, tile);
       }

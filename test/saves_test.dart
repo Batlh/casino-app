@@ -45,6 +45,8 @@ void main() {
                 g.tsumo(g.current);
               case MjBotKan(:final tile):
                 g.kan(g.current, tile);
+              case MjBotJoker(:final tile):
+                g.declareJoker(g.current, tile);
               case MjBotDiscard(:final tile):
                 g.discard(g.current, tile);
             }

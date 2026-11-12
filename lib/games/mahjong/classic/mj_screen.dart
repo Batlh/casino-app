@@ -14,7 +14,6 @@ import '../riichi_hand.dart';
 import '../tiles.dart';
 import 'mj_bot.dart';
 import 'mj_engine.dart';
-import 'mj_hand.dart';
 import 'mj_rules.dart';
 import 'mj_scoring.dart' show vietBonusPhan;
 import 'mj_shape.dart';
