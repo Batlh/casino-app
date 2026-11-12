@@ -82,8 +82,8 @@ const pachinkoGuide = GameGuide('Pachinko', [
   GuideSection(
     'Taschen',
     'Die Tulpen zahlen den Betrag, der darauf steht. Die Starttasche in der Mitte zahlt 30 und lässt die Walzen im '
-        'Anzeigefeld laufen. Zeigen sie drei gleiche Zeichen, beginnt das Fieber: Das Tor unten öffnet sich und zahlt 150 pro '
-        'Kugel. Bei drei Siebenen dauert das Fieber länger.',
+        'Anzeigefeld laufen. Zeigen sie drei gleiche Zeichen, beginnt das Fieber: Das Tor unten öffnet sich und zahlt pro Kugel, '
+        'was darauf steht (meist 150). Bei drei Siebenen dauert das Fieber länger.',
   ),
   GuideSection(
     'Die Maschinen',
