@@ -84,7 +84,7 @@ const spaceTable = TableSpec(
     WallSpec([Pt(6.400, 1.900), Pt(6.400, 2.900)], bounce: 0.4),
     WallSpec([Pt(0.900, 10.200), Pt(1.100, 7.400)]),
     WallSpec([Pt(2.000, 10.000), Pt(2.200, 7.400)]),
-    WallSpec([Pt(1.100, 7.400), Pt(2.200, 7.400)], bounce: 0.2),
+    WallSpec([Pt(1.100, 7.400), Pt(1.650, 6.850), Pt(2.200, 7.400)], bounce: 0.2),
     WallSpec([Pt(2.950, 7.900), Pt(2.950, 9.100)], bounce: 0.45, visible: false),
   ],
   flippers: [
@@ -99,7 +99,7 @@ const spaceTable = TableSpec(
   spinners: [SpinnerSpec('orbit', Pt(0.020, 8.500), Pt(1.000, 8.500))],
   saucers: [SaucerSpec('schleuse', 6.95, 4.1, -2.2, 3.6, lock: true)],
   ramps: [
-    RampSpec('rakete', Pt(0.950, 9.200), Pt(2.070, 9.200), 0, -1, [Pt(1.520, 9.000), Pt(1.620, 6.600), Pt(1.900, 4.200), Pt(2.900, 1.500), Pt(4.600, 0.750), Pt(6.600, 1.300), Pt(8.000, 3.000), Pt(8.750, 5.600), Pt(8.850, 8.800), Pt(8.550, 11.400), Pt(8.050, 12.750)], -2.6, 2.4, points: 1000, name: 'Raketenrampe'),
+    RampSpec('rakete', Pt(0.950, 9.200), Pt(2.070, 9.200), 0, -1, [Pt(1.520, 9.000), Pt(1.620, 6.600), Pt(1.900, 4.200), Pt(2.900, 1.500), Pt(4.600, 0.750), Pt(6.600, 1.300), Pt(8.000, 3.000), Pt(8.750, 5.600), Pt(8.850, 8.800), Pt(8.550, 11.400), Pt(8.050, 12.750)], -2.6, 2.4, points: 1000, minSpeed: 5, name: 'Raketenrampe'),
   ],
   missions: [
     MissionSpec('Raketenstart: Rampe 3 mal', MissionKind.ramp, 3, id: 'rakete'),
@@ -141,7 +141,7 @@ const pirateTable = TableSpec(
     WallSpec([Pt(6.400, 1.900), Pt(6.400, 2.900)], bounce: 0.4),
     WallSpec([Pt(8.350, 10.200), Pt(8.150, 7.400)]),
     WallSpec([Pt(7.250, 10.000), Pt(7.050, 7.400)]),
-    WallSpec([Pt(7.050, 7.400), Pt(8.150, 7.400)], bounce: 0.2),
+    WallSpec([Pt(7.050, 7.400), Pt(7.600, 6.850), Pt(8.150, 7.400)], bounce: 0.2),
   ],
   flippers: [
     FlipperSpec(Pt(2.600, 15.300), 1),
@@ -155,7 +155,7 @@ const pirateTable = TableSpec(
   spinners: [SpinnerSpec('wind', Pt(8.280, 8.500), Pt(9.230, 8.500))],
   saucers: [SaucerSpec('schatz', 1.35, 6.6, 2.4, 3.2, lock: true)],
   ramps: [
-    RampSpec('schiff', Pt(7.180, 9.200), Pt(8.300, 9.200), 0, -1, [Pt(7.730, 9.000), Pt(7.630, 6.600), Pt(7.350, 4.200), Pt(6.350, 1.500), Pt(4.650, 0.750), Pt(2.650, 1.300), Pt(1.250, 3.000), Pt(0.500, 5.600), Pt(0.400, 8.800), Pt(0.700, 11.400), Pt(1.200, 12.750)], 2.6, 2.4, points: 1000, name: 'Schiffsrampe'),
+    RampSpec('schiff', Pt(7.180, 9.200), Pt(8.300, 9.200), 0, -1, [Pt(7.730, 9.000), Pt(7.630, 6.600), Pt(7.350, 4.200), Pt(6.350, 1.500), Pt(4.650, 0.750), Pt(2.650, 1.300), Pt(1.250, 3.000), Pt(0.500, 5.600), Pt(0.400, 8.800), Pt(0.700, 11.400), Pt(1.200, 12.750)], 2.6, 2.4, points: 1000, minSpeed: 5, name: 'Schiffsrampe'),
   ],
   missions: [
     MissionSpec('Entern: Schiffsrampe 3 mal', MissionKind.ramp, 3, id: 'schiff'),
@@ -197,7 +197,7 @@ const hauntedTable = TableSpec(
     WallSpec([Pt(6.400, 1.900), Pt(6.400, 2.900)], bounce: 0.4),
     WallSpec([Pt(0.900, 10.200), Pt(1.100, 7.400)]),
     WallSpec([Pt(2.000, 10.000), Pt(2.200, 7.400)]),
-    WallSpec([Pt(1.100, 7.400), Pt(2.200, 7.400)], bounce: 0.2),
+    WallSpec([Pt(1.100, 7.400), Pt(1.650, 6.850), Pt(2.200, 7.400)], bounce: 0.2),
     WallSpec([Pt(8.350, 10.200), Pt(8.200, 6.500)]),
   ],
   flippers: [
@@ -211,7 +211,7 @@ const hauntedTable = TableSpec(
   spinners: [SpinnerSpec('uhr', Pt(8.300, 8.500), Pt(9.230, 8.500))],
   saucers: [SaucerSpec('gruft', 4.6, 7.3, -1.6, 4.4, lock: true)],
   ramps: [
-    RampSpec('treppe', Pt(0.950, 9.200), Pt(2.070, 9.200), 0, -1, [Pt(1.520, 9.000), Pt(1.620, 6.600), Pt(1.900, 4.200), Pt(2.900, 1.500), Pt(4.600, 0.750), Pt(6.600, 1.300), Pt(8.000, 3.000), Pt(8.750, 5.600), Pt(8.850, 8.800), Pt(8.550, 11.400), Pt(8.050, 12.750)], -2.6, 2.4, points: 1000, name: 'Geistertreppe'),
+    RampSpec('treppe', Pt(0.950, 9.200), Pt(2.070, 9.200), 0, -1, [Pt(1.520, 9.000), Pt(1.620, 6.600), Pt(1.900, 4.200), Pt(2.900, 1.500), Pt(4.600, 0.750), Pt(6.600, 1.300), Pt(8.000, 3.000), Pt(8.750, 5.600), Pt(8.850, 8.800), Pt(8.550, 11.400), Pt(8.050, 12.750)], -2.6, 2.4, points: 1000, minSpeed: 5, name: 'Geistertreppe'),
   ],
   missions: [
     MissionSpec('Geister vertreiben', MissionKind.drops, 1),
@@ -253,10 +253,10 @@ const racingTable = TableSpec(
     WallSpec([Pt(6.400, 1.900), Pt(6.400, 2.900)], bounce: 0.4),
     WallSpec([Pt(0.900, 10.200), Pt(1.100, 7.400)]),
     WallSpec([Pt(2.000, 10.000), Pt(2.200, 7.400)]),
-    WallSpec([Pt(1.100, 7.400), Pt(2.200, 7.400)], bounce: 0.2),
+    WallSpec([Pt(1.100, 7.400), Pt(1.650, 6.850), Pt(2.200, 7.400)], bounce: 0.2),
     WallSpec([Pt(8.350, 10.200), Pt(8.150, 7.400)]),
     WallSpec([Pt(7.250, 10.000), Pt(7.050, 7.400)]),
-    WallSpec([Pt(7.050, 7.400), Pt(8.150, 7.400)], bounce: 0.2),
+    WallSpec([Pt(7.050, 7.400), Pt(7.600, 6.850), Pt(8.150, 7.400)], bounce: 0.2),
   ],
   flippers: [
     FlipperSpec(Pt(2.600, 15.300), 1),
@@ -269,8 +269,8 @@ const racingTable = TableSpec(
   spinners: [SpinnerSpec('turbo', Pt(4.000, 7.900), Pt(5.200, 7.900))],
   saucers: [SaucerSpec('box', 6.2, 8.6, -1.2, 4.2, lock: true)],
   ramps: [
-    RampSpec('box', Pt(0.950, 9.200), Pt(2.070, 9.200), 0, -1, [Pt(1.520, 9.000), Pt(1.620, 6.600), Pt(1.900, 4.200), Pt(2.900, 1.500), Pt(4.600, 0.750), Pt(6.600, 1.300), Pt(8.000, 3.000), Pt(8.750, 5.600), Pt(8.850, 8.800), Pt(8.550, 11.400), Pt(8.050, 12.750)], -2.6, 2.4, points: 1000, name: 'Boxengasse'),
-    RampSpec('kurve', Pt(7.180, 9.200), Pt(8.300, 9.200), 0, -1, [Pt(7.730, 9.000), Pt(7.630, 6.600), Pt(7.350, 4.200), Pt(6.350, 1.500), Pt(4.650, 0.750), Pt(2.650, 1.300), Pt(1.250, 3.000), Pt(0.500, 5.600), Pt(0.400, 8.800), Pt(0.700, 11.400), Pt(1.200, 12.750)], 2.6, 2.4, points: 1000, name: 'Steilkurve'),
+    RampSpec('box', Pt(0.950, 9.200), Pt(2.070, 9.200), 0, -1, [Pt(1.520, 9.000), Pt(1.620, 6.600), Pt(1.900, 4.200), Pt(2.900, 1.500), Pt(4.600, 0.750), Pt(6.600, 1.300), Pt(8.000, 3.000), Pt(8.750, 5.600), Pt(8.850, 8.800), Pt(8.550, 11.400), Pt(8.050, 12.750)], -2.6, 2.4, points: 1000, minSpeed: 5, name: 'Boxengasse'),
+    RampSpec('kurve', Pt(7.180, 9.200), Pt(8.300, 9.200), 0, -1, [Pt(7.730, 9.000), Pt(7.630, 6.600), Pt(7.350, 4.200), Pt(6.350, 1.500), Pt(4.650, 0.750), Pt(2.650, 1.300), Pt(1.250, 3.000), Pt(0.500, 5.600), Pt(0.400, 8.800), Pt(0.700, 11.400), Pt(1.200, 12.750)], 2.6, 2.4, points: 1000, minSpeed: 5, name: 'Steilkurve'),
   ],
   missions: [
     MissionSpec('Runde: beide Rampen 4 mal', MissionKind.anyRamp, 4),
@@ -312,10 +312,10 @@ const cityTable = TableSpec(
     WallSpec([Pt(6.400, 1.900), Pt(6.400, 2.900)], bounce: 0.4),
     WallSpec([Pt(0.900, 10.200), Pt(1.100, 7.400)]),
     WallSpec([Pt(2.000, 10.000), Pt(2.200, 7.400)]),
-    WallSpec([Pt(1.100, 7.400), Pt(2.200, 7.400)], bounce: 0.2),
+    WallSpec([Pt(1.100, 7.400), Pt(1.650, 6.850), Pt(2.200, 7.400)], bounce: 0.2),
     WallSpec([Pt(8.350, 10.200), Pt(8.150, 7.400)]),
     WallSpec([Pt(7.250, 10.000), Pt(7.050, 7.400)]),
-    WallSpec([Pt(7.050, 7.400), Pt(8.150, 7.400)], bounce: 0.2),
+    WallSpec([Pt(7.050, 7.400), Pt(7.600, 6.850), Pt(8.150, 7.400)], bounce: 0.2),
   ],
   flippers: [
     FlipperSpec(Pt(2.600, 15.300), 1),
@@ -328,8 +328,8 @@ const cityTable = TableSpec(
   spinners: [SpinnerSpec('netz', Pt(4.000, 9.600), Pt(5.250, 9.600))],
   saucers: [SaucerSpec('kern', 4.65, 8.3, 1.3, 4.2, lock: true)],
   ramps: [
-    RampSpec('links', Pt(0.950, 9.200), Pt(2.070, 9.200), 0, -1, [Pt(1.520, 9.000), Pt(1.620, 6.600), Pt(1.900, 4.200), Pt(2.900, 1.500), Pt(4.600, 0.750), Pt(6.600, 1.300), Pt(8.000, 3.000), Pt(8.750, 5.600), Pt(8.850, 8.800), Pt(8.550, 11.400), Pt(8.050, 12.750)], -2.6, 2.4, points: 1000, name: 'Datenautobahn'),
-    RampSpec('rechts', Pt(7.180, 9.200), Pt(8.300, 9.200), 0, -1, [Pt(7.730, 9.000), Pt(7.630, 6.600), Pt(7.350, 4.200), Pt(6.350, 1.500), Pt(4.650, 0.750), Pt(2.650, 1.300), Pt(1.250, 3.000), Pt(0.500, 5.600), Pt(0.400, 8.800), Pt(0.700, 11.400), Pt(1.200, 12.750)], 2.6, 2.4, points: 1000, name: 'Hochbahn'),
+    RampSpec('links', Pt(0.950, 9.200), Pt(2.070, 9.200), 0, -1, [Pt(1.520, 9.000), Pt(1.620, 6.600), Pt(1.900, 4.200), Pt(2.900, 1.500), Pt(4.600, 0.750), Pt(6.600, 1.300), Pt(8.000, 3.000), Pt(8.750, 5.600), Pt(8.850, 8.800), Pt(8.550, 11.400), Pt(8.050, 12.750)], -2.6, 2.4, points: 1000, minSpeed: 5, name: 'Datenautobahn'),
+    RampSpec('rechts', Pt(7.180, 9.200), Pt(8.300, 9.200), 0, -1, [Pt(7.730, 9.000), Pt(7.630, 6.600), Pt(7.350, 4.200), Pt(6.350, 1.500), Pt(4.650, 0.750), Pt(2.650, 1.300), Pt(1.250, 3.000), Pt(0.500, 5.600), Pt(0.400, 8.800), Pt(0.700, 11.400), Pt(1.200, 12.750)], 2.6, 2.4, points: 1000, minSpeed: 5, name: 'Hochbahn'),
   ],
   missions: [
     MissionSpec('Einloggen: alle drei Gassen', MissionKind.lanes, 1, id: 'top'),
