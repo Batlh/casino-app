@@ -125,6 +125,20 @@ Jedes Spiel mit Erklärung und Tutorial wie die anderen, mit eigenen Einstellung
 Ergänzung 12.11.2026 (Nutzer): Mehr Tische, aufgebaut wie amerikanische Flipperautomaten (Rampen, Spinner, Drop-Targets,
 Kickout-Löcher, Multiball, Missionen und Modi auf einer Anzeige), mit Animationen. Bei Pachinko dasselbe: mehrere
 Maschinen mit eigenem Aufbau und Animationen.
+Antworten 12.11.2026:
+- Neue Flipper-Tische: Weltraumstation, Piratenbucht, Spukschloss, Rennstrecke. „Neon Nacht“ bleibt und wird erweitert.
+- Später kommt ein Entwurf (von GPT) für einen Tisch im Stil einer Cyberpunk-Großstadt, angelehnt an amerikanische
+  Flipper der 90er. Im Spiel ohne Marken- und Herstellernamen.
+- Neue Pachinko-Maschinen: Meer und Fische, Drache und Tempel, Kirschblüten, Retro-Spielhalle.
+
+Umsetzung Flipper (Reihenfolge):
+1. Tisch als Daten statt fest im Code: Wände, Pilze, Schleudern, Flipper (auch obere), Drop-Targets, Spinner,
+   Kickout-Löcher, Rampen (Eingang als Sensor, die Kugel fährt die Bahn als Animation und kommt an der Ausfahrt wieder),
+   Rollover-Gassen, Lichter. Mehrere Kugeln gleichzeitig für Multiball.
+2. Missionen und Modi mit Punktanzeige (Laufschrift oben wie bei echten Automaten), Jackpot, Extra-Kugel.
+3. Tische einzeln, je mit eigenem Thema, Farben und Anzeige-Animationen.
+4. Tests: jede Konstruktion mit dem 900-Kugeln-Test gegen Hängenbleiben, Rauswurf und Durchtunneln.
+
 Behoben 12.11.: Kugel blieb in einer Mulde zwischen Schienenende und Flipper-Drehpunkt liegen; ein Test wirft dafür
 900 Kugeln mit verschiedenem Flippern auf den Tisch.
 
