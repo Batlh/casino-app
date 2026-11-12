@@ -10,6 +10,13 @@ Stand: 12.11.2026. Notiz für später, noch nicht begonnen.
    Piratenbucht, Spukschloss und Rennstrecke.
 3. **Die fünf Pachinko-Maschinen** auf denselben Grafikstand bringen.
 
+## Aufgabenteilung
+
+- **GPT macht die Grafik:** Konzeptgrafik, Spielfeldbilder, Bauteile, Lichtebenen und Animations-Bildfolgen, alles
+  als WebP mit Angaben zu Lage und Ankerpunkt.
+- **Claude schreibt den Code:** Tischdaten, Physik, Regeln, Modi, Anzeige, Einbau der Grafiken und Tests. Claude
+  prüft außerdem die Grafiken gegen das Konzept.
+
 ## Ablauf pro Tisch bzw. Maschine (Lehre aus Neonstadt V4–V7)
 
 1. GPT erstellt **nur die Konzeptgrafik** im Neonstadt-Stil: gemaltes Spielfeld, Bauteile aus Acryl und Chrom,
@@ -19,8 +26,9 @@ Stand: 12.11.2026. Notiz für später, noch nicht begonnen.
    - Lagen in Prozent festhalten;
    - Abgleich mit dem Vorbild (Flipper: Williams-Automaten der 90er; Pachinko: echte Automaten);
    - verdeckte Bereiche nach Bauweise des Vorbilds ergänzen.
-3. Claude schreibt eine **Bauliste** mit Positionen, Schüssen und Regeln.
-4. GPT baut **Teil für Teil** nach der Liste, und Claude prüft jedes Teil einzeln:
+3. Claude schreibt eine **Bauliste** mit Positionen, Schüssen und Regeln und baut danach Geometrie und Regeln im
+   Code.
+4. GPT liefert die **Grafiken Teil für Teil** nach der Liste, und Claude prüft jedes Teil einzeln:
    - Überlagerung Konzept/Modell mit 50 % Deckkraft;
    - Tabelle mit den Stufen gleich / abweichend / fehlt / ergänzt;
    - Ausschnitt-Paare Konzept neben Modell.
