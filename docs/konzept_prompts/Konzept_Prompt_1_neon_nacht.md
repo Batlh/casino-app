@@ -11,7 +11,22 @@ Ein Nachtclub und eine Spielhalle der 80er in Synthwave-Optik:
 von „Neonstadt“ (Cyberpunk-Großstadt) durch 80er-Retro statt Zukunft: warme Sonne, Chrom-Schrift,
 Palmen-Silhouetten.
 
+**Echte Automaten als Vorbild:**
+- **The Party Zone** (Bally/Midway, 1991): Partynacht mit Radiomoderator. Der Spieler wünscht sich Musik
+  (Musikwunsch-Funktion), dazu Gastauftritte von Figuren aus früheren Bally-Automaten.
+- **Disco Fever** (Williams, 1978):
+  - Fallziel-Bänke mit 3 und 2 Zielen;
+  - eine Hufeisen-Gasse (U-Kehre);
+  - Bonus-Multiplikator ×2, ×3, ×5;
+  - Fortschritt, der von Kugel zu Kugel erhalten bleibt.
+- Dazu passend: **Dr. Dude and His Excellent Ray** (Bally, 1990) mit 80er-Neon-Optik.
+
 ## Aufbau (Williams-Basis)
+
+- **Musikwunsch** (nach Party Zone): Am DJ-Pult wählt der Spieler mit den Flippertasten aus 2–3 „Songs“ den
+  nächsten Modus. Jeder Song hat eigene Farben der Lichtebene.
+- **Hufeisenbahn** (nach Disco Fever): eine enge U-Kehre links unterhalb der Plattenrampe. Die Kugel kommt in
+  dieselbe Richtung zurück. Kombo-Schuss.
 
 - **Blickfang:** **Discokugel auf einer DJ-Bühne**, die als erhöhtes Plateau mitten im oberen Feld liegt.
   - Die Kugel dreht sich, wirft Lichtpunkte aufs Feld und senkt sich beim Multiball-Start.
@@ -23,7 +38,8 @@ Palmen-Silhouetten.
   - links „Plattenrampe“, Acryl, Drahtrücklauf zur **rechten** Rücklaufgasse;
   - rechts „Kassettenrampe“, Acryl, Drahtrücklauf zur **linken** Rücklaufgasse.
   - Beide Drähte kreuzen sich über der Mitte, wie beim Fisch-Automaten.
-- **Equalizer:** 5 Fallziele in einer Reihe vor der DJ-Bühne, leuchten wie ein Pegel.
+- **Equalizer:** Fallziele als Bänke mit 3 und 2 Zielen vor der DJ-Bühne, wie bei Disco Fever. Sie leuchten wie
+  ein Pegel, und der Fortschritt bleibt über Kugeln hinweg erhalten.
 - **Bumper:** 3 Lautsprecher-Bumper auf dem Bühnen-Plateau. Hinauf geht es über eine kurze Treppenrampe von links.
 - **Spielhalle:** rechts ein Arcade-Automat als Zielbank mit 3 Zielen, startet den **Videomodus** auf der Anzeige
   (ein kleines Autorennen bzw. Ausweichspiel mit den Flippertasten).
