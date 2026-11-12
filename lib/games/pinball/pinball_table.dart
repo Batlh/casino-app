@@ -99,6 +99,7 @@ class PinballTable {
 
   bool get ballSaveActive => _saveLeft > 0;
   Pt? get ball => _ball == null ? null : Pt(_ball!.position.x, _ball!.position.y);
+  double get ballSpeed => _ball?.linearVelocity.length ?? 0;
 
   /// Winkel der Flipper für die Anzeige.
   double get leftAngle => _leftFlipper.angle;
@@ -246,6 +247,17 @@ class PinballTable {
     charge = 0;
     _saveLeft = _saveUsed ? 0 : saveSeconds;
     events.add(const PinballEvent(PinballEventKind.launch));
+  }
+
+  /// Nur für Tests: Kugel an eine Stelle setzen.
+  void debugPlaceBall(double x, double y, double vx, double vy) {
+    final b = _ball;
+    if (b == null) return;
+    b.setTransform(Vector2(x, y), 0);
+    b.linearVelocity = Vector2(vx, vy);
+    b.angularVelocity = 0;
+    ballInLane = false;
+    _still = 0;
   }
 
   /// Rüttelt den Tisch leicht, wenn der Ball festhängt.
