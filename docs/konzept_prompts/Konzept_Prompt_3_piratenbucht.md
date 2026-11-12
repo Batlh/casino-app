@@ -150,6 +150,22 @@ braucht:
    - Größe in Welteinheiten;
    - Zustände.
 
+### Assets werden gemalt, nicht programmiert
+
+- **Das gemalte Konzept ist der Tisch.** Es gibt **keine** zweite, „technische“ Fassung, die anders aussieht.
+  Nummerierung, Laufplan und Assets beziehen sich auf genau dieses gemalte Bild.
+- **Konzept in Draufsicht:** Es wird gleich in der geforderten, nur leicht schrägen Draufsicht gemalt. Kein Trapez
+  und keine Fluchtpunkt-Perspektive, das Spielfeld ist rechteckig, 848 × 1536 px.
+- **Assets mit dem Bildmodell erzeugen**, im Stil des Konzepts, **nicht** mit Python-Zeichnungen aus einfachen
+  Formen:
+  - als **Asset-Bögen**: pro Bild 6–12 Bauteile nebeneinander auf einfarbigem Hintergrund, in derselben Ansicht
+    und demselben Licht;
+  - danach mit einem Skript ausschneiden und freistellen.
+- **Grundspielfeld:** als Bearbeitung des Konzeptbildes erzeugen, mit denselben Linien und Motiven, aber ohne
+  Aufbauten.
+- **Zustände** (an/aus, getroffen) als Bearbeitung des jeweiligen Asset-Bilds, nicht neu erfunden.
+- Ein Asset gilt nur, wenn es im Ausschnitt-Vergleich wie dieselbe Stelle im Konzept aussieht.
+
 ### Prüfe selbst, bevor du lieferst
 
 - Jede Nummer der Bauteilliste hat ein Asset, jeder Weg im Laufplan hat Einfahrt **und** Ausgang.
