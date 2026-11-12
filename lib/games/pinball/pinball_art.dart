@@ -1,14 +1,8 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
 import 'pinball_table.dart';
-import 'neonstadt_assets.dart';
-
-part 'neonstadt_art.dart';
-part 'neonstadt_ramps.dart';
 
 /// Funke nach einem Treffer.
 class Spark {
@@ -23,14 +17,7 @@ class Spark {
 
 /// Inhalt der Punktanzeige.
 class DmdState {
-  const DmdState(
-    this.big,
-    this.small,
-    this.color, {
-    this.blink = false,
-    this.scroll = false,
-    this.time = 0,
-  });
+  const DmdState(this.big, this.small, this.color, {this.blink = false, this.scroll = false, this.time = 0});
   final String big;
   final String small;
   final Color color;
@@ -41,18 +28,13 @@ class DmdState {
 
 /// Punktanzeige im Stil einer Punktmatrix: Text in Leuchtfarbe, darüber ein feines Raster.
 class DmdPainter extends CustomPainter {
-  DmdPainter(this.state, Listenable repaint, {this.industrial = false})
-    : super(repaint: repaint);
-  final bool industrial;
+  DmdPainter(this.state, Listenable repaint) : super(repaint: repaint);
   final DmdState Function() state;
 
   @override
   void paint(Canvas canvas, Size size) {
     final s = state();
-    final r = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      const Radius.circular(10),
-    );
+    final r = RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(10));
     canvas.drawRRect(r, Paint()..color = const Color(0xFF070504));
     canvas.save();
     canvas.clipRRect(r);
@@ -65,7 +47,6 @@ class DmdPainter extends CustomPainter {
           text: s.big,
           style: TextStyle(
             color: c,
-            fontFamily: industrial ? 'Barlow' : null,
             fontSize: bigSize,
             fontWeight: FontWeight.w900,
             letterSpacing: bigSize * 0.08,
@@ -85,12 +66,7 @@ class DmdPainter extends CustomPainter {
     final small = TextPainter(
       text: TextSpan(
         text: s.small,
-        style: TextStyle(
-          fontFamily: industrial ? 'Barlow' : null,
-          color: c.withValues(alpha: 0.9),
-          fontSize: size.height * 0.2,
-          fontWeight: FontWeight.w700,
-        ),
+        style: TextStyle(color: c.withValues(alpha: 0.9), fontSize: size.height * 0.2, fontWeight: FontWeight.w700),
       ),
       textDirection: TextDirection.ltr,
       maxLines: 1,
@@ -107,16 +83,6 @@ class DmdPainter extends CustomPainter {
       canvas.scale(scale);
       small.paint(canvas, Offset(-small.width / 2, -small.height / 2));
       canvas.restore();
-    }
-    if (industrial) {
-      // Dezente Aktivitätsleisten; die Punktzahl bleibt frei lesbar.
-      for (var i = 0; i < 16; i++) {
-        final active = (i + (s.time * 8).floor()) % 16 < 4;
-        canvas.drawRect(
-          Rect.fromLTWH(size.width - 5, 6 + i * (size.height - 12) / 16, 2, 2),
-          Paint()..color = c.withValues(alpha: active ? 0.8 : 0.12),
-        );
-      }
     }
     // Punktraster
     final grid = Paint()
@@ -144,21 +110,14 @@ class DmdPainter extends CustomPainter {
 
 /// Malt einen Tisch: Motiv, Lichter, Banden, Teile, Kugeln, Rampen und Funken.
 class TablePainter extends CustomPainter {
-  TablePainter(
-    this.table,
-    this.spec,
-    this.time,
-    this.sparks,
-    Listenable repaint,
-  ) : super(repaint: Listenable.merge([repaint, NeonstadtAssets.instance]));
+  TablePainter(this.table, this.spec, this.time, this.sparks, Listenable repaint) : super(repaint: repaint);
 
   /// Standbild für die Tischauswahl.
   TablePainter.preview(TableSpec s)
-    : table = (() => null),
-      spec = (() => s),
-      time = (() => 0.0),
-      sparks = (() => const []),
-      super(repaint: NeonstadtAssets.instance);
+      : table = (() => null),
+        spec = (() => s),
+        time = (() => 0.0),
+        sparks = (() => const []);
 
   final PinballTable? Function() table;
   final TableSpec Function() spec;
@@ -167,52 +126,17 @@ class TablePainter extends CustomPainter {
 
   static final Map<String, PinballTable> _demos = {};
 
-  static const cityHeaderHeight = 1.85;
-  static double viewHeight(TableSpec spec) =>
-      spec.playfieldHeight + (spec.theme.art == 'city' ? cityHeaderHeight : 0);
-
   @override
   void paint(Canvas canvas, Size size) {
     final sp = spec();
     final th = sp.theme;
-    if (th.art == 'city' && !NeonstadtAssets.instance.isReady) {
-      canvas.drawRect(
-        Offset.zero & size,
-        Paint()..color = const Color(0xFF080E19),
-      );
-      final failed = NeonstadtAssets.instance.hasError;
-      _text(
-        canvas,
-        failed ? 'Grafiken nicht verfügbar' : 'Neonstadt wird geladen …',
-        Offset(size.width / 2, size.height / 2),
-        math.min(16, size.width / 18),
-        th.accent,
-      );
-      return;
-    }
-    final t =
-        table() ??
-        _demos.putIfAbsent(
-          sp.id,
-          () => PinballTable(rng: math.Random(1), spec: sp),
-        );
+    final t = table() ?? _demos.putIfAbsent(sp.id, () => PinballTable(rng: math.Random(1), spec: sp));
     final now = time();
     final idle = table() == null || t.gameOver;
-    final s = math.min(
-      size.width / PinballTable.width,
-      size.height / viewHeight(sp),
-    );
+    final s = size.width / PinballTable.width;
     canvas.save();
-    canvas.translate(
-      (size.width - PinballTable.width * s) / 2,
-      (size.height - viewHeight(sp) * s) / 2,
-    );
     canvas.scale(s);
-    if (th.art == 'city') {
-      _cityHeader(canvas, t);
-      canvas.translate(0, cityHeaderHeight);
-    }
-    final field = Rect.fromLTWH(0, 0, PinballTable.width, sp.playfieldHeight);
+    const field = Rect.fromLTWH(0, 0, PinballTable.width, PinballTable.height);
     final rr = RRect.fromRectAndRadius(field, const Radius.circular(0.4));
     canvas.save();
     canvas.clipRRect(rr);
@@ -227,23 +151,9 @@ class TablePainter extends CustomPainter {
     );
     paintArt(canvas, th, now);
     for (final (text, p, sz) in sp.labels) {
-      // Neonstadt trägt einen eigenen, in die Druckgrafik integrierten Schriftzug.
-      if (th.art != 'city') {
-        _text(
-          canvas,
-          text,
-          Offset(p.x, p.y),
-          sz,
-          th.accent.withValues(alpha: 0.35),
-          weight: FontWeight.w900,
-        );
-      }
-    }
-    if (th.art == 'city') {
-      _cityGroundArchitecture(canvas, t);
+      _text(canvas, text, Offset(p.x, p.y), sz, th.accent.withValues(alpha: 0.35), weight: FontWeight.w900);
     }
     _inserts(canvas, t, th, now, idle);
-    if (th.art == 'city') _cityApron(canvas, th);
 
     // Banden
     final neon = Paint()
@@ -263,51 +173,31 @@ class TablePainter extends CustomPainter {
       for (final p in pts.skip(1)) {
         path.lineTo(p.x, p.y);
       }
-      if (th.art == 'city') {
-        _cityRail(canvas, path, pts);
-      } else {
-        canvas.drawPath(path, glow);
-        canvas.drawPath(path, neon);
-      }
+      canvas.drawPath(path, glow);
+      canvas.drawPath(path, neon);
     }
 
-    line(const [
-      Pt(PinballTable.fieldRight, 18.2),
-      Pt(PinballTable.fieldRight, 4.6),
-    ]);
+    line(const [Pt(PinballTable.fieldRight, 18.2), Pt(PinballTable.fieldRight, 4.6)]);
     for (final w in t.walls) {
       if (w.visible) line(w.points);
     }
-    if (t.gateClosed) line(t.gatePoints);
+    if (t.gateClosed) line(PinballTable.gate);
 
     // Gassenlichter
     for (var i = 0; i < t.lanes.length; i++) {
       final l = t.lanes[i];
       final chase = idle && ((now * 4).floor() % t.lanes.length) == i;
       final on = l.lit || chase || l.flash > 0.5;
-      if (th.art == 'city') {
-        _cityRollover(canvas, l, on, th);
-        continue;
-      }
       canvas.drawCircle(
         Offset(l.spec.x, l.spec.y + 0.85),
         0.18,
         Paint()..color = on ? th.light : th.light.withValues(alpha: 0.25),
       );
-      if (on)
-        canvas.drawCircle(
-          Offset(l.spec.x, l.spec.y + 0.85),
-          0.32,
-          Paint()..color = th.light.withValues(alpha: 0.18),
-        );
+      if (on) canvas.drawCircle(Offset(l.spec.x, l.spec.y + 0.85), 0.32, Paint()..color = th.light.withValues(alpha: 0.18));
     }
 
     // Kickout-Löcher
     for (final sc in t.saucers) {
-      if (th.art == 'city') {
-        _citySocket(canvas, sc, th, now);
-        continue;
-      }
       final c = Offset(sc.spec.x, sc.spec.y);
       for (var k = 0; k < 8; k++) {
         final a = k * math.pi / 4 + now * (sc.held != null ? 6 : 1.2);
@@ -327,27 +217,16 @@ class TablePainter extends CustomPainter {
           ..strokeWidth = 0.05
           ..color = Color.lerp(th.wall, Colors.white, sc.flash)!,
       );
-      if (sc.spec.lock)
-        _text(
-          canvas,
-          'LOCK',
-          c + const Offset(0, 0.72),
-          0.22,
-          th.accent.withValues(alpha: 0.8),
-        );
+      if (sc.spec.lock) _text(canvas, 'LOCK', c + const Offset(0, 0.72), 0.22, th.accent.withValues(alpha: 0.8));
     }
 
     // Spinner
     for (final sn in t.spinners) {
       final a = Offset(sn.spec.a.x, sn.spec.a.y);
       final b = Offset(sn.spec.b.x, sn.spec.b.y);
-      canvas.drawLine(
-        a,
-        b,
-        Paint()
-          ..color = th.wall.withValues(alpha: 0.6)
-          ..strokeWidth = 0.05,
-      );
+      canvas.drawLine(a, b, Paint()
+        ..color = th.wall.withValues(alpha: 0.6)
+        ..strokeWidth = 0.05);
       final mid = (a + b) / 2;
       final half = (b - a).distance / 2 * 0.8;
       final dir = (b - a) / (b - a).distance;
@@ -359,23 +238,7 @@ class TablePainter extends CustomPainter {
         ..lineTo((mid + dir * half - n).dx, (mid + dir * half - n).dy)
         ..lineTo((mid - dir * half - n).dx, (mid - dir * half - n).dy)
         ..close();
-      if (th.art == 'city') {
-        canvas.save();
-        canvas.clipPath(p);
-        _cityImage(canvas, 'chrome', p.getBounds(), fit: BoxFit.cover);
-        canvas.restore();
-        _cityStroke(canvas, p, th.ramp.withValues(alpha: .5), .02);
-      } else {
-        canvas.drawPath(
-          p,
-          Paint()
-            ..color = Color.lerp(
-              th.light,
-              Colors.white,
-              math.min(1, sn.speed / 8),
-            )!,
-        );
-      }
+      canvas.drawPath(p, Paint()..color = Color.lerp(th.light, Colors.white, math.min(1, sn.speed / 8))!);
     }
 
     // Fallziele
@@ -383,46 +246,17 @@ class TablePainter extends CustomPainter {
       for (final d in bank.targets) {
         final alpha = 1 - d.sink;
         if (alpha <= 0.02) {
-          _bar(
-            canvas,
-            d.c,
-            bank.spec.angle,
-            bank.spec.length,
-            0.06,
-            th.accent.withValues(alpha: 0.25),
-          );
+          _bar(canvas, d.c, bank.spec.angle, bank.spec.length, 0.06, th.accent.withValues(alpha: 0.25));
           continue;
         }
-        _bar(
-          canvas,
-          d.c,
-          bank.spec.angle,
-          bank.spec.length,
-          0.16,
-          Color.lerp(
-            th.accent,
-            Colors.white,
-            bank.flash,
-          )!.withValues(alpha: alpha),
-        );
+        _bar(canvas, d.c, bank.spec.angle, bank.spec.length, 0.16, Color.lerp(th.accent, Colors.white, bank.flash)!.withValues(alpha: alpha));
       }
     }
     // Stehende Ziele
     for (final bank in t.targetBanks) {
-      if (th.art == 'city') {
-        _cityTargetBank(canvas, bank);
-        continue;
-      }
       for (final d in bank.targets) {
         final c = d.lit ? th.light : th.light.withValues(alpha: 0.35);
-        _bar(
-          canvas,
-          d.c,
-          bank.spec.angle,
-          bank.spec.length,
-          0.14,
-          Color.lerp(c, Colors.white, d.flash)!,
-        );
+        _bar(canvas, d.c, bank.spec.angle, bank.spec.length, 0.14, Color.lerp(c, Colors.white, d.flash)!);
       }
     }
 
@@ -431,25 +265,8 @@ class TablePainter extends CustomPainter {
       final c = Offset(b.x, b.y);
       final r = b.spec.radius;
       final pulse = idle ? 0.5 + 0.5 * math.sin(now * 2 + b.x) : b.glow;
-      if (th.art == 'city') {
-        _cityBumper(canvas, c, r, th, pulse, b.glow);
-        continue;
-      }
-      canvas.drawCircle(
-        c,
-        r + 0.12 * pulse,
-        Paint()
-          ..color = Color.lerp(
-            th.bumper.withValues(alpha: 0.35),
-            th.bumper.withValues(alpha: 0.85),
-            pulse,
-          )!,
-      );
-      canvas.drawCircle(
-        c,
-        r * 0.84,
-        Paint()..color = Color.lerp(th.bottom, Colors.black, 0.3)!,
-      );
+      canvas.drawCircle(c, r + 0.12 * pulse, Paint()..color = Color.lerp(th.bumper.withValues(alpha: 0.35), th.bumper.withValues(alpha: 0.85), pulse)!);
+      canvas.drawCircle(c, r * 0.84, Paint()..color = Color.lerp(th.bottom, Colors.black, 0.3)!);
       canvas.drawCircle(
         c,
         r * 0.84,
@@ -458,11 +275,7 @@ class TablePainter extends CustomPainter {
           ..strokeWidth = 0.08
           ..color = th.bumper,
       );
-      canvas.drawCircle(
-        c,
-        r * 0.32,
-        Paint()..color = Color.lerp(th.bumper, Colors.white, b.glow)!,
-      );
+      canvas.drawCircle(c, r * 0.32, Paint()..color = Color.lerp(th.bumper, Colors.white, b.glow)!);
     }
     // Schleudern
     for (final sl in t.slings) {
@@ -471,68 +284,33 @@ class TablePainter extends CustomPainter {
         ..lineTo(sl.b.x, sl.b.y)
         ..lineTo(sl.c.x, sl.c.y)
         ..close();
-      if (th.art == 'city') {
-        _citySling(canvas, p, sl, th);
-      } else {
-        canvas.drawPath(
-          p,
-          Paint()
-            ..color = Color.lerp(
-              th.sling.withValues(alpha: 0.35),
-              th.sling.withValues(alpha: 0.85),
-              sl.glow,
-            )!,
-        );
-      }
+      canvas.drawPath(p, Paint()..color = Color.lerp(th.sling.withValues(alpha: 0.35), th.sling.withValues(alpha: 0.85), sl.glow)!);
     }
     for (final f in t.flippers) {
       _flipper(canvas, f, th);
     }
     // Feder in der Bahn
     final springTop = 17.7 + 0.5 * t.charge;
-    if (th.art == 'city') {
-      _cityPlunger(canvas, 12.4566 + .14 * t.charge, t.charge, th);
-    } else {
-      canvas.drawRect(
-        Rect.fromLTRB(9.35, springTop, 9.85, 18.0),
-        Paint()
-          ..color = Color.lerp(const Color(0xFF8A8A9A), th.accent, t.charge)!,
-      );
-    }
+    canvas.drawRect(
+      Rect.fromLTRB(9.35, springTop, 9.85, 18.0),
+      Paint()..color = Color.lerp(const Color(0xFF8A8A9A), th.accent, t.charge)!,
+    );
 
     // Kugeln auf dem Tisch
     for (final b in t.balls) {
-      if (b.raised || (th.art == 'city' && b.saucer != null)) continue;
+      if (b.raised) continue;
       final p = b.pos;
-      _ball(
-        canvas,
-        Offset(p.x, p.y),
-        PinballTable.ballRadius * (b.saucer != null ? 0.85 : 1),
-      );
+      _ball(canvas, Offset(p.x, p.y), PinballTable.ballRadius * (b.saucer != null ? 0.85 : 1));
     }
-    // Räumliche Rampen: Fahrbahn, Kugeln und Seitenwände werden nach Höhe sortiert.
-    if (th.art == 'city') {
-      _cityDrawRampLevels(
-        canvas,
-        t,
-        now,
-        (position, radius) => _ball(canvas, position, radius),
-      );
-    } else {
-      // Rampen über dem Tisch
-      for (final r in t.ramps) {
-        _ramp(canvas, r, th, now);
-      }
-      for (final b in t.balls) {
-        if (!b.raised) continue;
-        final p = b.pos;
-        canvas.drawCircle(
-          Offset(p.x + 0.12, p.y + 0.18),
-          PinballTable.ballRadius * 1.1,
-          Paint()..color = Colors.black38,
-        );
-        _ball(canvas, Offset(p.x, p.y), PinballTable.ballRadius * 1.15);
-      }
+    // Rampen über dem Tisch
+    for (final r in t.ramps) {
+      _ramp(canvas, r, th, now);
+    }
+    for (final b in t.balls) {
+      if (!b.raised) continue;
+      final p = b.pos;
+      canvas.drawCircle(Offset(p.x + 0.12, p.y + 0.18), PinballTable.ballRadius * 1.1, Paint()..color = Colors.black38);
+      _ball(canvas, Offset(p.x, p.y), PinballTable.ballRadius * 1.15);
     }
     for (final sp in sparks()) {
       canvas.drawCircle(
@@ -568,22 +346,12 @@ class TablePainter extends CustomPainter {
     );
   }
 
-  void _bar(
-    Canvas canvas,
-    Pt c,
-    double angle,
-    double length,
-    double thick,
-    Color color,
-  ) {
+  void _bar(Canvas canvas, Pt c, double angle, double length, double thick, Color color) {
     canvas.save();
     canvas.translate(c.x, c.y);
     canvas.rotate(angle);
     canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset.zero, width: length, height: thick),
-        const Radius.circular(0.04),
-      ),
+      RRect.fromRectAndRadius(Rect.fromCenter(center: Offset.zero, width: length, height: thick), const Radius.circular(0.04)),
       Paint()..color = color,
     );
     canvas.restore();
@@ -602,11 +370,7 @@ class TablePainter extends CustomPainter {
         ..strokeWidth = 0.62
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round
-        ..color = Color.lerp(
-          th.ramp.withValues(alpha: 0.16),
-          th.ramp.withValues(alpha: 0.45),
-          r.flash,
-        )!,
+        ..color = Color.lerp(th.ramp.withValues(alpha: 0.16), th.ramp.withValues(alpha: 0.45), r.flash)!,
     );
     // Schienen links und rechts
     for (final side in [-1.0, 1.0]) {
@@ -640,69 +404,24 @@ class TablePainter extends CustomPainter {
   }
 
   /// Pfeile zu Rampen und Löchern; sie blinken, wenn die Mission sie verlangt.
-  void _inserts(
-    Canvas canvas,
-    PinballTable t,
-    TableTheme th,
-    double now,
-    bool idle,
-  ) {
+  void _inserts(Canvas canvas, PinballTable t, TableTheme th, double now, bool idle) {
     final m = t.mission;
     final blink = (now * 3).floor().isEven;
     for (final r in t.ramps) {
-      final wanted =
-          m != null &&
-              ((m.kind == MissionKind.ramp && m.id == r.spec.id) ||
-                  m.kind == MissionKind.anyRamp) ||
+      final wanted = m != null &&
+          ((m.kind == MissionKind.ramp && m.id == r.spec.id) || m.kind == MissionKind.anyRamp) ||
           t.multiball;
-      final c = Offset(
-        (r.spec.a.x + r.spec.b.x) / 2,
-        r.spec.a.y + (th.art == 'city' ? 2.3 : 1.7),
-      );
-      final color = (wanted && blink) || (idle && blink)
-          ? th.light
-          : th.light.withValues(alpha: 0.25);
-      if (th.art == 'city') {
-        final left = r.spec.id == 'links';
-        for (var i = 0; i < 3; i++) {
-          final at = Offset(
-            left ? 3.00 + i * .35 : 6.25 - i * .35,
-            5.967 + i * .468,
-          );
-          _arrow(
-            canvas,
-            at,
-            left ? -.65 * math.pi : -.35 * math.pi,
-            color,
-            size: .23,
-          );
-        }
-      } else {
-        _arrow(canvas, c, -math.pi / 2, color);
-      }
+      final c = Offset((r.spec.a.x + r.spec.b.x) / 2, r.spec.a.y + 1.7);
+      _arrow(canvas, c, -math.pi / 2, (wanted && blink) || (idle && blink) ? th.light : th.light.withValues(alpha: 0.25));
     }
     for (final sc in t.saucers) {
-      final wanted =
-          m != null &&
-          (m.kind == MissionKind.saucer || m.kind == MissionKind.lock);
-      final c = Offset(sc.spec.x, sc.spec.y + (th.art == 'city' ? .50 : 1.0));
-      _arrow(
-        canvas,
-        c,
-        -math.pi / 2,
-        wanted && blink ? th.accent : th.accent.withValues(alpha: 0.2),
-        size: 0.28,
-      );
+      final wanted = m != null && (m.kind == MissionKind.saucer || m.kind == MissionKind.lock);
+      final c = Offset(sc.spec.x, sc.spec.y + 1.0);
+      _arrow(canvas, c, -math.pi / 2, wanted && blink ? th.accent : th.accent.withValues(alpha: 0.2), size: 0.28);
     }
   }
 
-  void _arrow(
-    Canvas canvas,
-    Offset c,
-    double angle,
-    Color color, {
-    double size = 0.34,
-  }) {
+  void _arrow(Canvas canvas, Offset c, double angle, Color color, {double size = 0.34}) {
     canvas.save();
     canvas.translate(c.dx, c.dy);
     canvas.rotate(angle + math.pi / 2);
@@ -717,10 +436,6 @@ class TablePainter extends CustomPainter {
   }
 
   void _flipper(Canvas canvas, Flipper f, TableTheme th) {
-    if (th.art == 'city') {
-      _cityFlipper(canvas, f);
-      return;
-    }
     canvas.save();
     canvas.translate(f.spec.pivot.x, f.spec.pivot.y);
     canvas.rotate(f.angle);
@@ -739,11 +454,7 @@ class TablePainter extends CustomPainter {
         ..strokeWidth = 0.04
         ..color = Colors.black54,
     );
-    canvas.drawCircle(
-      Offset.zero,
-      0.2,
-      Paint()..color = Color.lerp(th.flipper, Colors.white, 0.5)!,
-    );
+    canvas.drawCircle(Offset.zero, 0.2, Paint()..color = Color.lerp(th.flipper, Colors.white, 0.5)!);
     canvas.restore();
   }
 
@@ -751,24 +462,9 @@ class TablePainter extends CustomPainter {
   bool shouldRepaint(covariant TablePainter old) => true;
 }
 
-void _text(
-  Canvas canvas,
-  String text,
-  Offset c,
-  double size,
-  Color color, {
-  FontWeight weight = FontWeight.w700,
-}) {
+void _text(Canvas canvas, String text, Offset c, double size, Color color, {FontWeight weight = FontWeight.w700}) {
   final tp = TextPainter(
-    text: TextSpan(
-      text: text,
-      style: TextStyle(
-        color: color,
-        fontSize: size,
-        fontWeight: weight,
-        letterSpacing: size * 0.1,
-      ),
-    ),
+    text: TextSpan(text: text, style: TextStyle(color: color, fontSize: size, fontWeight: weight, letterSpacing: size * 0.1)),
     textDirection: TextDirection.ltr,
   )..layout();
   tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
@@ -803,12 +499,8 @@ void _neon(Canvas canvas, TableTheme th, double now) {
     const Offset(4.6, 10.6),
     2.4,
     Paint()
-      ..shader =
-          RadialGradient(
-            colors: [th.accent.withValues(alpha: 0.22), Colors.transparent],
-          ).createShader(
-            Rect.fromCircle(center: const Offset(4.6, 10.6), radius: 2.4),
-          ),
+      ..shader = RadialGradient(colors: [th.accent.withValues(alpha: 0.22), Colors.transparent])
+          .createShader(Rect.fromCircle(center: const Offset(4.6, 10.6), radius: 2.4)),
   );
 }
 
@@ -818,23 +510,15 @@ void _space(Canvas canvas, TableTheme th, double now) {
     final x = rng.nextDouble() * 9.95;
     final y = rng.nextDouble() * 18;
     final tw = 0.5 + 0.5 * math.sin(now * (1 + rng.nextDouble() * 3) + i);
-    canvas.drawCircle(
-      Offset(x, y),
-      0.02 + rng.nextDouble() * 0.035,
-      Paint()..color = Colors.white.withValues(alpha: 0.3 + 0.6 * tw),
-    );
+    canvas.drawCircle(Offset(x, y), 0.02 + rng.nextDouble() * 0.035, Paint()..color = Colors.white.withValues(alpha: 0.3 + 0.6 * tw));
   }
   // Nebel
   canvas.drawCircle(
     const Offset(3.2, 7.5),
     3.5,
     Paint()
-      ..shader =
-          RadialGradient(
-            colors: [th.sling.withValues(alpha: 0.18), Colors.transparent],
-          ).createShader(
-            Rect.fromCircle(center: const Offset(3.2, 7.5), radius: 3.5),
-          ),
+      ..shader = RadialGradient(colors: [th.sling.withValues(alpha: 0.18), Colors.transparent])
+          .createShader(Rect.fromCircle(center: const Offset(3.2, 7.5), radius: 3.5)),
   );
   // Planet mit Ring
   const pc = Offset(5.9, 10.9);
@@ -842,10 +526,8 @@ void _space(Canvas canvas, TableTheme th, double now) {
     pc,
     1.0,
     Paint()
-      ..shader = RadialGradient(
-        center: const Alignment(-0.4, -0.4),
-        colors: [th.accent, const Color(0xFF7A3B10)],
-      ).createShader(Rect.fromCircle(center: pc, radius: 1.0)),
+      ..shader = RadialGradient(center: const Alignment(-0.4, -0.4), colors: [th.accent, const Color(0xFF7A3B10)])
+          .createShader(Rect.fromCircle(center: pc, radius: 1.0)),
   );
   canvas.save();
   canvas.translate(pc.dx, pc.dy);
@@ -882,24 +564,15 @@ void _pirate(Canvas canvas, TableTheme th, double now) {
     canvas.drawPath(p, wave);
   }
   // Insel und Kompass
-  canvas.drawOval(
-    Rect.fromCenter(center: const Offset(4.6, 11.0), width: 3.6, height: 1.6),
-    Paint()..color = const Color(0x55E8C98A),
-  );
+  canvas.drawOval(Rect.fromCenter(center: const Offset(4.6, 11.0), width: 3.6, height: 1.6), Paint()..color = const Color(0x55E8C98A));
   const c = Offset(4.6, 11.0);
   final rose = Paint()..color = th.wall.withValues(alpha: 0.5);
   for (var k = 0; k < 4; k++) {
     final a = k * math.pi / 2 + now * 0.2;
     final p = Path()
       ..moveTo(c.dx + math.cos(a) * 0.75, c.dy + math.sin(a) * 0.75)
-      ..lineTo(
-        c.dx + math.cos(a + 0.35) * 0.18,
-        c.dy + math.sin(a + 0.35) * 0.18,
-      )
-      ..lineTo(
-        c.dx + math.cos(a - 0.35) * 0.18,
-        c.dy + math.sin(a - 0.35) * 0.18,
-      )
+      ..lineTo(c.dx + math.cos(a + 0.35) * 0.18, c.dy + math.sin(a + 0.35) * 0.18)
+      ..lineTo(c.dx + math.cos(a - 0.35) * 0.18, c.dy + math.sin(a - 0.35) * 0.18)
       ..close();
     canvas.drawPath(p, rose);
   }
@@ -912,14 +585,7 @@ void _pirate(Canvas canvas, TableTheme th, double now) {
     final a = Offset(1.6 + t * 2.4, 9.2 + math.sin(t * 5) * 0.4);
     canvas.drawLine(a, a + const Offset(0.15, 0.05), dash);
   }
-  _text(
-    canvas,
-    'X',
-    const Offset(4.15, 9.6),
-    0.5,
-    th.bumper.withValues(alpha: 0.7),
-    weight: FontWeight.w900,
-  );
+  _text(canvas, 'X', const Offset(4.15, 9.6), 0.5, th.bumper.withValues(alpha: 0.7), weight: FontWeight.w900);
 }
 
 void _haunted(Canvas canvas, TableTheme th, double now) {
@@ -929,16 +595,11 @@ void _haunted(Canvas canvas, TableTheme th, double now) {
     moon,
     1.6,
     Paint()
-      ..shader = RadialGradient(
-        colors: [const Color(0x55FFF4C2), Colors.transparent],
-      ).createShader(Rect.fromCircle(center: moon, radius: 1.6)),
+      ..shader = RadialGradient(colors: [const Color(0x55FFF4C2), Colors.transparent])
+          .createShader(Rect.fromCircle(center: moon, radius: 1.6)),
   );
   canvas.drawCircle(moon, 0.85, Paint()..color = const Color(0xCCEFE6C2));
-  canvas.drawCircle(
-    moon + const Offset(0.3, -0.15),
-    0.8,
-    Paint()..color = th.mid.withValues(alpha: 0.6),
-  );
+  canvas.drawCircle(moon + const Offset(0.3, -0.15), 0.8, Paint()..color = th.mid.withValues(alpha: 0.6));
   // Schloss
   final castle = Path()
     ..moveTo(1.4, 12.4)
@@ -958,16 +619,9 @@ void _haunted(Canvas canvas, TableTheme th, double now) {
     ..lineTo(5.8, 12.4)
     ..close();
   canvas.drawPath(castle, Paint()..color = const Color(0xAA0A0610));
-  for (final w in const [
-    Offset(1.9, 10.8),
-    Offset(3.7, 10.2),
-    Offset(5.4, 10.9),
-  ]) {
+  for (final w in const [Offset(1.9, 10.8), Offset(3.7, 10.2), Offset(5.4, 10.9)]) {
     final on = (now * 0.8 + w.dx).floor().isEven;
-    canvas.drawRect(
-      Rect.fromCenter(center: w, width: 0.18, height: 0.28),
-      Paint()..color = (on ? th.accent : th.light).withValues(alpha: 0.7),
-    );
+    canvas.drawRect(Rect.fromCenter(center: w, width: 0.18, height: 0.28), Paint()..color = (on ? th.accent : th.light).withValues(alpha: 0.7));
   }
   // Fledermäuse
   final bat = Paint()
@@ -999,10 +653,7 @@ void _racing(Canvas canvas, TableTheme th, double now) {
   for (var i = 0; i < 27; i++) {
     for (var j = 0; j < 2; j++) {
       if ((i + j).isEven) {
-        canvas.drawRect(
-          Rect.fromLTWH(i * sq, 10.9 + j * sq, sq, sq),
-          Paint()..color = Colors.white.withValues(alpha: 0.16),
-        );
+        canvas.drawRect(Rect.fromLTWH(i * sq, 10.9 + j * sq, sq, sq), Paint()..color = Colors.white.withValues(alpha: 0.16));
       }
     }
   }
@@ -1010,12 +661,47 @@ void _racing(Canvas canvas, TableTheme th, double now) {
   for (var i = 0; i < 18; i++) {
     canvas.drawRect(
       Rect.fromLTWH(0, i * 1.0, 0.18, 0.5),
-      Paint()
-        ..color = (i.isEven ? th.bumper : Colors.white).withValues(alpha: 0.3),
+      Paint()..color = (i.isEven ? th.bumper : Colors.white).withValues(alpha: 0.3),
     );
   }
 }
 
 void _city(Canvas canvas, TableTheme th, double now) {
-  _paintNeonstadt(canvas, th, now);
+  // Leiterbahnen
+  final trace = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 0.035;
+  final rng = math.Random(3);
+  for (var i = 0; i < 14; i++) {
+    final x = 0.5 + rng.nextDouble() * 8.3;
+    final y = 1 + rng.nextDouble() * 9;
+    final p = Path()
+      ..moveTo(x, y)
+      ..lineTo(x, y + 0.8 + rng.nextDouble())
+      ..lineTo(x + (rng.nextBool() ? 0.6 : -0.6), y + 1.6 + rng.nextDouble());
+    trace.color = (i.isEven ? th.ramp : th.accent).withValues(alpha: 0.18);
+    canvas.drawPath(p, trace);
+  }
+  // Holo-Turm in der Mitte
+  final tower = Rect.fromCenter(center: const Offset(4.65, 3.6), width: 0.8, height: 1.4);
+  canvas.drawRect(tower, Paint()..color = th.ramp.withValues(alpha: 0.12 + 0.08 * math.sin(now * 3)));
+  // Skyline
+  final r2 = math.Random(11);
+  var x = 0.3;
+  while (x < 9.0) {
+    final w = 0.45 + r2.nextDouble() * 0.6;
+    final h = 0.8 + r2.nextDouble() * 1.8;
+    final rect = Rect.fromLTWH(x, 12.4 - h, w, h);
+    canvas.drawRect(rect, Paint()..color = const Color(0xCC05080F));
+    for (var wy = rect.top + 0.15; wy < rect.bottom - 0.1; wy += 0.25) {
+      for (var wx = rect.left + 0.08; wx < rect.right - 0.08; wx += 0.18) {
+        if (r2.nextDouble() < 0.35) {
+          final c = r2.nextBool() ? th.accent : th.ramp;
+          final flick = (now * 0.5 + wx * 3 + wy).floor() % 7 == 0 ? 0.15 : 0.5;
+          canvas.drawRect(Rect.fromLTWH(wx, wy, 0.07, 0.09), Paint()..color = c.withValues(alpha: flick));
+        }
+      }
+    }
+    x += w + 0.08;
+  }
 }

@@ -23,12 +23,7 @@ void main() {
           for (var i = 0; i < 30; i++) {
             t.step(1 / 120);
           }
-          t.debugPlaceBall(
-            2.5 + rng.nextDouble() * 4,
-            0.6 + rng.nextDouble() * 0.6,
-            (rng.nextDouble() - 0.5) * 6,
-            0,
-          );
+          t.debugPlaceBall(2.5 + rng.nextDouble() * 4, 0.6 + rng.nextDouble() * 0.6, (rng.nextDouble() - 0.5) * 6, 0);
         }
         final mode = trial % 3;
         var hold = 0.0;
@@ -37,11 +32,7 @@ void main() {
         for (var i = 0; i < 120 * 12 && !t.gameOver; i++) {
           final p = t.ball;
           if (p == null) break;
-          if (mode != 0 &&
-              p.y > spec.flippers.first.pivot.y - 1.1 &&
-              p.x > 2.2 &&
-              p.x < 7.0 &&
-              hold <= 0) {
+          if (mode != 0 && p.y > 14.2 && p.x > 2.2 && p.x < 7.0 && hold <= 0) {
             hold = mode == 1 ? 0.14 : 0.3;
             left = p.x < 4.6;
           }
@@ -58,36 +49,25 @@ void main() {
           if (t.ballInLane) break;
           for (final b in t.balls) {
             final q = b.pos;
-            if (b.body != null &&
-                (q.x < -0.1 || q.x > PinballTable.width + 0.1 || q.y < -0.1)) {
-              escaped.add(
-                'Versuch $trial: (${q.x.toStringAsFixed(2)}, ${q.y.toStringAsFixed(2)})',
-              );
+            if (b.body != null && (q.x < -0.1 || q.x > PinballTable.width + 0.1 || q.y < -0.1)) {
+              escaped.add('Versuch $trial: (${q.x.toStringAsFixed(2)}, ${q.y.toStringAsFixed(2)})');
             }
           }
           final first = t.balls.isEmpty ? null : t.balls.first;
           final body = first?.body;
-          if (body != null &&
-              t.ballSpeed < 0.25 &&
-              !t.leftPressed &&
-              !t.rightPressed &&
-              body.position.x < PinballTable.fieldRight) {
+          if (body != null && t.ballSpeed < 0.25 && !t.leftPressed && !t.rightPressed && body.position.x < PinballTable.fieldRight) {
             slow += 1 / 120;
           } else {
             slow = 0;
           }
           if (slow > 1.5) {
-            stuck.add(
-              'Versuch $trial Modus $mode: (${p.x.toStringAsFixed(2)}, ${p.y.toStringAsFixed(2)})',
-            );
+            stuck.add('Versuch $trial Modus $mode: (${p.x.toStringAsFixed(2)}, ${p.y.toStringAsFixed(2)})');
             break;
           }
         }
       }
       // ignore: avoid_print
-      print(
-        '${spec.name}: Rampen $ramps, Löcher $saucers, Spinner $spinners, hängen ${stuck.length}, raus ${escaped.length}',
-      );
+      print('${spec.name}: Rampen $ramps, Löcher $saucers, Spinner $spinners, hängen ${stuck.length}, raus ${escaped.length}');
       // ignore: avoid_print
       for (final s in [...stuck.take(15), ...escaped.take(10)]) print(s);
       expect(escaped, isEmpty, reason: '${escaped.length} Kugeln außerhalb');

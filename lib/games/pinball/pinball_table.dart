@@ -38,13 +38,7 @@ enum PinballEventKind {
 }
 
 class PinballEvent {
-  const PinballEvent(
-    this.kind, [
-    this.points = 0,
-    this.x = 0,
-    this.y = 0,
-    this.text = '',
-  ]);
+  const PinballEvent(this.kind, [this.points = 0, this.x = 0, this.y = 0, this.text = '']);
   final PinballEventKind kind;
   final int points;
 
@@ -135,7 +129,6 @@ class Saucer {
 
 class Ramp {
   Ramp(this.spec) {
-    assert(spec.heights.isEmpty || spec.heights.length == spec.path.length);
     for (var i = 1; i < spec.path.length; i++) {
       final a = spec.path[i - 1];
       final b = spec.path[i];
@@ -143,29 +136,6 @@ class Ramp {
     }
   }
   final RampSpec spec;
-
-  /// Höheninterpolation am selben Längenparameter wie die Kugelfahrt.
-  double heightAt(double distance) {
-    if (spec.heights.isEmpty) return 0;
-    if (distance <= 0) return spec.heights.first;
-    if (distance >= length) return spec.heights.last;
-    var left = distance;
-    for (var i = 1; i < spec.path.length; i++) {
-      final a = spec.path[i - 1];
-      final b = spec.path[i];
-      final segment = sqrt(
-        (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y),
-      );
-      if (left <= segment || i == spec.path.length - 1) {
-        final t = segment == 0 ? 0.0 : (left / segment).clamp(0.0, 1.0);
-        return spec.heights[i - 1] +
-            (spec.heights[i] - spec.heights[i - 1]) * t;
-      }
-      left -= segment;
-    }
-    return spec.heights.last;
-  }
-
   double length = 0;
   double flash = 0;
 
@@ -213,13 +183,12 @@ class Ball {
 
   /// Auf einer Rampe liegt die Kugel über dem Tisch.
   bool get raised => ramp != null;
-  double get elevation => ramp?.heightAt(rampPos) ?? 0;
 }
 
 class PinballTable {
   PinballTable({Random? rng, TableSpec? spec})
-    : _rng = rng ?? Random.secure(),
-      spec = spec ?? neonNightTable {
+      : _rng = rng ?? Random.secure(),
+        spec = spec ?? neonNightTable {
     _build();
   }
 
@@ -287,9 +256,7 @@ class PinballTable {
   int missionIndex = 0;
   int missionProgress = 0;
   int missionLevel = 0;
-  MissionSpec? get mission => spec.missions.isEmpty
-      ? null
-      : spec.missions[missionIndex % spec.missions.length];
+  MissionSpec? get mission => spec.missions.isEmpty ? null : spec.missions[missionIndex % spec.missions.length];
 
   bool get ballSaveActive => _saveLeft > 0;
 
@@ -306,49 +273,27 @@ class PinballTable {
   void _wall(List<Pt> pts, {double bounce = 0.35, bool visible = true}) {
     walls.add(WallSpec(pts, bounce: bounce, visible: visible));
     for (var i = 0; i + 1 < pts.length; i++) {
-      final shape = EdgeShape()
-        ..set(Vector2(pts[i].x, pts[i].y), Vector2(pts[i + 1].x, pts[i + 1].y));
-      _ground.createFixture(
-        FixtureDef(shape, friction: 0.1, restitution: bounce),
-      );
+      final shape = EdgeShape()..set(Vector2(pts[i].x, pts[i].y), Vector2(pts[i + 1].x, pts[i + 1].y));
+      _ground.createFixture(FixtureDef(shape, friction: 0.1, restitution: bounce));
     }
   }
 
   Fixture _segment(Pt c, double angle, double length, {double bounce = 0.3}) {
     final dx = cos(angle) * length / 2;
     final dy = sin(angle) * length / 2;
-    final shape = EdgeShape()
-      ..set(Vector2(c.x - dx, c.y - dy), Vector2(c.x + dx, c.y + dy));
-    return _ground.createFixture(
-      FixtureDef(shape, friction: 0.1, restitution: bounce),
-    );
+    final shape = EdgeShape()..set(Vector2(c.x - dx, c.y - dy), Vector2(c.x + dx, c.y + dy));
+    return _ground.createFixture(FixtureDef(shape, friction: 0.1, restitution: bounce));
   }
-
-  double get _shooterFloor => spec.id == 'city' ? 12.402 : 17.70;
-  double get playfieldHeight => spec.playfieldHeight;
-  List<Pt> get gatePoints => spec.id == 'city'
-      ? const [Pt(fieldRight, 1.482), Pt(fieldRight, 3.588)]
-      : gate;
-  double get _laneThreshold => spec.id == 'city' ? 11.7 : 15;
 
   void _build() {
     _ground = _world.createBody(BodyDef());
 
     // Abschussbahn mit Feder, gleich bei allen Tischen
-    _wall([
-      Pt(fieldRight, playfieldHeight + .2),
-      Pt(fieldRight, spec.id == 'city' ? 3.588 : 4.6),
-    ]);
-    _wall([Pt(fieldRight, _shooterFloor), Pt(width, _shooterFloor)], bounce: 0);
+    _wall(const [Pt(fieldRight, 18.2), Pt(fieldRight, 4.6)]);
+    _wall(const [Pt(fieldRight, 17.7), Pt(width, 17.7)], bounce: 0);
 
     for (final w in spec.walls) {
       _wall(w.points, bounce: w.bounce, visible: w.visible);
-    }
-    for (final support in spec.supports) {
-      final shape = CircleShape()
-        ..radius = support.radius
-        ..position.setValues(support.x, support.y);
-      _ground.createFixture(FixtureDef(shape, friction: 0.1, restitution: 0.3));
     }
     for (final b in spec.bumpers) {
       bumpers.add(Bumper(b));
@@ -422,49 +367,30 @@ class PinballTable {
 
   Body _flipperBody(FlipperSpec f) {
     final body = _world.createBody(
-      BodyDef(
-        type: BodyType.dynamic,
-        position: Vector2(f.pivot.x, f.pivot.y),
-        bullet: true,
-      ),
+      BodyDef(type: BodyType.dynamic, position: Vector2(f.pivot.x, f.pivot.y), bullet: true),
     );
     final l = f.length * f.dir;
     final shape = PolygonShape()
       ..set([
-        Vector2(0, -f.heelHalfWidth),
-        Vector2(l, -f.tipHalfWidth),
-        Vector2(l, f.tipHalfWidth),
-        Vector2(0, f.heelHalfWidth),
+        Vector2(0, -0.2),
+        Vector2(l, -0.07),
+        Vector2(l, 0.07),
+        Vector2(0, 0.2),
       ]);
-    body.createFixture(
-      FixtureDef(shape, density: 3, friction: 0.3, restitution: 0.1),
-    );
-    body.setTransform(
-      Vector2(f.pivot.x, f.pivot.y),
-      f.dir > 0 ? f.rest : -f.rest,
-    );
+    body.createFixture(FixtureDef(shape, density: 3, friction: 0.3, restitution: 0.1));
+    body.setTransform(Vector2(f.pivot.x, f.pivot.y), f.dir > 0 ? f.rest : -f.rest);
     return body;
   }
 
   Body _ballBody(double x, double y) {
-    final b = _world.createBody(
-      BodyDef(type: BodyType.dynamic, position: Vector2(x, y), bullet: true),
-    );
-    b.createFixture(
-      FixtureDef(
-        CircleShape()..radius = ballRadius,
-        density: 1,
-        friction: 0.08,
-        restitution: 0.3,
-      ),
-    );
+    final b = _world.createBody(BodyDef(type: BodyType.dynamic, position: Vector2(x, y), bullet: true));
+    b.createFixture(FixtureDef(CircleShape()..radius = ballRadius, density: 1, friction: 0.08, restitution: 0.3));
     return b;
   }
 
   /// Neue Kugel in der Abschussbahn.
   void _newBall() {
-    final ball = Ball()
-      ..body = _ballBody(9.6, _shooterFloor - ballRadius - 0.01);
+    final ball = Ball()..body = _ballBody(9.6, 17.7 - ballRadius - 0.01);
     balls.add(ball);
     _openGate();
     ballInLane = true;
@@ -482,10 +408,7 @@ class PinballTable {
   Ball? get _laneBall {
     for (final b in balls) {
       final body = b.body;
-      if (body != null &&
-          body.position.x > fieldRight &&
-          body.position.y > _laneThreshold)
-        return b;
+      if (body != null && body.position.x > fieldRight && body.position.y > 15) return b;
     }
     return null;
   }
@@ -525,13 +448,7 @@ class PinballTable {
     _first!.still = 0;
   }
 
-  void _add(
-    int points,
-    PinballEventKind kind, [
-    double x = 0,
-    double y = 0,
-    String text = '',
-  ]) {
+  void _add(int points, PinballEventKind kind, [double x = 0, double y = 0, String text = '']) {
     final p = points * multiplier;
     score += p;
     events.add(PinballEvent(kind, p, x, y, text));
@@ -542,20 +459,12 @@ class PinballTable {
   void _progress(MissionKind kind, String? id, [int amount = 1]) {
     final m = mission;
     if (m == null || gameOver) return;
-    final matches =
-        m.kind == kind ||
-        (m.kind == MissionKind.anyRamp && kind == MissionKind.ramp);
+    final matches = m.kind == kind || (m.kind == MissionKind.anyRamp && kind == MissionKind.ramp);
     if (!matches) return;
     if (m.id != null && m.kind != MissionKind.anyRamp && m.id != id) return;
     missionProgress += amount;
     if (missionProgress < m.count) return;
-    _add(
-      m.reward * (missionLevel + 1),
-      PinballEventKind.mission,
-      4.6,
-      9,
-      m.title,
-    );
+    _add(m.reward * (missionLevel + 1), PinballEventKind.mission, 4.6, 9, m.title);
     missionIndex++;
     missionProgress = 0;
     if (missionIndex % spec.missions.length == 0) {
@@ -572,9 +481,7 @@ class PinballTable {
     if (charging && ballInLane) charge = min(1, charge + dt * 1.1);
     for (final f in flippers) {
       final pressed = f.spec.left ? leftPressed : rightPressed;
-      f.joint.motorSpeed = f.spec.left
-          ? (pressed ? -22 : 14)
-          : (pressed ? 22 : -14);
+      f.joint.motorSpeed = f.spec.left ? (pressed ? -22 : 14) : (pressed ? 22 : -14);
     }
     // Gassenwechsel mit den Flippern wie am echten Automaten
     if (leftPressed && !_leftWas) _rotateLanes(-1);
@@ -602,17 +509,9 @@ class PinballTable {
       final x = b.position.x;
       final y = b.position.y;
 
-      if (!ballInLane &&
-          x > fieldRight &&
-          y > _shooterFloor - .9 &&
-          b.linearVelocity.length < 0.5 &&
-          ball == _laneBall) {
+      if (!ballInLane && x > fieldRight && y > 16.8 && b.linearVelocity.length < 0.5 && ball == _laneBall) {
         ballInLane = true;
-        if (gateClosed)
-          debugLog.warn(
-            'flipper',
-            'Kugel trotz Klappe wieder in der Abschussbahn',
-          );
+        if (gateClosed) debugLog.warn('flipper', 'Kugel trotz Klappe wieder in der Abschussbahn');
       }
 
       _hitBumpers(b, x, y);
@@ -625,15 +524,12 @@ class PinballTable {
       if (_catchSaucer(ball, b, x, y)) continue;
 
       // Festhängende Kugeln bekommen einen Schubs
-      final inLane = x > fieldRight && y > _laneThreshold;
+      final inLane = x > fieldRight && y > 15;
       if (!inLane && b.linearVelocity.length < 0.3) {
         ball.still += dt;
         if (ball.still > 3) {
           ball.still = 0;
-          debugLog.detail(
-            'flipper',
-            'Kugel steht bei (${x.toStringAsFixed(2)}, ${y.toStringAsFixed(2)}), Schubs',
-          );
+          debugLog.detail('flipper', 'Kugel steht bei (${x.toStringAsFixed(2)}, ${y.toStringAsFixed(2)}), Schubs');
           b.applyLinearImpulse(Vector2((_rng.nextDouble() - 0.5) * 0.3, -0.45));
           events.add(const PinballEvent(PinballEventKind.nudge));
         }
@@ -641,16 +537,8 @@ class PinballTable {
         ball.still = 0;
       }
 
-      if (y > playfieldHeight + 0.3 ||
-          x < -0.5 ||
-          x > width + 0.5 ||
-          !x.isFinite ||
-          !y.isFinite) {
-        if (y <= playfieldHeight + 0.3)
-          debugLog.warn(
-            'flipper',
-            'Kugel hat den Tisch verlassen bei ($x, $y)',
-          );
+      if (y > height + 0.3 || x < -0.5 || x > width + 0.5 || !x.isFinite || !y.isFinite) {
+        if (y <= height + 0.3) debugLog.warn('flipper', 'Kugel hat den Tisch verlassen bei ($x, $y)');
         _world.destroyBody(b);
         ball.body = null;
         balls.remove(ball);
@@ -689,12 +577,7 @@ class PinballTable {
         s._turns += s.speed * dt;
         while (s._turns >= 1) {
           s._turns -= 1;
-          _add(
-            s.spec.points,
-            PinballEventKind.spinner,
-            (s.spec.a.x + s.spec.b.x) / 2,
-            (s.spec.a.y + s.spec.b.y) / 2,
-          );
+          _add(s.spec.points, PinballEventKind.spinner, (s.spec.a.x + s.spec.b.x) / 2, (s.spec.a.y + s.spec.b.y) / 2);
           _progress(MissionKind.spinner, s.spec.id);
         }
         s.speed = max(0, s.speed - dt * (1.5 + s.speed * 0.6));
@@ -726,8 +609,7 @@ class PinballTable {
     }
     if (_toServe > 0 && _laneBall == null) {
       _toServe--;
-      final ball = Ball()
-        ..body = _ballBody(9.6, _shooterFloor - ballRadius - 0.01);
+      final ball = Ball()..body = _ballBody(9.6, 17.7 - ballRadius - 0.01);
       balls.add(ball);
       _openGate();
       _autoLaunch = 0.6;
@@ -739,26 +621,15 @@ class PinballTable {
       final body = b.body;
       return body == null || body.position.x < fieldRight - 0.6;
     });
-    if (_gate == null &&
-        inField &&
-        _toServe == 0 &&
-        _autoLaunch == null &&
-        balls.any((b) => b.body != null)) {
-      final shape = EdgeShape()
-        ..set(
-          Vector2(gatePoints[0].x, gatePoints[0].y),
-          Vector2(gatePoints[1].x, gatePoints[1].y),
-        );
-      _gate = _ground.createFixture(
-        FixtureDef(shape, friction: 0.1, restitution: 0.35),
-      );
+    if (_gate == null && inField && _toServe == 0 && _autoLaunch == null && balls.any((b) => b.body != null)) {
+      final shape = EdgeShape()..set(Vector2(gate[0].x, gate[0].y), Vector2(gate[1].x, gate[1].y));
+      _gate = _ground.createFixture(FixtureDef(shape, friction: 0.1, restitution: 0.35));
     }
   }
 
   void _lost() {
     if (balls.isNotEmpty) {
-      if (balls.length == 1 && _toServe == 0)
-        events.add(const PinballEvent(PinballEventKind.multiballEnd));
+      if (balls.length == 1 && _toServe == 0) events.add(const PinballEvent(PinballEventKind.multiballEnd));
       return;
     }
     _toServe = 0;
@@ -800,17 +671,12 @@ class PinballTable {
     for (final s in slings) {
       final ax = s.b.x - s.a.x;
       final ay = s.b.y - s.a.y;
-      final t = (((x - s.a.x) * ax + (y - s.a.y) * ay) / (ax * ax + ay * ay))
-          .clamp(0.0, 1.0);
+      final t = (((x - s.a.x) * ax + (y - s.a.y) * ay) / (ax * ax + ay * ay)).clamp(0.0, 1.0);
       final px = s.a.x + ax * t;
       final py = s.a.y + ay * t;
       final dist = sqrt((x - px) * (x - px) + (y - py) * (y - py));
       final toward = (x - px) * s.nx + (y - py) * s.ny > 0;
-      if (dist < ballRadius + 0.05 &&
-          toward &&
-          t > 0.1 &&
-          t < 0.9 &&
-          s.glow < 0.5) {
+      if (dist < ballRadius + 0.05 && toward && t > 0.1 && t < 0.9 && s.glow < 0.5) {
         b.linearVelocity = b.linearVelocity + Vector2(s.nx, s.ny) * 6;
         s.glow = 1;
         _add(10, PinballEventKind.sling, px, py);
@@ -831,8 +697,7 @@ class PinballTable {
   void _hitLanes(double x, double y) {
     for (final l in lanes) {
       if (l.cooldown > 0) continue;
-      if ((x - l.spec.x).abs() < l.spec.halfWidth &&
-          (y - l.spec.y).abs() < 0.35) {
+      if ((x - l.spec.x).abs() < l.spec.halfWidth && (y - l.spec.y).abs() < 0.35) {
         l.cooldown = 0.4;
         l.flash = 1;
         if (l.lit) {
@@ -847,13 +712,7 @@ class PinballTable {
             o.lit = false;
           }
           if (l.spec.group == 'top') multiplier = min(5, multiplier + 1);
-          _add(
-            1000,
-            PinballEventKind.laneBonus,
-            l.spec.x,
-            l.spec.y,
-            l.spec.group,
-          );
+          _add(1000, PinballEventKind.laneBonus, l.spec.x, l.spec.y, l.spec.group);
           _progress(MissionKind.lanes, l.spec.group);
         }
       }
@@ -869,10 +728,7 @@ class PinballTable {
     final by = c.y + dy;
     final vx = bx - ax;
     final vy = by - ay;
-    final t = (((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy)).clamp(
-      0.0,
-      1.0,
-    );
+    final t = (((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy)).clamp(0.0, 1.0);
     final px = ax + vx * t;
     final py = ay + vy * t;
     return sqrt((x - px) * (x - px) + (y - py) * (y - py));
@@ -882,8 +738,7 @@ class PinballTable {
     for (final bank in dropBanks) {
       for (final t in bank.targets) {
         if (t.down) continue;
-        if (_segDist(t.c, bank.spec.angle, bank.spec.length, x, y) <
-            ballRadius + 0.06) {
+        if (_segDist(t.c, bank.spec.angle, bank.spec.length, x, y) < ballRadius + 0.06) {
           t.down = true;
           final f = t.fixture;
           if (f != null) _ground.destroyFixture(f);
@@ -912,14 +767,7 @@ class PinballTable {
         final blocked = balls.any((b) {
           final body = b.body;
           return body != null &&
-              _segDist(
-                    t.c,
-                    bank.spec.angle,
-                    bank.spec.length,
-                    body.position.x,
-                    body.position.y,
-                  ) <
-                  ballRadius + 0.25;
+              _segDist(t.c, bank.spec.angle, bank.spec.length, body.position.x, body.position.y) < ballRadius + 0.25;
         });
         if (blocked) {
           waiting = true;
@@ -936,15 +784,7 @@ class PinballTable {
     for (final bank in targetBanks) {
       for (final t in bank.targets) {
         if (t.cooldown > 0) continue;
-        // Neonstadt-Zielbanken: nur die zum freien Spielfeld gerichtete Front
-        // zählt. Passive Gehäuserückseiten lösen keine Treffer aus.
-        if (spec.id == 'city' &&
-            (x - t.c.x) * -sin(bank.spec.angle) +
-                    (y - t.c.y) * cos(bank.spec.angle) <
-                0)
-          continue;
-        if (_segDist(t.c, bank.spec.angle, bank.spec.length, x, y) <
-            ballRadius + 0.07) {
+        if (_segDist(t.c, bank.spec.angle, bank.spec.length, x, y) < ballRadius + 0.07) {
           t.cooldown = 0.3;
           t.flash = 1;
           t.lit = true;
@@ -997,8 +837,7 @@ class PinballTable {
       ball.sides[r] = side;
       if (prev == null || prev * side >= 0) continue;
       final d = sqrt(r.spec.dx * r.spec.dx + r.spec.dy * r.spec.dy);
-      final along =
-          (b.linearVelocity.x * r.spec.dx + b.linearVelocity.y * r.spec.dy) / d;
+      final along = (b.linearVelocity.x * r.spec.dx + b.linearVelocity.y * r.spec.dy) / d;
       if (along < r.spec.minSpeed) continue;
       // Auf die Rampe: die Kugel verlässt die Physik und fährt die Bahn ab
       _world.destroyBody(b);
@@ -1018,8 +857,7 @@ class PinballTable {
     if (ball.rampPos < r.length) return;
     final end = r.spec.path.last;
     ball.ramp = null;
-    ball.body = _ballBody(end.x, end.y)
-      ..linearVelocity = Vector2(r.spec.vx, r.spec.vy);
+    ball.body = _ballBody(end.x, end.y)..linearVelocity = Vector2(r.spec.vx, r.spec.vy);
     ball.still = 0;
     _add(r.spec.points, PinballEventKind.ramp, end.x, end.y, r.spec.name);
     if (multiball) _add(spec.jackpot, PinballEventKind.jackpot, end.x, end.y);
@@ -1047,19 +885,9 @@ class PinballTable {
         if (locks >= spec.locksForMultiball) {
           locks = 0;
           _toServe = 2;
-          events.add(
-            PinballEvent(PinballEventKind.multiball, 0, s.spec.x, s.spec.y),
-          );
+          events.add(PinballEvent(PinballEventKind.multiball, 0, s.spec.x, s.spec.y));
         } else {
-          events.add(
-            PinballEvent(
-              PinballEventKind.lock,
-              0,
-              s.spec.x,
-              s.spec.y,
-              '$locks',
-            ),
-          );
+          events.add(PinballEvent(PinballEventKind.lock, 0, s.spec.x, s.spec.y, '$locks'));
         }
       }
       return true;
@@ -1077,8 +905,7 @@ class PinballTable {
       final ox = s.spec.ex / len * 0.15;
       final oy = s.spec.ey / len * 0.15;
       ball.saucer = null;
-      ball.body = _ballBody(s.spec.x + ox, s.spec.y + oy)
-        ..linearVelocity = Vector2(s.spec.ex, s.spec.ey);
+      ball.body = _ballBody(s.spec.x + ox, s.spec.y + oy)..linearVelocity = Vector2(s.spec.ex, s.spec.ey);
       ball.still = 0;
       s.held = null;
       s.cooldown = 0.8;

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -10,7 +9,6 @@ import '../../core/sfx.dart';
 import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
 import 'pinball_art.dart';
-import 'neonstadt_assets.dart';
 import 'pinball_table.dart';
 import 'pinball_tables.dart';
 
@@ -21,8 +19,7 @@ const pinballPointsPerCoin = 100;
 /// Höchstens so viele Münzen gibt ein einzelnes Spiel.
 const pinballMaxPayout = 400;
 
-int pinballPayout(int score) =>
-    math.min(pinballMaxPayout, score ~/ pinballPointsPerCoin);
+int pinballPayout(int score) => math.min(pinballMaxPayout, score ~/ pinballPointsPerCoin);
 
 class PinballScreen extends StatefulWidget {
   const PinballScreen({super.key, this.seed});
@@ -41,8 +38,7 @@ class _DmdMessage {
   final bool blink;
 }
 
-class _PinballScreenState extends State<PinballScreen>
-    with SingleTickerProviderStateMixin {
+class _PinballScreenState extends State<PinballScreen> with SingleTickerProviderStateMixin {
   PinballTable? _table;
   TableSpec _spec = neonNightTable;
   bool _choosing = false;
@@ -67,7 +63,6 @@ class _PinballScreenState extends State<PinballScreen>
   void initState() {
     super.initState();
     _ticker = createTicker(_onTick)..start();
-    unawaited(NeonstadtAssets.instance.load());
   }
 
   @override
@@ -98,9 +93,7 @@ class _PinballScreenState extends State<PinballScreen>
       _app.settings.pinballHigh = v;
       return;
     }
-    final data = Map<String, dynamic>.from(
-      _app.settings.loadGame('pinball') ?? {},
-    );
+    final data = Map<String, dynamic>.from(_app.settings.loadGame('pinball') ?? {});
     final high = Map<String, dynamic>.from((data['high'] as Map?) ?? {});
     high[t.id] = v;
     data['high'] = high;
@@ -108,9 +101,7 @@ class _PinballScreenState extends State<PinballScreen>
   }
 
   void _choose(TableSpec t) {
-    final data = Map<String, dynamic>.from(
-      _app.settings.loadGame('pinball') ?? {},
-    );
+    final data = Map<String, dynamic>.from(_app.settings.loadGame('pinball') ?? {});
     data['table'] = t.id;
     _app.settings.saveGame('pinball', data);
     setState(() {
@@ -125,15 +116,6 @@ class _PinballScreenState extends State<PinballScreen>
   }
 
   void _start() {
-    if (_spec.theme.art == 'city' && !NeonstadtAssets.instance.isReady) {
-      setState(
-        () => _message = NeonstadtAssets.instance.hasError
-            ? 'Grafiken konnten nicht geladen werden. Bitte erneut starten.'
-            : 'Neonstadt lädt die Grafiken. Gleich geht es los.',
-      );
-      unawaited(NeonstadtAssets.instance.retry());
-      return;
-    }
     if (_table != null && !_table!.gameOver) return;
     if (!_app.wallet.spend(pinballGameCost)) {
       _app.wallet.refillIfBroke();
@@ -141,10 +123,7 @@ class _PinballScreenState extends State<PinballScreen>
       return;
     }
     setState(() {
-      _table = PinballTable(
-        rng: widget.seed == null ? null : math.Random(widget.seed),
-        spec: _spec,
-      );
+      _table = PinballTable(rng: widget.seed == null ? null : math.Random(widget.seed), spec: _spec);
       _message = 'Leertaste oder Abschuss gedrückt halten und loslassen';
       _paid = 0;
       _dmd
@@ -194,12 +173,7 @@ class _PinballScreenState extends State<PinballScreen>
     }
   }
 
-  void _say(
-    String big, [
-    String small = '',
-    double seconds = 2.2,
-    bool blink = false,
-  ]) {
+  void _say(String big, [String small = '', double seconds = 2.2, bool blink = false]) {
     _dmd.add(_DmdMessage(big, small, seconds, blink: blink));
     if (_dmd.length > 4) _dmd.removeAt(0);
   }
@@ -219,8 +193,7 @@ class _PinballScreenState extends State<PinballScreen>
         case PinballEventKind.lane:
           _app.sfx.play(Sound.coin);
         case PinballEventKind.laneBonus:
-          text =
-              'Alle Gassen! +${formatCoins(e.points)}, Multiplikator ×${t.multiplier}';
+          text = 'Alle Gassen! +${formatCoins(e.points)}, Multiplikator ×${t.multiplier}';
           _say('GASSEN', '×${t.multiplier}');
           _app.sfx.play(Sound.win);
         case PinballEventKind.drop:
@@ -241,18 +214,10 @@ class _PinballScreenState extends State<PinballScreen>
           _app.sfx.play(Sound.chip);
           _burst(e.x, e.y, th.accent, 10);
         case PinballEventKind.lock:
-          _say(
-            'KUGEL GEFANGEN',
-            '${e.text} von ${_spec.locksForMultiball}',
-            2.2,
-            true,
-          );
+          _say('KUGEL GEFANGEN', '${e.text} von ${_spec.locksForMultiball}', 2.2, true);
           _app.sfx.play(Sound.win);
         case PinballEventKind.ramp:
-          _say(
-            e.text.isEmpty ? 'RAMPE' : e.text.toUpperCase(),
-            '+${formatCoins(e.points)}',
-          );
+          _say(e.text.isEmpty ? 'RAMPE' : e.text.toUpperCase(), '+${formatCoins(e.points)}');
           _app.sfx.play(Sound.coin);
           _burst(e.x, e.y, th.ramp, 12);
         case PinballEventKind.multiball:
@@ -304,15 +269,9 @@ class _PinballScreenState extends State<PinballScreen>
     final record = t.score > best;
     if (record) _setHigh(_spec, t.score);
     _app.sfx.play(_paid > pinballGameCost ? Sound.bigWin : Sound.coin);
-    _say(
-      record ? 'NEUER REKORD' : 'SPIEL VORBEI',
-      formatCoins(t.score),
-      6,
-      record,
-    );
+    _say(record ? 'NEUER REKORD' : 'SPIEL VORBEI', formatCoins(t.score), 6, record);
     setState(() {
-      _message =
-          'Spiel vorbei: ${formatCoins(t.score)} Punkte, +${formatCoins(_paid)} Münzen'
+      _message = 'Spiel vorbei: ${formatCoins(t.score)} Punkte, +${formatCoins(_paid)} Münzen'
           '${record ? '. Neuer Rekord!' : ''}';
     });
   }
@@ -407,11 +366,7 @@ class _PinballScreenState extends State<PinballScreen>
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color.lerp(th.top, Colors.black, 0.35)!,
-            Color.lerp(th.mid, Colors.black, 0.45)!,
-            Color.lerp(th.bottom, Colors.black, 0.3)!,
-          ],
+          colors: [Color.lerp(th.top, Colors.black, 0.35)!, Color.lerp(th.mid, Colors.black, 0.45)!, Color.lerp(th.bottom, Colors.black, 0.3)!],
         ),
       ),
       child: Focus(
@@ -420,9 +375,7 @@ class _PinballScreenState extends State<PinballScreen>
         onKeyEvent: _onKey,
         child: GestureDetector(
           onTap: () => _focus.requestFocus(),
-          child: _choosing
-              ? _chooser()
-              : LayoutBuilder(builder: (context, box) => _layout(box)),
+          child: _choosing ? _chooser() : LayoutBuilder(builder: (context, box) => _layout(box)),
         ),
       ),
     );
@@ -446,38 +399,22 @@ class _PinballScreenState extends State<PinballScreen>
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.35),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: t == _spec
-                          ? t.theme.accent
-                          : t.theme.wall.withValues(alpha: 0.5),
-                      width: 2,
-                    ),
+                    border: Border.all(color: t == _spec ? t.theme.accent : t.theme.wall.withValues(alpha: 0.5), width: 2),
                   ),
                   padding: const EdgeInsets.all(6),
                   child: Column(
                     children: [
                       Expanded(
                         child: AspectRatio(
-                          aspectRatio:
-                              PinballTable.width / TablePainter.viewHeight(t),
+                          aspectRatio: PinballTable.width / PinballTable.height,
                           child: CustomPaint(painter: TablePainter.preview(t)),
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        t.name,
-                        style: TextStyle(
-                          color: t.theme.accent,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+                      Text(t.name, style: TextStyle(color: t.theme.accent, fontSize: 16, fontWeight: FontWeight.w800)),
                       Text(
                         'Rekord ${formatCoins(_high(t))}',
-                        style: const TextStyle(
-                          color: Color(0xFFF6E7C8),
-                          fontSize: 12,
-                        ),
+                        style: const TextStyle(color: Color(0xFFF6E7C8), fontSize: 12),
                       ),
                     ],
                   ),
@@ -494,50 +431,28 @@ class _PinballScreenState extends State<PinballScreen>
     final sideW = wide ? math.min(320.0, box.maxWidth * 0.38) : 0.0;
     final view = LayoutBuilder(
       builder: (context, b) {
-        final scale = math.min(
-          (b.maxWidth - 10) / PinballTable.width,
-          (b.maxHeight - 6) / TablePainter.viewHeight(_spec),
-        );
+        final scale = math.min((b.maxWidth - 10) / PinballTable.width, (b.maxHeight - 6) / PinballTable.height);
         return Center(
           child: SizedBox(
             width: scale * PinballTable.width,
-            height: scale * TablePainter.viewHeight(_spec),
+            height: scale * PinballTable.height,
             child: RepaintBoundary(
               child: CustomPaint(
-                painter: TablePainter(
-                  () => _table,
-                  () => _spec,
-                  () => _time,
-                  () => _sparks,
-                  _frame,
-                ),
+                painter: TablePainter(() => _table, () => _spec, () => _time, () => _sparks, _frame),
               ),
             ),
           ),
         );
       },
     );
-    final dmd = _spec.theme.art == 'city'
-        ? const SizedBox.shrink()
-        : SizedBox(
-            height: wide ? 96 : 70,
-            child: RepaintBoundary(
-              child: CustomPaint(
-                painter: DmdPainter(
-                  _dmdState,
-                  _frame,
-                  industrial: _spec.theme.art == 'city',
-                ),
-                size: Size.infinite,
-              ),
-            ),
-          );
-    final idle = _table == null || _table!.gameOver;
-    final status = ResultBanner(
-      text: _message,
-      highlight: _paid > pinballGameCost,
-      maxLines: 2,
+    final dmd = SizedBox(
+      height: wide ? 96 : 70,
+      child: RepaintBoundary(
+        child: CustomPaint(painter: DmdPainter(_dmdState, _frame), size: Size.infinite),
+      ),
     );
+    final idle = _table == null || _table!.gameOver;
+    final status = ResultBanner(text: _message, highlight: _paid > pinballGameCost, maxLines: 2);
     final startButton = Wrap(
       alignment: WrapAlignment.center,
       spacing: 8,
@@ -545,24 +460,16 @@ class _PinballScreenState extends State<PinballScreen>
       children: [
         ActionButton(
           primary: true,
-          label: _table == null
-              ? 'Spiel starten (−$pinballGameCost)'
-              : 'Nochmal (−$pinballGameCost)',
+          label: _table == null ? 'Spiel starten (−$pinballGameCost)' : 'Nochmal (−$pinballGameCost)',
           onPressed: _start,
         ),
-        ActionButton(
-          label: 'Tisch wechseln',
-          onPressed: () => setState(() => _choosing = true),
-        ),
+        ActionButton(label: 'Tisch wechseln', onPressed: () => setState(() => _choosing = true)),
       ],
     );
     final keysHelp = Text(
       'Tastatur: Links A, Y oder Shift links, Rechts L, M oder Shift rechts, Abschuss Leertaste halten, Rütteln T',
       textAlign: TextAlign.center,
-      style: TextStyle(
-        color: const Color(0xFFF6E7C8).withValues(alpha: 0.7),
-        fontSize: 12,
-      ),
+      style: TextStyle(color: const Color(0xFFF6E7C8).withValues(alpha: 0.7), fontSize: 12),
     );
     if (wide) {
       return Row(
@@ -594,10 +501,7 @@ class _PinballScreenState extends State<PinballScreen>
       children: [
         Padding(padding: const EdgeInsets.fromLTRB(8, 4, 8, 2), child: dmd),
         Expanded(child: view),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: status,
-        ),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: status),
         SizedBox(
           height: 100,
           child: Padding(
@@ -614,13 +518,7 @@ class _PinballScreenState extends State<PinballScreen>
     final t = _table;
     if (_dmd.isNotEmpty) {
       final m = _dmd.first;
-      return DmdState(
-        m.big,
-        m.small,
-        _spec.theme.dmd,
-        blink: m.blink,
-        time: _time,
-      );
+      return DmdState(m.big, m.small, _spec.theme.dmd, blink: m.blink, time: _time);
     }
     if (t == null || t.gameOver) {
       final score = t?.score ?? _lastScore;
@@ -636,15 +534,9 @@ class _PinballScreenState extends State<PinballScreen>
     final status = t.multiball
         ? 'MULTIBALL · Rampen = Jackpot'
         : m == null
-        ? 'Kugel ${t.ballNumber}'
-        : '${m.title} ${t.missionProgress}/${m.count}';
-    return DmdState(
-      formatCoins(t.score),
-      status,
-      _spec.theme.dmd,
-      time: _time,
-      scroll: status.length > 26,
-    );
+            ? 'Kugel ${t.ballNumber}'
+            : '${m.title} ${t.missionProgress}/${m.count}';
+    return DmdState(formatCoins(t.score), status, _spec.theme.dmd, time: _time, scroll: status.length > 26);
   }
 
   Widget _missionCard() {
@@ -668,27 +560,16 @@ class _PinballScreenState extends State<PinballScreen>
                 t == null || t.gameOver
                     ? 'Missionen'
                     : 'Kugel ${t.ballNumber} · ×${t.multiplier}${t.locks > 0 ? ' · ${t.locks} gefangen' : ''}'
-                          '${t.ballSaveActive ? ' · Rettung' : ''}',
-                style: TextStyle(
-                  color: th.accent,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
+                        '${t.ballSaveActive ? ' · Rettung' : ''}',
+                style: TextStyle(color: th.accent, fontSize: 14, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
               for (var i = 0; i < _spec.missions.length; i++)
                 Text(
-                  '${i < idx % math.max(1, _spec.missions.length)
-                      ? '✓'
-                      : i == idx % _spec.missions.length && t != null && !t.gameOver
-                      ? '▶'
-                      : '·'} '
+                  '${i < idx % math.max(1, _spec.missions.length) ? '✓' : i == idx % _spec.missions.length && t != null && !t.gameOver ? '▶' : '·'} '
                   '${_spec.missions[i].title}',
                   style: TextStyle(
-                    color:
-                        i == idx % _spec.missions.length &&
-                            t != null &&
-                            !t.gameOver
+                    color: i == idx % _spec.missions.length && t != null && !t.gameOver
                         ? th.light
                         : const Color(0xFFF6E7C8).withValues(alpha: 0.75),
                     fontSize: 13,
@@ -701,12 +582,7 @@ class _PinballScreenState extends State<PinballScreen>
     );
   }
 
-  Widget _touchButton(
-    String label,
-    IconData icon,
-    void Function(bool) onChange, {
-    double flex = 1,
-  }) {
+  Widget _touchButton(String label, IconData icon, void Function(bool) onChange, {double flex = 1}) {
     final th = _spec.theme;
     return Expanded(
       flex: (flex * 10).round(),
@@ -726,14 +602,7 @@ class _PinballScreenState extends State<PinballScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(icon, color: Colors.white, size: 28),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -746,19 +615,9 @@ class _PinballScreenState extends State<PinballScreen>
     final row = Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _touchButton(
-          'Links',
-          Icons.arrow_back,
-          (d) => _flip(left: true, down: d),
-          flex: 1.5,
-        ),
+        _touchButton('Links', Icons.arrow_back, (d) => _flip(left: true, down: d), flex: 1.5),
         _touchButton('Abschuss', Icons.arrow_downward, _plunger),
-        _touchButton(
-          'Rechts',
-          Icons.arrow_forward,
-          (d) => _flip(left: false, down: d),
-          flex: 1.5,
-        ),
+        _touchButton('Rechts', Icons.arrow_forward, (d) => _flip(left: false, down: d), flex: 1.5),
       ],
     );
     return compact ? SizedBox(height: 110, child: row) : row;
