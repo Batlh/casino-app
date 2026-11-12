@@ -72,6 +72,32 @@ class _LobbyScreenState extends State<LobbyScreen> {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
   }
 
+  final _sectionKeys = {for (final s in const ['Zuletzt gespielt', 'Casino', 'Kartenspiele', 'Brettspiele', 'Mahjong']) s: GlobalKey()};
+
+  /// Zuletzt geöffnete Spiele, neuestes zuerst.
+  List<String> _recent() {
+    final r = AppScope.of(context).settings.loadGame('lobby')?['recent'];
+    return r is List ? [for (final x in r) '$x'] : const [];
+  }
+
+  void _remember(String name) {
+    final list = [name, ..._recent().where((x) => x != name)].take(4).toList();
+    AppScope.of(context).settings.saveGame('lobby', {'recent': list});
+  }
+
+  _Game _tracked(_Game g) => _Game(g.name, g.blurb, g.color, g.art, () {
+        _remember(g.name);
+        g.onTap();
+        setState(() {});
+      });
+
+  void _jump(String section) {
+    final ctx = _sectionKeys[section]?.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 450), curve: Curves.easeOutCubic);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
@@ -102,14 +128,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
         "Texas Hold'em",
         'No-Limit gegen bis zu fünf Gegner',
         const Color(0xFF7A1F12),
-        _HoldemArt.new,
+        () => _PokerArt('holdem'),
         () => _open(const HoldemScreen()),
       ),
       _Game(
         'Omaha',
         'Vier Karten auf der Hand, genau zwei davon zählen',
         const Color(0xFF5A1A3A),
-        _HoldemArt.new,
+        () => _PokerArt('omaha'),
         () => _open(const HoldemScreen(omaha: true)),
       ),
       _Game(
@@ -123,7 +149,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         'Caribbean Stud',
         'Fünf-Karten-Poker gegen die Bank',
         const Color(0xFF0E5E6B),
-        _HoldemArt.new,
+        () => _PokerArt('caribbean'),
         () => _open(const CaribbeanScreen()),
       ),
       _Game(
@@ -380,6 +406,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
       ),
     ];
 
+    final all = {for (final g in [...games, ...cardGames, ...boardGames, ...mahjongGames]) g.name: g};
+    final recent = [for (final n in _recent()) if (all[n] != null) _tracked(all[n]!)];
+
     return Scaffold(
       backgroundColor: p.bg,
       body: SafeArea(
@@ -409,17 +438,33 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         const Marquee(),
                         const SizedBox(height: 14),
                         _BonusBar(wallet: app.wallet, sfx: app.sfx),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final s in const ['Casino', 'Kartenspiele', 'Brettspiele', 'Mahjong'])
+                              ActionChip(
+                                label: Text(s, style: TextStyle(color: p.ink, fontWeight: FontWeight.w700)),
+                                backgroundColor: p.panel,
+                                side: BorderSide(color: p.panelEdge, width: 2),
+                                onPressed: () => _jump(s),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
                       ],
                     ),
                   ),
                 ),
               ),
             ),
-            ..._section(context, 'Casino', games),
-            ..._section(context, 'Kartenspiele', cardGames),
-            ..._section(context, 'Brettspiele', boardGames),
-            ..._section(context, 'Mahjong', mahjongGames),
+            if (recent.isNotEmpty) ..._section(context, 'Zuletzt gespielt', recent, key: _sectionKeys['Zuletzt gespielt']),
+            ..._section(context, 'Casino', [for (final g in games) _tracked(g)], key: _sectionKeys['Casino']),
+            ..._section(context, 'Kartenspiele', [for (final g in cardGames) _tracked(g)], key: _sectionKeys['Kartenspiele']),
+            ..._section(context, 'Brettspiele', [for (final g in boardGames) _tracked(g)], key: _sectionKeys['Brettspiele']),
+            ..._section(context, 'Mahjong', [for (final g in mahjongGames) _tracked(g)], key: _sectionKeys['Mahjong']),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
@@ -428,10 +473,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 }
 
-List<Widget> _section(BuildContext context, String title, List<_Game> games) => [
+List<Widget> _section(BuildContext context, String title, List<_Game> games, {Key? key}) => [
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(20, 10, 16, 10),
         sliver: SliverToBoxAdapter(
+          key: key,
           child: Text(title, style: Theme.of(context).textTheme.headlineMedium),
         ),
       ),
@@ -1194,12 +1240,41 @@ class _Game {
 }
 
 /// Spielgerät in der Lobby: oben das Motiv hinter gewölbtem Glas, unten das Schild.
-class _Cabinet extends StatelessWidget {
+/// Unter der Maus wächst es ein wenig, beim Drücken gibt es nach.
+class _Cabinet extends StatefulWidget {
   const _Cabinet({required this.game});
   final _Game game;
 
   @override
+  State<_Cabinet> createState() => _CabinetState();
+}
+
+class _CabinetState extends State<_Cabinet> {
+  bool _hover = false;
+  bool _down = false;
+
+  @override
   Widget build(BuildContext context) {
+    final scale = _down ? 0.97 : (_hover ? 1.025 : 1.0);
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: Listener(
+        onPointerDown: (_) => setState(() => _down = true),
+        onPointerUp: (_) => setState(() => _down = false),
+        onPointerCancel: (_) => setState(() => _down = false),
+        child: AnimatedScale(
+          scale: scale,
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeOut,
+          child: _cabinet(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _cabinet(BuildContext context) {
+    final game = widget.game;
     final p = Palette.of(context);
     return Semantics(
       button: true,
@@ -1237,6 +1312,7 @@ class _Cabinet extends StatelessWidget {
                     ),
                     child: CustomPaint(
                       painter: game.art(),
+                      foregroundPainter: _GlassPainter(),
                       size: Size.infinite,
                     ),
                   ),
@@ -1487,44 +1563,72 @@ class _GartenArt extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _HoldemArt extends CustomPainter {
+/// Pokertisch mit Karten und Chips: holdem zwei Karten, omaha vier, caribbean fünf und die Bank.
+class _PokerArt extends CustomPainter {
+  _PokerArt(this.kind);
+  final String kind;
+
   @override
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
-    final felt = Rect.fromCenter(
-      center: c.translate(0, 8),
-      width: size.width * 0.86,
-      height: size.height * 0.62,
-    );
+    final felt = Rect.fromCenter(center: c.translate(0, 14), width: size.width * 0.9, height: size.height * 0.62);
     canvas.drawRRect(
       RRect.fromRectAndRadius(felt, Radius.circular(felt.height / 2)),
-      Paint()..color = const Color(0xFF1B7A63),
+      Paint()..color = const Color(0xFF6B3E1E),
     );
-    const suits = [Suit.diamonds, Suit.spades, Suit.hearts];
-    final w = size.width * 0.17;
-    final h = w / cardAspect;
-    for (var i = 0; i < 3; i++) {
-      final r = Rect.fromLTWH(
-        c.dx + (i - 1.5) * (w + 5),
-        felt.center.dy - h / 2,
-        w,
-        h,
-      );
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(r, const Radius.circular(5)),
-        Paint()..color = const Color(0xFFFFF8E7),
-      );
-      paintSuit(
-        canvas,
-        Rect.fromCenter(center: r.center, width: w * 0.62, height: w * 0.62),
-        suits[i],
-        i == 1 ? const Color(0xFF241410) : const Color(0xFFC8321F),
+    final inner = felt.deflate(size.width * 0.03);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(inner, Radius.circular(inner.height / 2)),
+      Paint()
+        ..shader = const RadialGradient(colors: [Color(0xFF239A7C), Color(0xFF145C4A)])
+            .createShader(inner),
+    );
+    final w = size.width * 0.16;
+    switch (kind) {
+      case 'omaha':
+        const cards = [('A', Suit.spades), ('K', Suit.hearts), ('Q', Suit.clubs), ('J', Suit.diamonds)];
+        for (var i = 0; i < 4; i++) {
+          _miniCard(canvas, c + Offset((i - 1.5) * w * 0.62, 10 + (i - 1.5).abs() * 4), w, (i - 1.5) * 0.22, cards[i].$1, cards[i].$2);
+        }
+        _chips(canvas, Offset(inner.right - w * 0.9, inner.bottom - w * 0.55), w * 0.42, 5, const Color(0xFF2B5BD7));
+      case 'caribbean':
+        const cards = [('10', Suit.hearts), ('J', Suit.hearts), ('Q', Suit.hearts), ('K', Suit.hearts), ('A', Suit.hearts)];
+        for (var i = 0; i < 5; i++) {
+          _miniCard(canvas, c + Offset((i - 2) * w * 0.66, 14 + (i - 2).abs() * 5.0), w * 0.92, (i - 2) * 0.16, cards[i].$1, cards[i].$2);
+        }
+        // Spielmarke der Bank
+        final d = Offset(inner.left + w * 0.8, inner.top + w * 0.6);
+        canvas.drawCircle(d, w * 0.32, Paint()..color = const Color(0xFFFFF8E7));
+        final tp = TextPainter(
+          text: TextSpan(text: 'Bank', style: TextStyle(fontFamily: bodyFont, fontWeight: FontWeight.w800, fontSize: w * 0.2, color: const Color(0xFF241410))),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tp.paint(canvas, d - Offset(tp.width / 2, tp.height / 2));
+      default:
+        _miniCard(canvas, c + Offset(-w * 0.35, 6), w * 1.1, -0.18, 'A', Suit.spades);
+        _miniCard(canvas, c + Offset(w * 0.35, 6), w * 1.1, 0.18, 'A', Suit.hearts);
+        _chips(canvas, Offset(inner.left + w * 0.9, inner.bottom - w * 0.55), w * 0.42, 6, const Color(0xFFC8321F));
+        _chips(canvas, Offset(inner.right - w * 0.9, inner.bottom - w * 0.5), w * 0.42, 4, const Color(0xFF241410));
+    }
+  }
+
+  void _chips(Canvas canvas, Offset base, double r, int n, Color color) {
+    for (var i = 0; i < n; i++) {
+      final c = base - Offset(0, i * r * 0.32);
+      canvas.drawOval(Rect.fromCenter(center: c + Offset(0, r * 0.12), width: r * 2, height: r * 0.8), Paint()..color = const Color(0x55000000));
+      canvas.drawOval(Rect.fromCenter(center: c, width: r * 2, height: r * 0.8), Paint()..color = color);
+      canvas.drawOval(
+        Rect.fromCenter(center: c, width: r * 1.4, height: r * 0.5),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = r * 0.12
+          ..color = const Color(0xFFFFF8E7),
       );
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _PokerArt oldDelegate) => oldDelegate.kind != kind;
 }
 
 class _FlipperArt extends CustomPainter {
@@ -1711,4 +1815,32 @@ class _VideoPokerArt extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Glanz auf dem gewölbten Glas über dem Motiv.
+class _GlassPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final shine = Path()
+      ..moveTo(size.width * 0.08, size.height * 0.55)
+      ..quadraticBezierTo(size.width * 0.12, size.height * 0.08, size.width * 0.5, size.height * 0.04)
+      ..lineTo(size.width * 0.5, size.height * 0.12)
+      ..quadraticBezierTo(size.width * 0.2, size.height * 0.16, size.width * 0.14, size.height * 0.55)
+      ..close();
+    canvas.drawPath(shine, Paint()..color = Colors.white.withValues(alpha: 0.13));
+    final rect = Offset.zero & size;
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.white.withValues(alpha: 0.07), Colors.transparent, Colors.black.withValues(alpha: 0.12)],
+          stops: const [0, 0.45, 1],
+        ).createShader(rect),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _GlassPainter oldDelegate) => false;
 }
