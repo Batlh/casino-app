@@ -10,6 +10,16 @@ Eine große Raumstation im All:
 **Stilvorbilder:** Star Trek (Brücke, Gänge, Warp), Star Wars (Hangar, Raumschlacht, Gebrauchsspuren) und
 Stargate (Ringtor mit Symbolen). Alle Schiffe, Figuren, Symbole und Namen sind eigene Entwürfe.
 
+**Echte Automaten als Vorbild für Aufbau und Regeln:**
+- **Star Trek: The Next Generation** (Williams, 1993), das wichtigste Vorbild:
+  - je eine Kanone an den Schleudern; die Kugel kommt unterirdisch dorthin und der Spieler feuert selbst;
+  - drei Rampen als „Quadranten“;
+  - Spinner in der linken Umlaufbahn; die rechte Umlaufbahn führt zum Lock bzw. in die Bumper;
+  - ein Shuttle, das bei Rampentreffern startet;
+  - Holodeck-Videomodus und Missionen mit Wizard-Modus für 6 Kugeln.
+- **Star Wars** (Data East, 1992): drehende Kampfstation-Kugel als Spielzeug, Droide über den Bumpern.
+- **Stargate** (Gottlieb, 1995): Pyramide, die aus dem Spielfeld aufsteigt, Gleiter über dem Feld.
+
 ## Aufbau (Williams-Basis)
 
 - **Blickfang:** **Sternentor**, ein großer stehender Ring auf einem Plateau oben in der Mitte.
@@ -25,6 +35,9 @@ Stargate (Ringtor mit Symbolen). Alle Schiffe, Figuren, Symbole und Namen sind e
   oben rechts, von dem aus man die Brücke treffen kann. Das ist bei Williams der 90er üblich.
 - **Brücke:** Zielbank mit 3 Zielen, „Schilde“ als 3 Fallziele davor.
 - **Reaktorkern:** eine **gefangene Kugel** in einem kurzen Kanal; Treffer laden die Energie auf.
+- **Abwehrkanonen:** je eine schwenkbare Kanone an der linken und rechten Schleuder, wie beim Williams-Vorbild.
+  Die Kugel gelangt über einen verdeckten Tunnel vom Torkern dorthin, der Spieler feuert mit der Abschusstaste
+  auf ein leuchtendes Ziel.
 - **Bumper:** 3 „Asteroiden“-Bumper. **Obere Gassen:** „W-A-R-P“ als 4 Gassen oder „S-O-S“ als 3 Gassen.
 
 ## Modi (Vorschläge, ausarbeiten)
