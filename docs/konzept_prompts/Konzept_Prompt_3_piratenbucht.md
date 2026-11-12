@@ -8,8 +8,18 @@ Eine tropische Piratenbucht bei Sonnenuntergang:
 - Holz, Tauwerk, Messing, alte Seekarten. Abends Laternenlicht.
 
 **Stilvorbilder:** One Piece (bunte, übertriebene Crew und Abenteuerlust), Fluch der Karibik (Geisterschiff,
-Fluch, Seeschlacht), Monkey Island (Humor) sowie die 90er-Piratenflipper mit Kanone. Crew, Schiff, Flagge und
-Namen sind eigene Entwürfe.
+Fluch, Seeschlacht) und Monkey Island (Humor). Crew, Schiff, Flagge und Namen sind eigene Entwürfe.
+
+**Echter Automat als Hauptvorbild: Black Rose** (Bally/Midway, also Williams-Gruppe, 1992):
+- eine drehbare Kanone, die der Spieler mit einem Feuerknopf abschießt; beim Laden hebt sich das Rohr;
+- drei Rampen, darunter eine Strudel-Rampe mit schleifenförmigem Drahtrücklauf und eine Seitenrampe, die sich
+  hebt und ein Versteck freigibt;
+- ein dritter Flipper oben rechts;
+- 9 Stehziele in 3 Gruppen;
+- eine Sackgasse („Piratenbucht“) unten links;
+- Multiball über L-O-C-K.
+
+Modernere Piraten-Automaten gibt es auch, sie dienen hier aber nicht als Vorbild.
 
 ## Aufbau (Williams-Basis)
 
@@ -22,6 +32,9 @@ Namen sind eigene Entwürfe.
   - links „Riffpassage“ mit Spinner (Steuerrad als Spinner-Motiv);
   - rechts „Hafeneinfahrt“.
 - **Mastrampe:** Drahtrampe, die sich um den Mast nach oben windet und links in die Rücklaufgasse führt.
+- **Strudel-Rampe:** Acryl, mit schleifenförmigem Drahtrücklauf wie beim Vorbild.
+- **Dritter Flipper:** oben rechts, für den Schuss auf die Galeone.
+- **Sackgasse:** unten links, als Schmugglerversteck (Kugel wird gehalten und ausgeworfen, Preis je nach Stufe).
 - **Schatzhöhle:** Loch (Scoop) unten am Plateau. Modusstart und Lock, 3 Schatztruhen-Lampen davor.
 - **Kraken:** Zielbank rechts mit 3 Tentakel-Zielen. Ist sie abgeräumt, hebt sich ein Tentakel und versperrt
   zeitweise die rechte Rampe (beweglicher Sperrarm).

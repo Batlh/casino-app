@@ -11,6 +11,18 @@ Ein gruseliges, aber augenzwinkerndes Gruselschloss bei Gewitter:
 Mansion (Geisterbahn mit Ballsaal), Castlevania (gotisches Schloss), Luigi's Mansion und Scooby-Doo (lustig statt
 blutig). Familie, Geister und Namen sind eigene Entwürfe.
 
+**Echte Automaten als Vorbild:**
+- **The Addams Family** (Bally/Midway, 1992), das Hauptvorbild:
+  - Bücherregal, das sich zum Tresor-Lock dreht;
+  - eine Hand, die die Kugel greift;
+  - Magnete in der Mitte;
+  - Leuchteinsätze für die Zimmer des Hauses als Fortschritt bis zum Wizard-Modus.
+- **Haunted House** (Gottlieb, 1982): drei Ebenen. Über eine Rampe oder einen Auswerfer geht es auf den Dachboden
+  (oberes Spielfeld). Eine Falltür unter der Rampe führt in den Keller, ein umgekehrtes Spielfeld.
+- **Monster Bash** (Williams, 1998): Monster-Band, für die Instrumente gesammelt werden.
+- **Scared Stiff** (Bally, 1996): Sarg, Falltür, Spinnen-Rad zur Preiswahl.
+- **Elvira and the Party Monsters** (Bally, 1989).
+
 ## Aufbau (Williams-Basis)
 
 - **Blickfang:** **drehendes Bücherregal** in der Bibliothek, oben links.
@@ -27,6 +39,9 @@ blutig). Familie, Geister und Namen sind eigene Entwürfe.
 - **Ritterrüstungen:** 3 Fallziele, die bei Treffer umkippen.
 - **Särge:** Zielbank mit 3 Zielen vor der Gruft.
 - **Dritter Flipper:** oben rechts im Wehrgang, für den Schuss auf den Turm.
+- **Falltür zur Gruft:** Unter der Turmrampe öffnet sich zeitweise eine Falltür. Die Kugel fällt in die Gruft,
+  also den Lock, wie beim Vorbild. Nur das Verhalten zählt, ein Kellerspielfeld wird nicht gezeichnet.
+- **Zimmer-Einsätze:** 8 Leuchteinsätze als Zimmer des Schlosses, einer pro Modus, wie beim Vorbild.
 - **Gewitter:** Bei jedem Jackpot blitzt es über das ganze Feld (Lichtebene).
 - **Obere Gassen:** „B-U-H“.
 
