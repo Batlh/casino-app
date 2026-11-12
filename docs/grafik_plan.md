@@ -17,22 +17,66 @@ Stand: 12.11.2026. Notiz für später, noch nicht begonnen.
 - **Claude schreibt den Code:** Tischdaten, Physik, Regeln, Modi, Anzeige, Einbau der Grafiken und Tests. Claude
   prüft außerdem die Grafiken gegen das Konzept.
 
-## Ablauf pro Tisch bzw. Maschine (Lehre aus Neonstadt V4–V7)
+## Ablauf pro Tisch bzw. Maschine (Lehre aus Neonstadt V4–V9)
 
-1. GPT erstellt **nur die Konzeptgrafik** im Neonstadt-Stil: gemaltes Spielfeld, Bauteile aus Acryl und Chrom,
-   Licht als eigene Ebene.
-2. Claude analysiert sie gründlich:
+1. **GPT erstellt die Konzeptgrafik und gleichzeitig alle Assets** des Tisches im selben Durchgang, damit Stil,
+   Licht und Maße zusammenpassen. Was dazugehört, steht unter „Asset-Paket“ unten.
+2. **Der Nutzer markiert** die Konzeptgrafik: rote Kreise an Bahnen, Ebenen und Funktionen. Er kennt die
+   Williams-Automaten aus eigener Spielpraxis und sieht übereinanderliegende Rampen, Umlaufbahnen und erhöhte
+   Ebenen, die auf einem gemalten Bild leicht zu einer verschwimmen.
+3. Claude analysiert Konzept, Markierungen und Assets gründlich:
    - Bauteile zählen und nummerieren;
-   - Lagen in Prozent festhalten;
-   - Abgleich mit dem Vorbild (Flipper: Williams-Automaten der 90er; Pachinko: echte Automaten);
-   - verdeckte Bereiche nach Bauweise des Vorbilds ergänzen.
-3. Claude schreibt eine **Bauliste** mit Positionen, Schüssen und Regeln und baut danach Geometrie und Regeln im
-   Code.
-4. GPT liefert die **Grafiken Teil für Teil** nach der Liste, und Claude prüft jedes Teil einzeln:
-   - Überlagerung Konzept/Modell mit 50 % Deckkraft;
-   - Tabelle mit den Stufen gleich / abweichend / fehlt / ergänzt;
-   - Ausschnitt-Paare Konzept neben Modell.
-5. Die Tests laufen über GitHub. Erst danach wird übernommen.
+   - **jeden Kugelweg von Anfang bis Ende verfolgen** (pro Seite oft vier bis fünf: Umlaufbahn, mehrere Rampen,
+     Draht, Innenrampe);
+   - Ebenen erkennen (Boden, Plateaus, Rampen, Draht);
+   - Lagen in Pixeln bzw. Prozent festhalten;
+   - Abgleich mit Williams der 90er;
+   - verdeckte Bereiche nach Williams-Bauweise ergänzen;
+   - prüfen, ob für jedes Bauteil ein Asset da ist und zum Konzept passt.
+4. Fehlt etwas oder passt ein Asset nicht, liefert GPT **nur die betroffenen Assets** nach. Kein kompletter
+   Neudurchlauf.
+5. Claude schreibt den Code (Geometrie, Ebenen, Regeln, Einbau der Assets) und prüft das Ergebnis gegen das
+   Konzept:
+   - Überlagerung mit 50 % Deckkraft;
+   - Tabelle mit gleich / abweichend / fehlt / ergänzt;
+   - Ausschnitt-Paare, auch für jeden roten Kreis des Nutzers.
+6. Die Tests laufen über GitHub. Erst danach wird übernommen.
+
+## Asset-Paket (GPT liefert es zusammen mit der Konzeptgrafik)
+
+Alles als WebP mit transparentem Hintergrund, wo nötig. Gemeinsam für alle Teile gelten:
+- dieselbe Schrägsicht und dieselbe Lichtrichtung wie im Konzept;
+- keine Marken- oder Herstellernamen.
+
+Zu jedem Teil gehört in `manifest.json`:
+- Name und Ebene (Boden, Plateau, Rampe unten, Rampe oben, Draht, Licht);
+- Ankerpunkt;
+- Lage im Konzept in Pixeln;
+- Größe in Welteinheiten (Tisch 9,95 × 18).
+
+- **Spielfeld:** Grundbild ohne Aufbauten, dazu **Lichtebene** und **Schattenebene** einzeln.
+- **Kopfteil.**
+- **Rampen:** jede Acrylrampe als eigene Teile:
+  - Fahrbahn;
+  - Seitenwände;
+  - Einfahrtszunge.
+  - Bei Kreuzungen getrennt in den Teil unter und den Teil über der Kreuzung.
+- **Drahtbündel** mit Klammern, Umlaufbahnen und Eckrampen, Abschussbahn mit Gehäuse und Bogen.
+- **Erhöhte Ebenen** (zum Beispiel Bumper-Plateau) mit Kante und Abfahrten.
+- **Bauteile mit Zuständen:**
+  - Bumper ruhig / getroffen;
+  - Schleudern ruhig / ausgeschlagen;
+  - Flipper unten / oben;
+  - Zielbänke mit Einzelzielen an / aus;
+  - Kern bzw. Loch, Kickback-Stößel, Feder.
+- **Pfosten und Halter:** mit leuchtender Hülse, in zwei bis drei Höhen.
+- **Leuchteinsätze:** jeder Pfeil, jede Gassen-, Modus-, Lock-, Spezial- und Rückstoß-Lampe sowie „Nochmal
+  schießen“, jeweils **an** und **aus**.
+- **Unten:** Rücklauf- und Ausgassen mit Rahmen, Flipper-Mulden, Schürze mit Abfluss, Seitenwand-Lichtleisten.
+- **Blickfang:** als Bildfolge, zum Beispiel ein Hologramm, das sich dreht.
+- **Anzeige:** Bildfolgen pro Modus für die Punktmatrix-Anzeige.
+
+Umfang: etwa 1–1,5 MB pro Tisch.
 
 ## Flipper: Mindestumfang wie 90er-Williams
 
