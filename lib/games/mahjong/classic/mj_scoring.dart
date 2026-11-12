@@ -765,13 +765,121 @@ MjScore scoreFilipino(Shape s, WinInfo w) {
 
 // ---------------------------------------------------------------- Vietnam
 
+/// Phán für einen beiseitegelegten Stein (Blume, Joker). Kaiser und Kaiserin zählen nichts.
+int vietBonusPhan(int t, int seat) {
+  if (t >= firstFlower && t < firstAnimal) return (t - firstFlower) % 4 == seat ? 1 : 0;
+  return switch (t) {
+    47 => 2 + (seat == 0 ? 1 : 0),
+    48 => 1 + (seat == 1 ? 1 : 0),
+    49 => 1 + (seat == 2 ? 1 : 0),
+    50 => 1 + (seat == 3 ? 1 : 0),
+    51 => 2,
+    52 => 1 + (seat == 1 ? 1 : 0),
+    53 => 1 + (seat == 2 ? 1 : 0),
+    54 => 2 + (seat == 3 ? 1 : 0),
+    _ => 0,
+  };
+}
+
+/// Auszahlung zu Phán: 0 und 1 zahlen 1, dann verdoppelt sich jeder Phán.
+const _vietPhanPay = [1, 1, 2, 4, 8, 16];
+
+/// Vietnam (Quelle: riichi_advanced, documentation/vietnamese.md). Phán sind die Grundeinheit, 6 Phán sind 1 Mủn;
+/// ab 1 Mủn zählen übrige Phán nicht mehr. points ist die Auszahlung (1 Mủn = 32).
 MjScore scoreVietnam(Shape s, WinInfo w) {
-  final base = scoreHongKong(s, w);
-  final f = [...base.fans.where((x) => x.name != 'Ohne Blumen')];
-  if (s.jokers == 0) f.add(const Fan('Ohne Joker', 1));
-  if (w.bonus.isEmpty && s.jokers == 0 && !s.hasHonor) f.add(const Fan('Keine Blumen, keine Blätter', 3));
-  final total = min(hkLimit, f.fold(0, (a, x) => a + x.value));
-  return MjScore(f, total, limit: total >= hkLimit);
+  final f = <Fan>[];
+  var phan = 0;
+  var mun = 0;
+  void p(String n, int v) {
+    if (v == 0) return;
+    f.add(Fan(n, v, unit: 'Phán'));
+    phan += v;
+  }
+
+  void m(String n, int v) {
+    f.add(Fan(n, v, unit: 'Mủn'));
+    mun += v;
+  }
+
+  for (final t in w.bonus) {
+    p(tileName(t), vietBonusPhan(t, w.seat));
+  }
+  final noJokers = s.jokers == 0;
+  final noFlowers = w.bonus.isEmpty;
+  int plus(int base) => base + (noJokers ? 1 : 0) + (noFlowers ? 1 : 0);
+
+  if (s.special == 'orphans') {
+    m('Dreizehn Waisen', 2);
+  } else {
+    // Keine Blumen, keine Blätter: nur echte Farbsteine, nichts beiseitegelegt, Sieg auf einen Farbstein
+    final nfnl = noFlowers && noJokers && !s.hasHonor && w.winTile < 27;
+    if (nfnl) {
+      final opts = <(String, int)>[('Keine Blumen, keine Blätter', 3)];
+      if (s.allTrip) opts.add(('Keine Blumen, keine Blätter, nur Pungs', 4));
+      if (s.fullFlush) opts.add(('Keine Blumen, keine Blätter, eine Farbe', 5));
+      if (s.fullFlush && s.allTrip) opts.add(('Keine Blumen, keine Blätter, eine Farbe, nur Pungs', 6));
+      if (s.concealed && s.allSeq && s.wait == 'tanki') opts.add(('Keine Blumen, keine Blätter, verdeckt, nur Folgen, Einzelwartung', 4));
+      if (s.concealed && s.allTrip) opts.add(('Keine Blumen, keine Blätter, verdeckt, nur Pungs', 6));
+      if (s.concealed && s.fullFlush && s.allTrip) opts.add(('Keine Blumen, keine Blätter, verdeckt, eine Farbe, nur Pungs', 8));
+      opts.sort((a, b) => b.$2 - a.$2);
+      m(opts.first.$1, opts.first.$2);
+    } else if (noFlowers && !s.hasHonor) {
+      if (s.allSeq) {
+        m('Ohne Blumen, Ehren und Pungs', 2);
+      } else {
+        m('Ohne Blumen und Ehren', 1);
+      }
+    }
+    // Pung-Hände: die höchste zählt
+    if (s.allTrip) {
+      final called = s.trips.every((g) => g.open);
+      if (called && s.hasHonor) {
+        m('Nur gerufene Pungs mit Ehren', 2);
+      } else if (called) {
+        m('Nur gerufene Pungs', 1);
+      } else if (s.hasHonor) {
+        m('Nur Pungs mit Ehren', 1);
+      } else if (s.allTermHonor) {
+        m('Nur Pungs aus Endsteinen', 1);
+      } else {
+        p('Nur Pungs', 3);
+      }
+    }
+    if (s.allSeq) {
+      if (isHonor(s.pair)) {
+        p('Nur Folgen mit Ehren-Paar', 3);
+      } else if (!(noFlowers && !s.hasHonor)) {
+        p('Nur Folgen', 1);
+      }
+    }
+    if (s.fullFlush) m('Eine Farbe', 2);
+    if (s.pureStraight) m('Straße 1 bis 9', 3);
+    if (s.allHonors) m('Nur Ehrensteine', 4);
+    if (s.dragonTrips.length == 3) {
+      m('Große drei Drachen', 2);
+    } else if (s.dragonTrips.length == 2 && s.dragonPair) {
+      m('Kleine drei Drachen', 1);
+    }
+    if (s.windTrips.length == 4) {
+      m('Große vier Winde', plus(8));
+    } else if (s.windTrips.length == 3 && s.windPair) {
+      m('Kleine vier Winde', plus(5));
+    }
+    if (s.kans.length == 4) {
+      m('Vier Kans', plus(4));
+    } else if (s.special.isEmpty && s.concealedTrips == 4) {
+      m('Vier verdeckte Pungs', plus(3));
+    }
+  }
+  if (w.heaven) m('Segen des Himmels', 2);
+  if (w.earth && !w.tsumo) m('Segen der Erde', 2);
+  if (w.earth && w.tsumo) m('Segen des Menschen', 2);
+  if (!w.tsumo && isJokerTile(w.winTile)) m('Gewonnen auf einen Joker', 1);
+
+  mun += phan ~/ 6;
+  final pay = mun > 0 ? 32 * mun : _vietPhanPay[phan];
+  if (f.isEmpty) f.add(const Fan('Hühnerhand (0 Phán)', 0));
+  return MjScore(f, pay, limit: mun > 0);
 }
 
 /// Nur zur Anzeige: wie viele Gruppen ein Meld hat.

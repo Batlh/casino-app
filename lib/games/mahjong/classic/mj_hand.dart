@@ -6,7 +6,7 @@ import '../tiles.dart';
 /// Joker-Stein (für die Varianten mit Jokern).
 const jokerTile = jokerKind;
 
-bool isBonusTile(int t) => t >= firstFlower && t < jokerTile;
+bool isBonusTile(int t) => (t >= firstFlower && t < jokerTile) || t == flowerJoker || t == emperorTile || t == empressTile;
 
 /// Zählt die normalen Steine 0 bis 33; Joker und Bonussteine bleiben außen vor.
 List<int> countsPlain(Iterable<int> tiles) {
@@ -17,7 +17,7 @@ List<int> countsPlain(Iterable<int> tiles) {
   return c;
 }
 
-int jokersIn(Iterable<int> tiles) => tiles.where((t) => t == jokerTile).length;
+int jokersIn(Iterable<int> tiles) => tiles.where(isJokerTile).length;
 
 /// Shanten für Hände mit [sets] Gruppen plus Paar (4 bei 13 Steinen, 5 bei 16).
 /// Joker zählen als bester Stein, das ist für die Computer genau genug.
@@ -86,12 +86,49 @@ int shantenN(List<int> counts, int openMelds, int sets, {int jokers = 0, bool se
 
 /// Alle Zerlegungen in Paar und Gruppen, Joker füllen Lücken.
 /// Gibt (Paar, Gruppen, Joker-Ersatz) zurück; der Ersatz listet, welche Steine die Joker darstellen.
-List<(int, List<Group>, List<int>)> decompositionsJ(List<int> counts, int jokers, {int limit = 300}) {
+List<(int, List<Group>, List<int>)> decompositionsJ(List<int> counts, int jokers, {int limit = 300}) =>
+    decompositionsT(counts, List.filled(jokers, jokerTile), limit: limit);
+
+/// Wie [decompositionsJ], aber jeder Joker ersetzt nur die Steine seiner Art (Vietnam).
+/// Gebraucht wird immer der Joker mit der kleinsten Reichweite, die allgemeinen bleiben für später.
+List<(int, List<Group>, List<int>)> decompositionsT(List<int> counts, List<int> jokers, {int limit = 300}) {
   final out = <(int, List<Group>, List<int>)>[];
   final c = counts.toList();
   final groups = <Group>[];
   final subs = <int>[];
-  var j = jokers;
+  final pool = [...jokers]..sort((a, b) => jokerReach(a) - jokerReach(b));
+  var j = pool.length;
+
+  /// Nimmt für jeden Stein in [tiles] einen passenden Joker; null, wenn es nicht geht.
+  List<int>? take(List<int> tiles) {
+    final taken = <int>[];
+    for (final x in tiles) {
+      final i = pool.indexWhere((k) => jokerCovers(k, x));
+      if (i < 0) {
+        pool.addAll(taken);
+        pool.sort((a, b) => jokerReach(a) - jokerReach(b));
+        return null;
+      }
+      taken.add(pool.removeAt(i));
+    }
+    j -= taken.length;
+    return taken;
+  }
+
+  void giveBack(List<int> taken) {
+    pool
+      ..addAll(taken)
+      ..sort((a, b) => jokerReach(a) - jokerReach(b));
+    j += taken.length;
+  }
+
+  /// Ein Stein, den alle übrigen Joker darstellen können (für Gruppen nur aus Jokern).
+  int? common(int not) {
+    for (final t in [33, 32, 31, 27, 28, 29, 30, for (var x = 0; x < 27; x++) x]) {
+      if (t != not && pool.every((k) => jokerCovers(k, t))) return t;
+    }
+    return null;
+  }
 
   void sets(int i, int pair) {
     if (out.length >= limit) return;
@@ -100,18 +137,21 @@ List<(int, List<Group>, List<int>)> decompositionsJ(List<int> counts, int jokers
     }
     if (i >= tileKinds) {
       if (j % 3 != 0) return;
-      // Übrige Joker bilden eigene Drillinge (stellvertretend als Drilling des Paares)
+      // Übrige Joker bilden eigene Drillinge (stellvertretend als Drilling eines Steins, den alle darstellen können)
       final extra = j ~/ 3;
-      final g = [...groups, for (var k = 0; k < extra; k++) Group(false, pair)];
-      out.add((pair, g, [...subs, for (var k = 0; k < extra * 3; k++) pair]));
+      final rep = extra == 0 ? pair : (pool.every((k) => jokerCovers(k, pair)) ? pair : common(-1));
+      if (rep == null) return;
+      final g = [...groups, for (var k = 0; k < extra; k++) Group(false, rep)];
+      out.add((pair, g, [...subs, for (var k = 0; k < extra * 3; k++) rep]));
       return;
     }
     // Drilling mit Jokern
     for (var real = min(3, c[i]); real >= 1; real--) {
       final need = 3 - real;
       if (need > j) continue;
+      final taken = take(List.filled(need, i));
+      if (taken == null) continue;
       c[i] -= real;
-      j -= need;
       groups.add(Group(false, i));
       for (var k = 0; k < need; k++) {
         subs.add(i);
@@ -121,7 +161,7 @@ List<(int, List<Group>, List<int>)> decompositionsJ(List<int> counts, int jokers
         subs.removeLast();
       }
       groups.removeLast();
-      j += need;
+      giveBack(taken);
       c[i] += real;
     }
     // Folgen, in denen i der kleinste echte Stein ist
@@ -151,13 +191,19 @@ List<(int, List<Group>, List<int>)> decompositionsJ(List<int> counts, int jokers
           }
           continue;
         }
-        j -= need;
+        final taken = take(filled);
+        if (taken == null) {
+          for (final x in used) {
+            c[x]++;
+          }
+          continue;
+        }
         groups.add(Group(true, base));
         subs.addAll(filled);
         sets(i, pair);
         subs.length -= filled.length;
         groups.removeLast();
-        j += need;
+        giveBack(taken);
         for (final x in used) {
           c[x]++;
         }
@@ -171,24 +217,30 @@ List<(int, List<Group>, List<int>)> decompositionsJ(List<int> counts, int jokers
       sets(0, p);
       c[p] += 2;
     } else if (c[p] == 1 && j >= 1) {
+      final taken = take([p]);
+      if (taken == null) continue;
       c[p] -= 1;
-      j -= 1;
       subs.add(p);
       sets(0, p);
       subs.removeLast();
-      j += 1;
+      giveBack(taken);
       c[p] += 1;
     }
   }
   if (j >= 2) {
-    // Paar nur aus Jokern: stellvertretend als Roter Drache
-    j -= 2;
-    subs
-      ..add(33)
-      ..add(33);
-    sets(0, 33);
-    subs.length -= 2;
-    j += 2;
+    // Paar nur aus Jokern: stellvertretend als Roter Drache oder ein anderer Stein, den zwei Joker darstellen können
+    for (final t in [33, 32, 31, 27, 28, 29, 30, for (var x = 0; x < 27; x++) x]) {
+      if (c[t] > 0) continue;
+      final taken = take([t, t]);
+      if (taken == null) continue;
+      subs
+        ..add(t)
+        ..add(t);
+      sets(0, t);
+      subs.length -= 2;
+      giveBack(taken);
+      break;
+    }
   }
   return out;
 }

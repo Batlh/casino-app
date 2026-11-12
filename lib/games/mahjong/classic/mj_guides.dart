@@ -388,31 +388,53 @@ final _filipinoLessons = <QuizLesson>[
 final _vietLessons = <QuizLesson>[
   ..._basics,
   const QuizLesson(
-    title: 'Joker',
-    text: 'Acht Joker ersetzen jeden beliebigen Stein in Gruppen und im Paar. Abwerfen solltest du sie fast nie. '
-        'Eine Hand ganz ohne Joker bringt 1 Fan extra. Die Wertung folgt sonst der Hongkong-Regel.',
-    tiles: [0, 1, 46, -1, 13, 46, 13, -1, 46, 31, 31],
-    question: 'Welche Gruppe macht der Joker aus 1 und 2 Zeichen?',
-    textOptions: ['1-2-3 Zeichen', 'Einen Pung aus 1 Zeichen', 'Gar keine'],
-    correct: 0,
-    explain: 'Richtig, er spielt die 3 Zeichen.',
-  ),
-  const QuizLesson(
-    title: 'Joker im Paar',
-    text: 'Ein Joker darf auch das Paar ergänzen: Ein Stein plus Joker ist ein Paar.',
-    tiles: [31, 46],
-    question: 'Ist Weißer Drache plus Joker ein gültiges Paar?',
-    textOptions: ['Ja', 'Nein'],
-    correct: 0,
-    explain: 'Richtig, der Joker spielt den zweiten Weißen Drachen.',
-  ),
-  const QuizLesson(
-    title: 'Ohne Joker',
-    text: 'Wer ganz ohne Joker gewinnt, bekommt 1 Fan extra. Joker sind trotzdem fast immer nützlich.',
-    question: 'Was bringt eine Siegerhand ganz ohne Joker?',
-    textOptions: ['Nichts', '1 Fan extra', 'Doppelte Punkte'],
+    title: 'Acht Joker-Arten',
+    text: 'Vietnam spielt mit 24 Jokern, je drei von acht Arten. Grün: Allgemein (jeder Stein), Kreise, Bambus, Zeichen. '
+        'Rot: Blume, Wind, Drache und Farbe (jeder Zahlenstein). Ein Joker ersetzt nur Steine seiner Art.',
+    tiles: [47, 48, 49, 50, -1, 51, 52, 53, 54],
+    question: 'Welcher Joker darf den Ostwind ersetzen?',
+    textOptions: ['Der Kreise-Joker', 'Der Wind-Joker', 'Der Farb-Joker'],
     correct: 1,
-    explain: 'Genau, 1 Fan extra.',
+    explain: 'Richtig. Der allgemeine Joker ginge auch, der Farb-Joker nur für Zahlensteine.',
+  ),
+  const QuizLesson(
+    title: 'Joker in der Gruppe',
+    text: 'Der Bambus-Joker füllt eine Lücke in einer Bambus-Folge, aber nicht in einer Kreise-Folge.',
+    tiles: [18, 49, 20, -1, 9, 49, 11],
+    question: 'Welche der beiden Gruppen ist mit dem Bambus-Joker gültig?',
+    textOptions: ['Die Bambus-Folge links', 'Die Kreise-Folge rechts', 'Beide'],
+    correct: 0,
+    explain: 'Genau, er spielt nur Bambus.',
+  ),
+  const QuizLesson(
+    title: 'Phán und Mủn',
+    text: 'Gezählt wird in Phán. Jeder Phán verdoppelt die Auszahlung (1, 2, 4, 8, 16), sechs Phán sind 1 Mủn. '
+        'Große Hände zählen gleich in Mủn: eine Farbe 2, Straße 1 bis 9 3, keine Blumen, keine Blätter 3. '
+        '1 Mủn zahlt 32, jeder weitere Mủn 32 mehr. Sieben Paare gibt es nicht, ein Minimum auch nicht.',
+    question: 'Wie viel zahlt eine Hand mit 3 Phán?',
+    textOptions: ['3', '4', '8'],
+    correct: 1,
+    explain: 'Richtig: 1, 2, 4 – drei Phán zahlen 4.',
+  ),
+  const QuizLesson(
+    title: 'Blumen und Joker ablegen',
+    text: 'Blumen kommen sofort zur Seite. Eine Blume mit der Zahl deines Platzes (Ost 1, Süd 2, West 3, Nord 4) bringt 1 Phán, '
+        'Kaiser und Kaiserin nichts. Joker darfst du am Zug beiseitelegen („Joker ablegen“): Dann zählen sie Phán, '
+        'zum Beispiel der allgemeine 2, als Ost 3, ersetzen aber keinen Stein mehr.',
+    tiles: [34, 35, 55, 56, 47],
+    question: 'Du sitzt Ost. Was bringt die Blume 1?',
+    textOptions: ['Nichts', '1 Phán', '1 Mủn'],
+    correct: 1,
+    explain: 'Genau, sie passt zu deinem Platz.',
+  ),
+  const QuizLesson(
+    title: 'Bezahlen',
+    text: 'Gewinnst du auf einen Abwurf, zahlen alle, der Werfende doppelt. Ziehst du selbst, zahlen alle doppelt. '
+        'Auf einen Stein darf nur einer gewinnen, der nächste in Spielrichtung.',
+    question: 'Wer zahlt bei einem Sieg auf Bens Abwurf doppelt?',
+    textOptions: ['Alle', 'Ben', 'Niemand'],
+    correct: 1,
+    explain: 'Richtig, der Werfende zahlt doppelt, die anderen einfach.',
   ),
 ];
 
@@ -644,14 +666,38 @@ GameGuide mjGuide(MjVariant v, {WidgetBuilder? tutorial}) {
     MjVariant.vietnam => [
         GuideSection(
           'Ziel',
-          'Vietnamesisches Mahjong mit acht Jokern, die jeden Stein ersetzen. Blumen und Jahreszeiten sind dabei.',
-          picture: (_) => _row(const [46, 46, -1, 34, 38]),
+          'Vietnamesisches Mahjong mit 176 Steinen: die üblichen 136, acht Blumen und Jahreszeiten, je vier Kaiser und Kaiserin '
+              'und 24 Joker. Vier Gruppen und ein Paar oder die Dreizehn Waisen; Sieben Paare zählen nicht.',
+          picture: (_) => _row(const [47, 48, 49, 50, -1, 51, 52, 53, 54, -1, 55, 56]),
         ),
         _turn,
         const GuideSection(
-          'Punkte',
-          'Die Wertung folgt der Hongkong-Regel. Eine Hand ohne Joker bringt 1 Fan extra, ganz ohne Joker, Blumen und Ehren 3. '
-              'Echte vietnamesische Sätze haben verschiedene Jokerarten mit festen Aufgaben, hier ersetzt jeder Joker alles.',
+          'Joker',
+          'Grüne Joker: Allgemein (jeder Stein), Kreise, Bambus, Zeichen. Rote Joker: Blume, Wind, Drache, Farbe (jeder '
+              'Zahlenstein). Jeder ersetzt nur seine Art. Der Blumen-Joker kommt wie eine Blume sofort zur Seite. Mit „Joker '
+              'ablegen“ legst du einen Joker am Zug für Punkte beiseite und ziehst Ersatz. Auf einen abgeworfenen Joker darf '
+              'jeder gewinnen, der fertig ist; Pung oder Chi mit Jokern gibt es hier nicht.',
+        ),
+        const GuideSection(
+          'Phán',
+          'Blume mit deiner Platzzahl 1, Kaiser und Kaiserin 0. Joker beiseite: Allgemein 2 (+1 als Ost), Kreise 1 (+1 Süd), '
+              'Bambus 1 (+1 West), Zeichen 1 (+1 Nord), Blume 2, Wind 1 (+1 Süd), Drache 1 (+1 West), Farbe 2 (+1 Nord). '
+              'Nur Folgen 1 (mit Ehren-Paar 3), nur Pungs 3.',
+        ),
+        const GuideSection(
+          'Mủn',
+          'Sechs Phán sind 1 Mủn. Nur Pungs mit Ehren oder aus Endsteinen 1, nur gerufene Pungs 1 (mit Ehren 2), ohne Blumen '
+              'und Ehren 1 (dazu nur Folgen 2), eine Farbe 2, Straße 1 bis 9 3, nur Ehren 4, Dreizehn Waisen 2, keine Blumen, '
+              'keine Blätter 3 bis 8, kleine drei Drachen 1, große 2, vier verdeckte Pungs 3, vier Kans 4, kleine vier Winde 5, '
+              'große 8 (je +1 ohne Joker und +1 ohne Blumen), Segen des Himmels, der Erde oder des Menschen 2, Sieg auf einen '
+              'abgeworfenen Joker 1.',
+        ),
+        const GuideSection(
+          'Bezahlen',
+          '0 oder 1 Phán zahlen 1 Einsatz, 2 Phán 2, 3 Phán 4, 4 Phán 8, 5 Phán 16, jeder Mủn 32. Auf einen Abwurf zahlen '
+              'alle, der Werfende doppelt; selbst gezogen zahlen alle doppelt. Ein Einsatz sind 5 Punkte. '
+              'Quelle: riichi_advanced (Dokumentation „vietnamese“). Weggelassen: der Sieg durch drei abgeworfene grüne Joker, '
+              'die Rahmenformen der Joker und die Boni fürs Ablegen vor Spielbeginn.',
         ),
         _coins(4),
       ],

@@ -49,9 +49,12 @@ class WinInfo {
 
 /// Ein Muster in der Wertung.
 class Fan {
-  const Fan(this.name, this.value);
+  const Fan(this.name, this.value, {this.unit});
   final String name;
   final int value;
+
+  /// Eigene Einheit, wenn sie von der Variante abweicht (Vietnam: Phán oder Mủn).
+  final String? unit;
 }
 
 class MjScore {
@@ -156,7 +159,7 @@ List<Shape> shapesOf(List<int> closed, List<Meld> melds, WinInfo w, {required in
       out.add(Shape(pair: -1, groups: const [], all: closed, concealed: true, wait: 'special', special: 'orphans'));
     }
     if (sevenPairs && isSevenPairs(c, j)) {
-      final all = [...closed.where((t) => t != jokerTile)];
+      final all = [...closed.where((t) => !isJokerTile(t))];
       // Joker füllen die einzelnen Steine auf
       var left = j;
       for (var t = 0; t < tileKinds; t++) {
@@ -229,9 +232,9 @@ List<Shape> shapesOf(List<int> closed, List<Meld> melds, WinInfo w, {required in
     out.add(Shape(pair: -1, groups: const [], all: closed, concealed: true, wait: 'special', special: 'pairsPung'));
   }
 
-  for (final (pair, groupsClosed, subs) in decompositionsJ(c, j)) {
+  for (final (pair, groupsClosed, subs) in decompositionsT(c, closed.where(isJokerTile).toList())) {
     if (groupsClosed.length + melds.length != sets) continue;
-    final allTiles = [...closed.where((t) => t != jokerTile), ...subs, ...meldTiles];
+    final allTiles = [...closed.where((t) => !isJokerTile(t)), ...subs, ...meldTiles];
     final roles = <int>[];
     if (pair == w.winTile) roles.add(-1);
     for (var g = 0; g < groupsClosed.length; g++) {

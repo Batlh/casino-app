@@ -5,8 +5,10 @@ import 'package:gluckspfennig/games/mahjong/classic/mj_bot.dart';
 import 'package:gluckspfennig/games/mahjong/classic/mj_engine.dart';
 import 'package:gluckspfennig/games/mahjong/classic/mj_hand.dart';
 import 'package:gluckspfennig/games/mahjong/classic/mj_rules.dart';
+import 'package:gluckspfennig/games/mahjong/classic/mj_scoring.dart' show vietBonusPhan;
 import 'package:gluckspfennig/games/mahjong/classic/mj_shape.dart';
 import 'package:gluckspfennig/games/mahjong/riichi_hand.dart';
+import 'package:gluckspfennig/games/mahjong/tiles.dart';
 
 /// Kurzschrift wie im Riichi-Test: 123m 456p 789s 1234z (z = Ehrensteine 1 bis 7).
 List<int> h(String s) {
@@ -209,10 +211,65 @@ void main() {
       expect(s.points, greaterThan(20));
     });
     test('Vietnam: Joker im Pung', () {
-      final hand = h('11m999p555s66677z') + [jokerTile];
+      final hand = h('11m999p555s66677z') + [firstVietJoker];
       final s = mjRules[MjVariant.vietnam]!
           .evaluate(hand, const [], const WinInfo(winTile: 32, tsumo: false, seatWind: 27, roundWind: 27, seat: 0));
       expect(s, isNotNull);
+    });
+  });
+
+  group('Vietnam', () {
+    MjScore? viet(List<int> tiles, int win, {List<int> bonus = const []}) => mjRules[MjVariant.vietnam]!
+        .evaluate(tiles, const [], WinInfo(winTile: win, tsumo: false, seatWind: 27, roundWind: 27, seat: 0, bonus: bonus));
+    test('176 Steine', () {
+      expect(mjRules[MjVariant.vietnam]!.buildWall().length, 176);
+    });
+    test('Bambus-Joker nur in Bambus', () {
+      expect(viet([...h('123m456m789m11z'), 18, 49, 20], 18), isNotNull);
+      expect(viet([...h('123m456m789m11z'), 9, 49, 11], 9), isNull);
+    });
+    test('Wind-Joker im Wind-Pung, Drachen-Joker nicht', () {
+      expect(viet([...h('123m456m789m11p'), 27, 27, 52], 27), isNotNull);
+      expect(viet([...h('123m456m789m11p'), 27, 27, 53], 27), isNull);
+    });
+    test('Zwei Joker als Paar', () {
+      expect(viet([...h('123m456m789m123p'), 52, 52], 0), isNotNull);
+      expect(viet([...h('123m456m789m123p'), 48, 49], 0), isNull);
+    });
+    test('Allgemeiner und Farb-Joker zusammen', () {
+      expect(viet([...h('123m456m789m11z'), 47, 54, 20], 20), isNotNull);
+    });
+    test('Phán verdoppeln die Auszahlung', () {
+      // Nur Folgen mit Ehren-Paar 3 Phán, Blume 1 passt zu Ost 1 Phán: 4 Phán zahlen 8
+      final s = viet(h('123m456p789s234s11z'), 0, bonus: const [34])!;
+      expect(s.points, 8);
+    });
+    test('Große Hand in Mủn', () {
+      final s = viet(h('123456789m22m555m'), 4)!;
+      expect(s.fans.map((f) => f.name), contains('Straße 1 bis 9'));
+      expect(s.points, greaterThanOrEqualTo(32 * 5));
+    });
+    test('Phán fürs Ablegen', () {
+      expect(vietBonusPhan(47, 0), 3);
+      expect(vietBonusPhan(54, 3), 3);
+      expect(vietBonusPhan(48, 0), 1);
+      expect(vietBonusPhan(emperorTile, 0), 0);
+      expect(vietBonusPhan(35, 1), 1);
+    });
+    test('Joker ablegen gibt Ersatz', () {
+      final g = MjGame(mjRules[MjVariant.vietnam]!, rng: Random(3))..start();
+      for (var tries = 0; tries < 200 && g.declarableJokers(g.current).isEmpty; tries++) {
+        g.discard(g.current, g.players[g.current].hand.firstWhere((t) => !isJokerTile(t)));
+        if (g.phase == MjPhase.claim) g.resolveClaims({});
+        if (g.phase != MjPhase.discard) break;
+      }
+      final p = g.current;
+      final js = g.declarableJokers(p);
+      if (js.isEmpty) return;
+      final before = g.players[p].hand.length;
+      g.declareJoker(p, js.first);
+      expect(g.players[p].hand.length, before);
+      expect(g.players[p].bonus, contains(js.first));
     });
   });
 

@@ -16,6 +16,7 @@ import 'mj_bot.dart';
 import 'mj_engine.dart';
 import 'mj_hand.dart';
 import 'mj_rules.dart';
+import 'mj_scoring.dart' show vietBonusPhan;
 import 'mj_shape.dart';
 import '../../../ui/tap_catcher.dart';
 import '../tile_legend.dart';
@@ -31,6 +32,7 @@ int mjHandReward(MjRules r, MjScore s) {
     MjVariant.filipino => s.points ~/ 2,
     MjVariant.korean => s.core,
     MjVariant.taiwan => s.points,
+    MjVariant.vietnam => s.points >= 32 ? 6 * (s.points ~/ 32) : s.points ~/ 2,
     _ => s.points * 2,
   };
   return math.min(200, 20 + 10 * units);
@@ -187,6 +189,9 @@ class _MjScreenState extends State<MjScreen> {
           case MjBotKan(:final tile):
             _g.kan(p, tile);
             _app.sfx.play(Sound.chip);
+          case MjBotJoker(:final tile):
+            _g.declareJoker(p, tile);
+            _app.sfx.play(Sound.chip);
           case MjBotDiscard(:final tile):
             _g.discard(p, tile);
             _app.sfx.play(Sound.tick);
@@ -336,6 +341,24 @@ class _MjScreenState extends State<MjScreen> {
       t = opts[i];
     }
     _g.kan(0, t);
+    _app.sfx.play(Sound.chip);
+    setState(() => _selected = null);
+    _pump();
+  }
+
+  /// Vietnam: einen Joker für Punkte beiseitelegen, dafür kommt ein Ersatzstein.
+  Future<void> _declareJoker() async {
+    if (!_myTurn) return;
+    final opts = _g.declarableJokers(0);
+    if (opts.isEmpty) return;
+    final seat = _g.seatOf(0);
+    final i = await showChoiceSheet(
+      context,
+      title: 'Welchen Joker beiseitelegen? Er bringt Punkte, ersetzt aber keinen Stein mehr.',
+      options: [for (final o in opts) '${tileName(o)}: ${vietBonusPhan(o, seat)} Phán'],
+    );
+    if (i == null || !mounted) return;
+    _g.declareJoker(0, opts[i]);
     _app.sfx.play(Sound.chip);
     setState(() => _selected = null);
     _pump();
@@ -572,6 +595,7 @@ class _MjScreenState extends State<MjScreen> {
     } else if (_myTurn) {
       if (_g.canTsumo(0)) buttons.add(ActionButton(primary: true, label: 'Gewinnen!', onPressed: _tsumo));
       if (_g.kanOptions(0).isNotEmpty) buttons.add(ActionButton(label: 'Kan', onPressed: _kan));
+      if (_g.declarableJokers(0).isNotEmpty) buttons.add(ActionButton(label: 'Joker ablegen', onPressed: _declareJoker));
     } else if (_me.out && !_fast && _g.phase != MjPhase.handOver) {
       buttons.add(ActionButton(label: 'Vorspulen', onPressed: () => setState(() => _fast = true)));
     }
@@ -661,7 +685,7 @@ class _MjScreenState extends State<MjScreen> {
           const SizedBox(height: 4),
           for (final f in s.fans)
             Text(
-              f.value == 0 ? f.name : '${f.name}: ${f.value} ${_r.unitName}',
+              f.value == 0 ? f.name : '${f.name}: ${f.value} ${f.unit ?? _r.unitName}',
               style: TextStyle(color: pal.ink, fontSize: 14),
             ),
           Text(
@@ -742,7 +766,7 @@ class _MjScreenState extends State<MjScreen> {
 }
 
 /// Für Tests und Anzeige: ist der Stein ein Joker?
-bool isJoker(int t) => t == jokerTile;
+bool isJoker(int t) => isJokerTile(t);
 
 /// Für Tests: Meld als Text.
 String meldText(Meld m) => m.tiles.map(tileName).join(', ');

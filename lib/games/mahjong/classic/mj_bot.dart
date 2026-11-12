@@ -4,6 +4,7 @@ import '../riichi_hand.dart';
 import '../tiles.dart';
 import 'mj_engine.dart';
 import 'mj_hand.dart';
+import 'mj_scoring.dart' show vietBonusPhan;
 
 sealed class MjBotTurn {}
 
@@ -11,6 +12,11 @@ class MjBotWin extends MjBotTurn {}
 
 class MjBotKan extends MjBotTurn {
   MjBotKan(this.tile);
+  final int tile;
+}
+
+class MjBotJoker extends MjBotTurn {
+  MjBotJoker(this.tile);
   final int tile;
 }
 
@@ -51,6 +57,10 @@ MjBotTurn mjBotTurn(MjGame g, int p, Random rng) {
   final pl = g.players[p];
   if (g.canTsumo(p)) return MjBotWin();
   if (pl.locked && g.drawn != null) return MjBotDiscard(g.drawn!);
+  // Vietnam: Joker mit Sitzbonus ablegen, solange die Hand noch weit weg ist
+  for (final t in g.declarableJokers(p)) {
+    if (vietBonusPhan(t, g.seatOf(p)) >= 2 && _bestAfterDiscard(g, pl.hand, pl.meldCount) >= 3) return MjBotJoker(t);
+  }
   for (final t in g.kanOptions(p)) {
     final c = countsPlain(pl.hand);
     final before = _bestAfterDiscard(g, pl.hand, pl.meldCount);
@@ -91,7 +101,7 @@ int mjBestDiscard(MjGame g, int p, Random rng) {
       c[k]--;
     }
     var score = -s * 1000.0 + ukeire * 8;
-    if (t == jokerTile) score -= 5000;
+    if (isJokerTile(t)) score -= 5000;
     if (isHonor(t)) {
       final pairs = pl.hand.where((x) => x == t).length;
       final valuable = t >= 31 || t == g.seatWind(p) || t == g.roundWind;

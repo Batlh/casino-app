@@ -51,6 +51,7 @@ class MjRules {
     this.hands = 4,
     this.dealerStays = true,
     this.honorsAreFlowers = false,
+    this.vietnamSet = false,
     this.instant = const {},
     this.instantUnit = 0,
   });
@@ -96,6 +97,9 @@ class MjRules {
   /// Winde und Drachen werden wie Blumen beiseitegelegt (Philippinen).
   final bool honorsAreFlowers;
 
+  /// Vietnam: 24 Joker in acht Arten, Kaiser und Kaiserin; Joker dürfen für Punkte beiseitegelegt werden.
+  final bool vietnamSet;
+
   /// Sofortzahlungen in Einheiten: kanOpen, kanClosed, kanAdded, noFlowers, flowers13.
   final Map<String, int> instant;
   final int instantUnit;
@@ -108,6 +112,11 @@ class MjRules {
         if (flowers >= 8) ...[for (var i = 0; i < 4; i++) firstSeason + i],
         if (animals) ...[for (var i = 0; i < 4; i++) firstAnimal + i],
         for (var i = 0; i < jokers; i++) jokerTile,
+        if (vietnamSet) ...[
+          for (var k = 0; k < 8; k++) ...List.filled(3, firstVietJoker + k),
+          ...List.filled(4, emperorTile),
+          ...List.filled(4, empressTile),
+        ],
       ];
 
   /// Beste Wertung einer fertigen Hand, oder null wenn sie nicht fertig ist.
@@ -337,14 +346,15 @@ final mjRules = <MjVariant, MjRules>{
   MjVariant.vietnam: MjRules(
     variant: MjVariant.vietnam,
     title: 'Vietnam',
-    blurb: 'Mit acht Jokern, die jeden Stein ersetzen',
-    unitName: 'Fan',
+    blurb: '176 Steine mit 24 Jokern in acht Arten, Wertung in Phán und Mủn',
+    unitName: 'Einsätze',
     kinds: _allKinds,
     flowers: 8,
-    jokers: 8,
+    vietnamSet: true,
+    sevenPairs: false,
     scorer: scoreVietnam,
-    pay: simplePay((s) => 10 * _hkTable[min(s.points, 13)], ronFactor: 2, tsumoFactor: 1),
-    minScore: 1,
-    startPoints: 3000,
+    // Auf einen Abwurf zahlen alle, der Werfende doppelt; selbst gezogen zahlen alle doppelt
+    pay: simplePay((s) => 5 * s.points, ronFactor: 2, ronOthers: 1, tsumoFactor: 2),
+    startPoints: 5000,
   ),
 };

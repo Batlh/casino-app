@@ -14,6 +14,43 @@ const firstFlower = 34;
 const firstSeason = 38;
 const firstAnimal = 42;
 const jokerKind = 46;
+
+/// Vietnam: acht Joker-Arten (grün: Allgemein, Kreise, Bambus, Zeichen; rot: Blume, Wind, Drache, Farbe),
+/// dazu Kaiser und Kaiserin als Blumen.
+const firstVietJoker = 47;
+const flowerJoker = 51;
+const emperorTile = 55;
+const empressTile = 56;
+const vietJokerKanji = ['縂', '筒', '索', '萬', '花', '喜', '元', '合'];
+const vietJokerNames = ['Allgemein', 'Kreise', 'Bambus', 'Zeichen', 'Blume', 'Wind', 'Drache', 'Farbe'];
+
+/// Welche Steine ein Joker ersetzen kann (46 und 47 alles, der Blumen-Joker nichts in der Hand).
+bool jokerCovers(int joker, int t) {
+  if (t >= tileKinds) return false;
+  return switch (joker) {
+    46 || 47 => true,
+    48 => t >= 9 && t < 18,
+    49 => t >= 18 && t < 27,
+    50 => t < 9,
+    52 => t >= 27 && t < 31,
+    53 => t >= 31 && t < 34,
+    54 => t < 27,
+    _ => false,
+  };
+}
+
+/// Wie viele Steinsorten ein Joker abdeckt (je kleiner, desto lieber wird er verbraucht).
+int jokerReach(int joker) => switch (joker) {
+      46 || 47 => 34,
+      54 => 27,
+      48 || 49 || 50 => 9,
+      52 => 4,
+      53 => 3,
+      _ => 0,
+    };
+
+/// Joker in der Hand (der Blumen-Joker zählt wie eine Blume).
+bool isJokerTile(int t) => t == jokerKind || (t >= firstVietJoker && t < emperorTile && t != flowerJoker);
 const animalNames = ['Katze', 'Maus', 'Hahn', 'Tausendfüßer'];
 const _animalKanji = ['貓', '鼠', '雞', '蜈'];
 
@@ -37,7 +74,9 @@ String tileName(int t) {
   if (t < 38) return 'Blume ${t - 33}';
   if (t < 42) return 'Jahreszeit ${t - 37}';
   if (t < 46) return animalNames[t - 42];
-  return 'Joker';
+  if (t == 46) return 'Joker';
+  if (t < emperorTile) return 'Joker ${vietJokerNames[t - firstVietJoker]}';
+  return t == emperorTile ? 'Kaiser' : 'Kaiserin';
 }
 
 const _ivory = Color(0xFFFBF5E6);
@@ -55,6 +94,7 @@ String? tileHintLabel(int t) {
   if (t < 27) return '${t % 9 + 1}';
   if (t < 31) return const ['O', 'S', 'W', 'N'][t - 27];
   if (t < 34) return const ['Weiß', 'Grün', 'Rot'][t - 31];
+  if (t > jokerKind && t < emperorTile) return vietJokerNames[t - firstVietJoker];
   return null;
 }
 
@@ -300,6 +340,32 @@ void _paintFace(Canvas canvas, Rect r, int t) {
         ..color = _red,
     );
     _text(canvas, 'JOKER', at(const Offset(0.5, 0.88)), w * 0.24, _red);
+    return;
+  }
+  if (t >= firstVietJoker && t < emperorTile) {
+    // Grüne Joker: Allgemein, Kreise, Bambus, Zeichen; rote: Blume, Wind, Drache, Farbe
+    final k = t - firstVietJoker;
+    final color = k < 4 ? _green : _red;
+    final c = at(const Offset(0.5, 0.42));
+    canvas.drawCircle(c, w * 0.38, Paint()..color = color.withValues(alpha: 0.14));
+    canvas.drawCircle(
+      c,
+      w * 0.38,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.04
+        ..color = color,
+    );
+    _text(canvas, vietJokerKanji[k], c, w * 0.56, color);
+    _text(canvas, 'JOKER', at(const Offset(0.5, 0.88)), w * 0.22, color);
+    return;
+  }
+  if (t == emperorTile || t == empressTile) {
+    final c = at(const Offset(0.5, 0.42));
+    const gold = Color(0xFFB8860B);
+    canvas.drawCircle(c, w * 0.36, Paint()..color = gold.withValues(alpha: 0.18));
+    _text(canvas, t == emperorTile ? '皇' : '后', c, w * 0.6, t == emperorTile ? gold : _red);
+    _text(canvas, t == emperorTile ? 'Kaiser' : 'Kaiserin', at(const Offset(0.5, 0.88)), w * 0.18, _ink);
     return;
   }
   // Blumen und Jahreszeiten

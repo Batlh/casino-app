@@ -439,6 +439,25 @@ class MjGame with ActionLog {
     _afterWins([p], p);
   }
 
+  /// Vietnam: Joker, die man jetzt für Punkte beiseitelegen darf (danach gibt es einen Ersatzstein).
+  List<int> declarableJokers(int p) {
+    final pl = players[p];
+    if (!rules.vietnamSet || phase != MjPhase.discard || current != p || pl.locked || wall.isEmpty) return const [];
+    return {for (final t in pl.hand) if (isJokerTile(t)) t}.toList()..sort();
+  }
+
+  void declareJoker(int p, int t) => record(['j', p, t], () => _declareJokerImpl(p, t));
+
+  void _declareJokerImpl(int p, int t) {
+    if (!declarableJokers(p).contains(t)) return;
+    final pl = players[p];
+    pl.hand.remove(t);
+    pl.bonus.add(t);
+    final note = '${who(p)} ${_verb(p, 'legst', 'legt')} ${tileName(t)} für Punkte beiseite';
+    _draw(p, replacement: true);
+    lastEvent = note;
+  }
+
   void kan(int p, int t) => record(['k', p, t], () => _kanImpl(p, t));
 
   void _kanImpl(int p, int t) {
@@ -565,7 +584,7 @@ class MjGame with ActionLog {
       final opts = <MjOption>[];
       if (winScore(q, t, tsumo: false) != null) opts.add(const MjOption(MjClaimType.win));
       final voidTile = pl.voidSuit != null && t < 27 && suitOf(t) == pl.voidSuit;
-      if (!pl.locked && wall.isNotEmpty && t != jokerTile && !voidTile) {
+      if (!pl.locked && wall.isNotEmpty && !isJokerTile(t) && !voidTile) {
         final c = pl.hand.where((x) => x == t).length;
         if (c >= 2) opts.add(MjOption(MjClaimType.pon, [t, t]));
         if (c >= 3) opts.add(MjOption(MjClaimType.kan, [t, t, t]));
@@ -843,6 +862,8 @@ void mjApply(MjGame g, List<dynamic> a) {
       g.tsumo(i(1));
     case 'k':
       g.kan(i(1), i(2));
+    case 'j':
+      g.declareJoker(i(1), i(2));
     case 'd':
       g.discard(i(1), i(2));
     case 'c':
