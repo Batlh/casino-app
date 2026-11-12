@@ -37,18 +37,34 @@ class SlingSpec {
 
 /// Flipper: dir 1 zeigt nach rechts (linker Flipper), -1 nach links. rest und up sind die Winkel in Ruhe und oben.
 class FlipperSpec {
-  const FlipperSpec(this.pivot, this.dir, {this.length = 1.75, this.rest = 0.5, this.up = -0.45});
+  const FlipperSpec(
+    this.pivot,
+    this.dir, {
+    this.length = 1.75,
+    this.rest = 0.5,
+    this.up = -0.45,
+    this.heelHalfWidth = .2,
+    this.tipHalfWidth = .07,
+  });
   final Pt pivot;
   final int dir;
   final double length;
   final double rest;
   final double up;
+  final double heelHalfWidth;
+  final double tipHalfWidth;
   bool get left => dir > 0;
 }
 
 /// Rollover-Gasse: Sensor an einer Stelle. Gassen derselben Gruppe ergeben zusammen einen Bonus.
 class LaneSpec {
-  const LaneSpec(this.x, this.y, {this.group = 'top', this.points = 50, this.halfWidth = 0.32});
+  const LaneSpec(
+    this.x,
+    this.y, {
+    this.group = 'top',
+    this.points = 50,
+    this.halfWidth = 0.32,
+  });
   final double x;
   final double y;
   final String group;
@@ -58,7 +74,14 @@ class LaneSpec {
 
 /// Reihe von Fallzielen; jedes Ziel ist eine kurze Bande mit Mitte, Winkel (Richtung der Bande) und Länge.
 class DropBankSpec {
-  const DropBankSpec(this.id, this.targets, {this.angle = 0, this.length = 0.55, this.points = 200, this.bonus = 2000});
+  const DropBankSpec(
+    this.id,
+    this.targets, {
+    this.angle = 0,
+    this.length = 0.55,
+    this.points = 200,
+    this.bonus = 2000,
+  });
   final String id;
   final List<Pt> targets;
   final double angle;
@@ -69,7 +92,14 @@ class DropBankSpec {
 
 /// Stehende Zielscheiben: zählen bei jedem Treffer, alle zusammen geben einen Bonus.
 class TargetBankSpec {
-  const TargetBankSpec(this.id, this.targets, {this.angle = 0, this.length = 0.5, this.points = 150, this.bonus = 1500});
+  const TargetBankSpec(
+    this.id,
+    this.targets, {
+    this.angle = 0,
+    this.length = 0.5,
+    this.points = 150,
+    this.bonus = 1500,
+  });
   final String id;
   final List<Pt> targets;
   final double angle;
@@ -89,7 +119,15 @@ class SpinnerSpec {
 
 /// Kickout-Loch: fängt die Kugel, hält sie kurz und wirft sie in Richtung (ex, ey) wieder aus.
 class SaucerSpec {
-  const SaucerSpec(this.id, this.x, this.y, this.ex, this.ey, {this.points = 500, this.lock = false});
+  const SaucerSpec(
+    this.id,
+    this.x,
+    this.y,
+    this.ex,
+    this.ey, {
+    this.points = 500,
+    this.lock = false,
+  });
   final String id;
   final double x;
   final double y;
@@ -116,6 +154,10 @@ class RampSpec {
     this.points = 1000,
     this.minSpeed = 6,
     this.name = '',
+    this.deckWidth = 0.62,
+    this.sideHeight = 0.18,
+    this.heights = const [],
+    this.wireStart = 1.0,
   });
   final String id;
   final Pt a;
@@ -128,13 +170,50 @@ class RampSpec {
   final int points;
   final double minSpeed;
   final String name;
+
+  /// Gerenderte Fahrbahnbreite und Seitenwandhöhe in Welteinheiten.
+  final double deckWidth;
+  final double sideHeight;
+
+  /// Höhe an jedem Pfadpunkt, getrennt von den x/y-Weltkoordinaten.
+  /// Leere Liste erhält die alte, flache Darstellung anderer Tische.
+  final List<double> heights;
+
+  /// Anteil der Rampenlänge, ab dem ein offener Draht-Rücklauf beginnt.
+  final double wireStart;
 }
 
-enum MissionKind { bumper, sling, lanes, drops, targets, spinner, saucer, ramp, anyRamp, lock }
+/// Tragpfosten mit tatsächlichem Boden-Kollisionskreis und grafischer Höhe.
+class SupportSpec {
+  const SupportSpec(this.x, this.y, this.height, {this.radius = 0.10});
+  final double x;
+  final double y;
+  final double height;
+  final double radius;
+}
+
+enum MissionKind {
+  bumper,
+  sling,
+  lanes,
+  drops,
+  targets,
+  spinner,
+  saucer,
+  ramp,
+  anyRamp,
+  lock,
+}
 
 /// Eine Aufgabe auf der Anzeige, zum Beispiel „Linke Rampe 3 mal“.
 class MissionSpec {
-  const MissionSpec(this.title, this.kind, this.count, {this.id, this.reward = 10000});
+  const MissionSpec(
+    this.title,
+    this.kind,
+    this.count, {
+    this.id,
+    this.reward = 10000,
+  });
   final String title;
   final MissionKind kind;
   final int count;
@@ -186,7 +265,9 @@ class TableSpec {
     required this.theme,
     required this.walls,
     required this.flippers,
+    this.playfieldHeight = 18,
     this.bumpers = const [],
+    this.supports = const [],
     this.slings = const [],
     this.lanes = const [],
     this.drops = const [],
@@ -204,8 +285,10 @@ class TableSpec {
   final String blurb;
   final TableTheme theme;
   final List<WallSpec> walls;
+  final double playfieldHeight;
   final List<FlipperSpec> flippers;
   final List<BumperSpec> bumpers;
+  final List<SupportSpec> supports;
   final List<SlingSpec> slings;
   final List<LaneSpec> lanes;
   final List<DropBankSpec> drops;
