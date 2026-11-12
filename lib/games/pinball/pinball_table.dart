@@ -55,6 +55,8 @@ class PinballTable {
   static const leftPivot = Pt(2.6, 15.3);
   static const rightPivot = Pt(6.65, 15.3);
   static const laneX = [3.4, 4.6, 5.8];
+  static const railEndLeft = Pt(2.5, 14.85);
+  static const railEndRight = Pt(6.75, 14.85);
 
   final Random _rng;
   final World _world = World(Vector2(0, 9));
@@ -132,9 +134,10 @@ class PinballTable {
     _wall(ground, [const Pt(fieldRight, 18.2), const Pt(fieldRight, 4.6)]);
     _wall(ground, [const Pt(fieldRight, 17.7), const Pt(width, 17.7)], bounce: 0);
 
-    // Führungsschienen zu den Flippern
-    _wall(ground, [const Pt(0, 12.4), const Pt(2.45, 15.05)]);
-    _wall(ground, [const Pt(fieldRight, 12.4), const Pt(6.8, 15.05)]);
+    // Führungsschienen zu den Flippern. Sie enden etwas über dem Flipper, so dass die Kugel auf ihn hinunterrollt;
+    // endeten sie auf Höhe des Drehpunkts, blieb zwischen Schiene und Flipper eine Mulde, in der die Kugel liegen blieb.
+    _wall(ground, [const Pt(0, 12.4), railEndLeft]);
+    _wall(ground, [const Pt(fieldRight, 12.4), railEndRight]);
 
     // Ablaufkanten unter den Flippern
     _wall(ground, [const Pt(0, 13.2), const Pt(0, 16.3), const Pt(1.2, 18.2)]);
@@ -264,7 +267,7 @@ class PinballTable {
   void nudge() {
     final b = _ball;
     if (b == null || ballInLane) return;
-    b.applyLinearImpulse(Vector2((_rng.nextDouble() - 0.5) * 0.2, -0.25));
+    b.applyLinearImpulse(Vector2((_rng.nextDouble() - 0.5) * 0.3, -0.45));
     events.add(const PinballEvent(PinballEventKind.nudge));
   }
 

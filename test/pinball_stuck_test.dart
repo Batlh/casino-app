@@ -7,11 +7,12 @@ import 'package:gluckspfennig/games/pinball/pinball_table.dart';
 void main() {
   test('Kugel bleibt bei den Flippern nicht hängen', () {
     final stuck = <String>[];
-    for (var trial = 0; trial < 600; trial++) {
+    for (var trial = 0; trial < 900; trial++) {
       final rng = Random(trial);
       final t = PinballTable(rng: rng);
       t.launch();
-      t.debugPlaceBall(0.5 + rng.nextDouble() * 8.4, 9 + rng.nextDouble() * 5, (rng.nextDouble() - 0.5) * 8, rng.nextDouble() * 4);
+      // Start über den Schleudern und unter den Pilzen
+      t.debugPlaceBall(0.5 + rng.nextDouble() * 8.4, 9.4 + rng.nextDouble() * 1.9, (rng.nextDouble() - 0.5) * 8, rng.nextDouble() * 4);
       final mode = trial % 3;
       var hold = 0.0;
       var left = true;
