@@ -7,6 +7,7 @@ import '../core/sfx.dart';
 import '../core/theme.dart';
 import '../core/wallet.dart';
 import '../games/cards/playing_card.dart';
+import 'card_art.dart';
 import 'guide.dart';
 import 'settings_sheet.dart';
 
@@ -241,14 +242,10 @@ class _GameFrameState extends State<GameFrame> {
     final dense = MediaQuery.sizeOf(context).width < 430 ? VisualDensity.compact : VisualDensity.standard;
     return Scaffold(
       backgroundColor: p.bg,
-      body: DecoratedBox(
-        decoration: widget.background ??
-            BoxDecoration(
-              gradient: RadialGradient(
-                radius: 1.1,
-                colors: [p.felt, p.feltEdge],
-              ),
-            ),
+      body: CustomPaint(
+        painter: widget.background == null ? FeltPainter(p.felt, p.feltEdge) : null,
+        child: DecoratedBox(
+        decoration: widget.background ?? const BoxDecoration(),
         child: SafeArea(
           child: Column(
             children: [
@@ -308,6 +305,7 @@ class _GameFrameState extends State<GameFrame> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -674,179 +672,53 @@ class PlayingCardView extends StatelessWidget {
     final height = width / cardAspect;
     final radius = BorderRadius.circular(width * 0.09);
     final c = card;
+    final settings = AppScope.of(context).settings;
+    final animate = !MediaQuery.disableAnimationsOf(context);
+    Widget side(bool back) => Container(
+          key: ValueKey(back),
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF8E7),
+            borderRadius: radius,
+            border: Border.all(
+              color: highlighted ? const Color(0xFFFFC95C) : const Color(0x33000000),
+              width: highlighted ? 3 : 1,
+            ),
+            boxShadow: const [
+              BoxShadow(blurRadius: 5, offset: Offset(0, 2), color: Color(0x66000000)),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: radius,
+            child: ListenableBuilder(
+              listenable: settings,
+              builder: (context, _) => CustomPaint(
+                size: Size(width, height),
+                painter: back || c == null
+                    ? CardBackPainter(settings.cardBack)
+                    : CardFacePainter(c, c.rankLabel(settings.cardNames), strip: strip),
+              ),
+            ),
+          ),
+        );
     return Semantics(
       label: c?.spokenName ?? 'Verdeckte Karte',
       excludeSemantics: true,
-      child: Container(
+      child: SizedBox(
         width: width,
         height: height,
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF8E7),
-          borderRadius: radius,
-          border: Border.all(
-            color: highlighted ? const Color(0xFFFFC95C) : const Color(0x33000000),
-            width: highlighted ? 3 : 1,
-          ),
-          boxShadow: const [
-            BoxShadow(blurRadius: 5, offset: Offset(0, 2), color: Color(0x66000000)),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: radius,
-          child: c == null
-              ? CustomPaint(painter: _CardBackPainter())
-              : _CardFace(card: c, width: width, height: height, strip: strip),
-        ),
+        child: animate
+            ? AnimatedSwitcher(
+                duration: const Duration(milliseconds: 320),
+                transitionBuilder: flipTransition,
+                layoutBuilder: (current, previous) => Stack(children: [...previous, if (current != null) current]),
+                child: side(c == null),
+              )
+            : side(c == null),
       ),
     );
   }
-}
-
-class _CardFace extends StatelessWidget {
-  const _CardFace({
-    required this.card,
-    required this.width,
-    required this.height,
-    this.strip = false,
-  });
-  final PlayingCard card;
-  final double width;
-  final double height;
-  final bool strip;
-
-  @override
-  Widget build(BuildContext context) {
-    final settings = AppScope.of(context).settings;
-    return ListenableBuilder(
-      listenable: settings,
-      builder: (context, _) => _build(card.rankLabel(settings.cardNames)),
-    );
-  }
-
-  Widget _build(String label) {
-    final color = card.isRed ? const Color(0xFFC8321F) : const Color(0xFF241410);
-    if (strip) return _buildStrip(label, color);
-    final corner = Padding(
-      padding: EdgeInsets.all(width * 0.06),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: bodyFont,
-              fontWeight: FontWeight.w700,
-              fontSize: width * 0.25,
-              height: 1,
-              color: color,
-            ),
-          ),
-          SuitIcon(suit: card.suit, size: width * 0.17, color: color),
-        ],
-      ),
-    );
-    final isFace = card.rank >= 11 && card.rank <= 13;
-    return Stack(
-      children: [
-        Center(
-          child: isFace
-              ? Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: displayFont,
-                    fontSize: width * 0.62,
-                    color: color,
-                  ),
-                )
-              : SuitIcon(suit: card.suit, size: width * 0.5, color: color),
-        ),
-        Align(alignment: Alignment.topLeft, child: corner),
-        Align(
-          alignment: Alignment.bottomRight,
-          child: RotatedBox(quarterTurns: 2, child: corner),
-        ),
-      ],
-    );
-  }
-}
-
-extension on _CardFace {
-  Widget _buildStrip(String label, Color color) {
-    final isFace = card.rank >= 11 && card.rank <= 13;
-    // Schmale Karten bekommen eine größere Schrift, damit sie lesbar bleiben
-    final narrow = width < 48;
-    return Stack(
-      children: [
-        Positioned(
-          left: width * (narrow ? 0.05 : 0.07),
-          top: width * 0.02,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontFamily: bodyFont,
-              fontWeight: FontWeight.w700,
-              fontSize: width * (narrow ? 0.42 : 0.36),
-              height: 1.05,
-              color: color,
-            ),
-          ),
-        ),
-        Positioned(
-          right: width * 0.07,
-          top: width * 0.08,
-          child: SuitIcon(suit: card.suit, size: width * (narrow ? 0.24 : 0.26), color: color),
-        ),
-        Align(
-          alignment: const Alignment(0, 0.5),
-          child: isFace
-              ? Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: displayFont,
-                    fontSize: width * 0.5,
-                    color: color,
-                  ),
-                )
-              : SuitIcon(suit: card.suit, size: width * 0.44, color: color),
-        ),
-      ],
-    );
-  }
-}
-
-/// Kartenrücken im Tapetenmuster der Siebziger.
-class _CardBackPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xFFC4391F));
-    final step = size.width / 2.6;
-    final rings = [
-      const Color(0xFFF2A33A),
-      const Color(0xFF6B3E1E),
-      const Color(0xFFFFF1C9),
-    ];
-    for (var ix = 0; ix < 4; ix++) {
-      for (var iy = 0; iy < 6; iy++) {
-        final c = Offset(
-          step * 0.2 + ix * step + (iy.isOdd ? step / 2 : 0),
-          iy * step * 0.8,
-        );
-        for (var i = 0; i < rings.length; i++) {
-          canvas.drawCircle(c, step * (0.5 - i * 0.14), Paint()..color = rings[i]);
-        }
-      }
-    }
-    canvas.drawRect(
-      (Offset.zero & size).deflate(size.width * 0.04),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = size.width * 0.03
-        ..color = const Color(0xFFFFF1C9),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// Lässt eine Karte von oben einfliegen.
@@ -866,8 +738,12 @@ class DealIn extends StatelessWidget {
       curve: Interval(start, 1, curve: Curves.easeOutCubic),
       builder: (context, v, child) => Opacity(
         opacity: v.clamp(0.0, 1.0),
-        child: Transform.translate(
-          offset: Offset(0, -40 * (1 - v)),
+        child: Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.identity()
+            ..translateByDouble(0, -60 * (1 - v), 0, 1)
+            ..rotateZ(-0.35 * (1 - v))
+            ..scaleByDouble(0.85 + 0.15 * v, 0.85 + 0.15 * v, 1, 1),
           child: child,
         ),
       ),

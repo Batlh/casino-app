@@ -54,6 +54,13 @@ class Settings extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Muster des Kartenrückens: 0 Siebziger-Tapete, 1 klassisch blau, 2 Neon.
+  int get cardBack => (_prefs.getInt('settings.cardBack') ?? 0).clamp(0, 2);
+  set cardBack(int value) {
+    _prefs.setInt('settings.cardBack', value);
+    notifyListeners();
+  }
+
   static const _cardNamesKey = 'settings.cardNames';
   static const _penaltyKey = 'settings.mauPenaltyEndsTurn';
   static const _jackKey = 'settings.mauJackOnJack';
