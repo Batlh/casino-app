@@ -196,8 +196,8 @@ const retroMachine = MachineSpec(
   feverChance: 0.03,
   feverSeconds: 10,
   pockets: [
-    Pocket(1.1, 10.7, 2.1, 11.0, 20, PocketKind.tulip),
-    Pocket(7.2, 10.7, 8.2, 11.0, 20, PocketKind.tulip),
+    Pocket(1.1, 10.7, 2.1, 11.0, 25, PocketKind.tulip),
+    Pocket(7.2, 10.7, 8.2, 11.0, 25, PocketKind.tulip),
     Pocket(4.2, 11.7, 5.2, 12.0, 30, PocketKind.start),
     Pocket(3.0, 13.6, 6.4, 14.1, 100, PocketKind.gate),
   ],
