@@ -366,7 +366,7 @@ class _PinballScreenState extends State<PinballScreen> with SingleTickerProvider
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color.lerp(th.top, Colors.black, 0.45)!, Color.lerp(th.mid, Colors.black, 0.55)!, Colors.black],
+          colors: [Color.lerp(th.top, Colors.black, 0.35)!, Color.lerp(th.mid, Colors.black, 0.45)!, Color.lerp(th.bottom, Colors.black, 0.3)!],
         ),
       ),
       child: Focus(

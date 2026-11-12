@@ -230,7 +230,7 @@ class TablePainter extends CustomPainter {
       final mid = (a + b) / 2;
       final half = (b - a).distance / 2 * 0.8;
       final dir = (b - a) / (b - a).distance;
-      final thick = 0.06 + 0.22 * math.cos(sn.angle).abs();
+      final thick = 0.03 + 0.12 * math.cos(sn.angle).abs();
       final n = Offset(-dir.dy, dir.dx) * thick;
       final p = Path()
         ..moveTo((mid - dir * half + n).dx, (mid - dir * half + n).dy)

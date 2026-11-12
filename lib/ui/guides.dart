@@ -89,7 +89,7 @@ const pachinkoGuide = GameGuide('Pachinko', [
     'Die Maschinen',
     'Neon Pachinko ist die klassische. Meer und Fische hat ein welliges Nagelbild. Drache und Tempel hat einen großen Tempel, '
         'ein Drachenrad und das längste Fieber. Kirschblüten hat keine Windräder, dafür fünf Tulpen. Die Retro-Spielhalle hat '
-        'das häufigste, aber kürzeste Fieber.',
+        'das kürzeste Fieber.',
   ),
   GuideSection('Stärke', 'Mit dem Regler stellst du ein, wie kräftig geschossen wird. Zu schwache Schüsse rollen zurück, du bekommst die Kugel erstattet.'),
 ]);

@@ -113,6 +113,7 @@ const seaMachine = MachineSpec(
     art: 'sea',
   ),
   pattern: 'wave',
+  feverChance: 0.035,
   pockets: [
     Pocket(1.0, 10.6, 2.0, 10.9, 25, PocketKind.tulip),
     Pocket(7.3, 10.6, 8.3, 10.9, 25, PocketKind.tulip),
@@ -168,10 +169,10 @@ const blossomMachine = MachineSpec(
   pattern: 'blossom',
   feverChance: 0.03,
   pockets: [
-    Pocket(0.8, 9.4, 1.8, 9.7, 15, PocketKind.tulip),
-    Pocket(2.4, 10.8, 3.4, 11.1, 15, PocketKind.tulip),
-    Pocket(6.0, 10.8, 7.0, 11.1, 15, PocketKind.tulip),
-    Pocket(7.6, 9.4, 8.6, 9.7, 15, PocketKind.tulip),
+    Pocket(0.8, 9.4, 1.8, 9.7, 18, PocketKind.tulip),
+    Pocket(2.4, 10.8, 3.4, 11.1, 18, PocketKind.tulip),
+    Pocket(6.0, 10.8, 7.0, 11.1, 18, PocketKind.tulip),
+    Pocket(7.6, 9.4, 8.6, 9.7, 18, PocketKind.tulip),
     Pocket(4.2, 11.9, 5.2, 12.2, 30, PocketKind.start),
     Pocket(3.0, 13.6, 6.4, 14.1, 150, PocketKind.gate),
   ],
@@ -180,7 +181,7 @@ const blossomMachine = MachineSpec(
 const retroMachine = MachineSpec(
   id: 'retro',
   name: 'Retro-Spielhalle',
-  blurb: 'Pixel-Look, Walzen wie am Automaten und schnelles Fieber',
+  blurb: 'Pixel-Look, Walzen wie am Automaten und kurzes Fieber',
   theme: MachineTheme(
     top: Color(0xFF151515),
     bottom: Color(0xFF050505),
@@ -192,8 +193,8 @@ const retroMachine = MachineSpec(
   ),
   spinners: [(2.0, 8.0), (7.4, 8.0)],
   pattern: 'retro',
-  feverChance: 0.045,
-  feverSeconds: 12,
+  feverChance: 0.03,
+  feverSeconds: 10,
   pockets: [
     Pocket(1.1, 10.7, 2.1, 11.0, 25, PocketKind.tulip),
     Pocket(7.2, 10.7, 8.2, 11.0, 25, PocketKind.tulip),

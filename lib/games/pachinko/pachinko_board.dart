@@ -233,7 +233,7 @@ class PachinkoBoard {
 
   /// Seitliche Verschiebung einer Nagelreihe je nach Nagelbild.
   double _patternShift(int row) => switch (spec.pattern) {
-        'wave' => 0.22 * sin(row * 0.9),
+        'wave' => 0.12 * sin(row * 0.9),
         'retro' => (row ~/ 2).isOdd ? 0.12 : -0.12,
         _ => 0,
       };
