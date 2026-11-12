@@ -7,9 +7,13 @@ Eine legendäre Langstrecke im Mittelgebirge, „die grüne Hölle“:
 - Regen, Nebel, Nachtrennen im Scheinwerferlicht.
 - Asphalt, Curbs in Rot-Weiß, Leitplanken, Reifenstapel, Startnummern, Zielflagge.
 
-**Stilvorbild:** die Nordschleife mit der Grand-Prix-Strecke, also **zwei Schleifen**, die sich an Start und Ziel
-treffen, dazu 24-Stunden-Rennen und Tourenwagen der 90er. Die Streckenteile tragen allgemeine Namen
-(„Karussell“, „Steilkurve“, „Fuchsloch“ …). Autos, Teams und Strecke sind eigene Entwürfe.
+**Stilvorbild:** der **Nürburgring**, also Nordschleife und Grand-Prix-Strecke als **zwei Schleifen**, die sich
+an Start und Ziel treffen. Dazu das 24-Stunden-Rennen und Tourenwagen der 90er.
+
+- Markante Abschnitte als Vorlage für Rampen und Lampen: Karussell (Steilkurve), Fuchsröhre, Brünnchen,
+  Schwedenkreuz, Döttinger Höhe.
+- Auf dem Tisch stehen eigene Namen, zum Beispiel „Eifelring“ oder einfach „Grüne Hölle“.
+- Autos und Teams sind eigene Entwürfe.
 
 ## Aufbau (Williams-Basis)
 
