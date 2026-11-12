@@ -155,8 +155,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
         () => _open(const PachinkoScreen()),
       ),
       _Game(
-        'Neon Flipper',
-        'Flipper mit Tastatur oder Bildschirmtasten',
+        'Flipper',
+        'Sechs Tische mit Rampen, Multiball und Missionen',
         const Color(0xFF1A0B33),
         _FlipperArt.new,
         () => _open(const PinballScreen()),

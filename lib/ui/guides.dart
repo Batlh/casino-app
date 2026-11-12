@@ -370,11 +370,12 @@ final riichiGuide = GameGuide(
   tutorialLabel: 'Mahjong lernen: 7 kurze Übungen',
 );
 
-const pinballGuide = GameGuide('Neon Flipper', [
+const pinballGuide = GameGuide('Flipper', [
   GuideSection(
     'Ziel',
-    'Halte die Kugel mit den beiden Flippern im Spiel und sammle Punkte. Ein Spiel hat drei Kugeln und kostet 20 Münzen; '
-        'am Ende gibt es eine Münze je 100 Punkte.',
+    'Halte die Kugel mit den Flippern im Spiel und sammle Punkte. Ein Spiel hat drei Kugeln und kostet 20 Münzen; '
+        'am Ende gibt es eine Münze je 100 Punkte, höchstens 400. Sechs Tische stehen zur Wahl: Neon Nacht, '
+        'Weltraumstation, Piratenbucht, Spukschloss, Rennstrecke und Neonstadt. Jeder Tisch merkt sich seinen Rekord.',
   ),
   GuideSection(
     'Steuerung am PC',
@@ -388,9 +389,17 @@ const pinballGuide = GameGuide('Neon Flipper', [
         'lassen sich gleichzeitig drücken. Abschuss gedrückt halten spannt die Feder.',
   ),
   GuideSection(
-    'Punkte',
-    'Pilze 100, Schleudern über den Flippern 10, jede obere Gasse 50. Leuchten alle drei Gassen, gibt es 1.000 Punkte '
-        'und der Multiplikator steigt, bis ×5. Er gilt für alle Punkte und fällt mit jeder verlorenen Kugel zurück auf ×1. '
+    'Auf dem Tisch',
+    'Pilze 100, Schleudern 10, obere Gassen 50; mit den Flippern wandern die Gassenlichter. Leuchten alle drei, gibt es '
+        '1.000 Punkte und der Multiplikator steigt bis ×5. Fallziele klappen weg, sind alle unten, gibt es einen Bonus und '
+        'sie kommen wieder hoch. Stehende Zielscheiben leuchten auf, alle zusammen geben einen Bonus. Spinner drehen sich '
+        'und zählen jede Umdrehung. Rampen brauchen Schwung: Die Kugel fährt über den Tisch und kommt an einem Flipper wieder an.',
+  ),
+  GuideSection(
+    'Multiball und Missionen',
+    'Kickout-Löcher mit LOCK fangen die Kugel kurz. Nach drei gefangenen Kugeln startet der Multiball mit drei Kugeln, '
+        'dann bringt jede Rampe den Jackpot. Oben auf der Anzeige steht die aktuelle Mission, die blinkenden Pfeile zeigen, '
+        'wohin. Sind alle Missionen geschafft, gibt es eine Extra-Kugel und die Missionen beginnen mit doppelten Punkten. '
         'In den ersten 6 Sekunden nach dem Abschuss rettet die Ballrettung einmal pro Kugel eine verlorene Kugel.',
   ),
 ]);
