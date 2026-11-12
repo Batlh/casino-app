@@ -31,7 +31,8 @@ Alle Antworten unten hat der Nutzer am 10.11.2026 gegeben.
   Spielstand als Datei, Mahjong-Steinkunde mit Hilfszahlen, Übungen für alle Mahjong-Varianten.
 - Neu in 0.8.5: Weitergeben auch bei Eins! (beim Wettrennen hat jeder Mensch einen eigenen Knopf, Münzseite fragt
   jeden einzeln). Mahjong-Regeln (3) für MCR, Korea und Philippinen, Quellen siehe unten.
-- Offen: Vietnam mit echten Jokerarten (siehe 3), Flipper ausbauen (6), Grafik (7).
+- Offen: Flipper ausbauen (6), Grafik (7).
+- Neu in 0.8.6: Vietnam mit acht Joker-Arten, Kaiser und Kaiserin, Joker ablegen, Phán und Mủn; Flipper-Fehler am Drehpunkt behoben.
 
 ## 1. Fehler zuerst
 
@@ -80,7 +81,7 @@ Umgesetzt am 12.11.2026:
 - **Philippinen:** Winde und Drachen sind Blumen (nur Farben in der Hand), Werte in Vierteln einer Auszahlung,
   Sofortzahlungen für Kan, geheimen Kan, Sagasa, keine Blumen und 13 Blumen; Bunot alle doppelt, bei Ron der Werfende
   doppelt. Quellen: mahjongero.com „Mahjong, as we play it“ (2020) und filipinomj.com. Ohne den optionalen Joker.
-- **Vietnam (noch offen):** Quelle riichi_advanced, documentation/vietnamese.md: 176 Steine mit 16 Blumen (auch Kaiser
+- **Vietnam (umgesetzt in 0.8.6, ohne den Sieg durch drei grüne Joker, Rahmenformen und Ablege-Boni vor Spielbeginn):** Quelle riichi_advanced, documentation/vietnamese.md: 176 Steine mit 16 Blumen (auch Kaiser
   und Kaiserin), 12 grünen Jokern (Allgemein, Kreise, Bambus, Zeichen) und 12 roten (Blume, Wind, Drache, Farbe),
   je drei mit verschiedenem Rahmen. Joker können für Punkte beiseitegelegt werden. Wertung in Phán und Mủn (6 Phán =
   1 Mủn), keine Sieben Paare, Sonderhand „Keine Blumen, keine Blätter“. Braucht neue Steine, Joker mit Einschränkung
@@ -120,6 +121,12 @@ Jedes Spiel mit Erklärung und Tutorial wie die anderen, mit eigenen Einstellung
 - Mehr auf dem Tisch: Rampen, Zielscheiben, Missionen, Multiball.
 - Mehrere Tische mit eigenem Thema.
 - Schönere Grafik: Licht, Effekte, Animationen, Sound.
+
+Ergänzung 12.11.2026 (Nutzer): Mehr Tische, aufgebaut wie amerikanische Flipperautomaten (Rampen, Spinner, Drop-Targets,
+Kickout-Löcher, Multiball, Missionen und Modi auf einer Anzeige), mit Animationen. Bei Pachinko dasselbe: mehrere
+Maschinen mit eigenem Aufbau und Animationen.
+Behoben 12.11.: Kugel blieb in einer Mulde zwischen Schienenende und Flipper-Drehpunkt liegen; ein Test wirft dafür
+900 Kugeln mit verschiedenem Flippern auf den Tisch.
 
 ## 7. Grafik verbessern
 
