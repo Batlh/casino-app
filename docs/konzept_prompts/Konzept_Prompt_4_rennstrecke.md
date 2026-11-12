@@ -15,7 +15,22 @@ an Start und Ziel treffen. Dazu das 24-Stunden-Rennen und Tourenwagen der 90er.
 - Auf dem Tisch stehen eigene Namen, zum Beispiel „Eifelring“ oder einfach „Grüne Hölle“.
 - Autos und Teams sind eigene Entwürfe.
 
+**Echte Automaten als Vorbild für einzelne Elemente:** Der Tisch selbst ist eine eigene Idee rund um die zwei
+Schleifen.
+- **The Getaway: High Speed II** (Williams, 1992): „Supercharger“-Schleife, in der 3 Elektromagnete die Kugel
+  beschleunigen; dazu Ampel, Straßen und Bäume.
+- **Corvette** (Bally/Midway, 1994): zwei Modellautos, die an der rechten Seite gegeneinander Beschleunigungsrennen
+  fahren; ein Motor-Modell oben links, durch dessen Ansaugtrakt die Kugel zum Jackpot läuft.
+- **Indianapolis 500** (Bally, 1995): Siegerpokal zwischen den Flippern, Rampen mit Rennsprüchen, Stimmen eines
+  Rennkommentators.
+
 ## Aufbau (Williams-Basis)
+
+- **Turbo-Schleife** (nach Getaway): Die lange Schleife (Nordschleife) bekommt auf der Döttinger Höhe 2–3
+  verdeckte Beschleuniger-Magnete. Die Kugel wird sichtbar schneller, Lichter laufen mit, die Anzeige zeigt die
+  km/h.
+- **Motor** (nach Corvette): ein Rennmotor-Modell oben links. Ein Schuss in den Ansaugtrichter gibt nach dem Lock
+  den Super-Jackpot.
 
 - **Die zwei Schleifen sind das Herz des Tisches.**
   - **Kurze Schleife (Grand-Prix-Kurs):** innere Umlaufbahn um das Plateau, von links rein und rechts raus.
