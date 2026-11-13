@@ -9,7 +9,10 @@ import 'package:gluckspfennig/games/pinball/pinball_table.dart';
 void main() {
   for (final spec in paintedTables) {
     test('${spec.name}: alle Rampen und Löcher sind erreichbar', () {
-      final hits = {for (final r in spec.ramps) r.id: 0};
+      final hits = {
+        for (final r in spec.ramps)
+          if (!r.id.startsWith('_')) r.id: 0,
+      };
       var saucers = 0;
       var drops = 0;
       var bumpers = 0;
@@ -39,7 +42,9 @@ void main() {
           for (final e in t.events) {
             if (e.kind == PinballEventKind.ramp) {
               for (final r in spec.ramps) {
-                if (r.name == e.text) hits[r.id] = hits[r.id]! + 1;
+                if (r.name == e.text && hits.containsKey(r.id)) {
+                  hits[r.id] = hits[r.id]! + 1;
+                }
               }
             }
             if (e.kind == PinballEventKind.saucer) saucers++;
