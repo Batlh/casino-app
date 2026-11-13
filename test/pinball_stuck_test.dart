@@ -23,12 +23,26 @@ void main() {
           for (var i = 0; i < 30; i++) {
             t.step(1 / 120);
           }
-          t.debugPlaceBall(
-            2.5 + rng.nextDouble() * 4,
-            0.6 + rng.nextDouble() * 0.6,
-            (rng.nextDouble() - 0.5) * 6,
-            0,
-          );
+          final tops = [
+            for (final l in spec.lanes)
+              if (l.group == 'top') l,
+          ];
+          if (spec.theme.art.startsWith('painted') && tops.isNotEmpty) {
+            final l = tops[rng.nextInt(tops.length)];
+            t.debugPlaceBall(
+              l.x + (rng.nextDouble() - 0.5) * 0.1,
+              l.y + 0.7,
+              (rng.nextDouble() - 0.5) * 3,
+              0,
+            );
+          } else {
+            t.debugPlaceBall(
+              2.5 + rng.nextDouble() * 4,
+              0.6 + rng.nextDouble() * 0.6,
+              (rng.nextDouble() - 0.5) * 6,
+              0,
+            );
+          }
         }
         final mode = trial % 3;
         var hold = 0.0;

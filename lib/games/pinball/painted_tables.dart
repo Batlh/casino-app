@@ -33,7 +33,7 @@ const paintedNeon2Table = TableSpec(
     WallSpec([Pt(6.550, 1.350), Pt(6.550, 2.600)], visible: false),
     WallSpec([Pt(5.520, 4.050), Pt(5.359, 4.439), Pt(4.970, 4.600), Pt(4.581, 4.439), Pt(4.420, 4.050), Pt(4.581, 3.661), Pt(4.970, 3.500), Pt(5.359, 3.661), Pt(5.520, 4.050)], bounce: 0.5, visible: false),
     WallSpec([Pt(3.450, 6.550), Pt(5.000, 6.150), Pt(6.550, 6.550), Pt(6.550, 7.200), Pt(5.400, 7.500), Pt(4.550, 7.500), Pt(3.450, 7.200), Pt(3.450, 6.550)], visible: false),
-    WallSpec([Pt(7.350, 8.700), Pt(8.150, 8.300), Pt(8.950, 8.700), Pt(8.950, 9.950), Pt(7.350, 9.950), Pt(7.350, 8.700)], visible: false),
+    WallSpec([Pt(7.350, 8.750), Pt(8.300, 8.300), Pt(9.250, 8.750), Pt(9.250, 9.950), Pt(7.350, 9.950), Pt(7.350, 8.750)], visible: false),
   ],
   flippers: [
     FlipperSpec(Pt(2.550, 15.550), 1, length: 1.6),
@@ -66,8 +66,7 @@ const paintedNeon2Table = TableSpec(
     RampSpec('kassette', Pt(7.200, 7.550), Pt(8.300, 7.550), 0.300, -1.000, [Pt(7.750, 7.300), Pt(8.200, 6.000), Pt(8.500, 4.600), Pt(8.000, 3.400), Pt(6.900, 2.950), Pt(4.900, 3.100), Pt(2.900, 3.400), Pt(1.700, 5.000), Pt(1.400, 8.000), Pt(1.300, 11.400)], 0.000, 3.000, points: 1000, minSpeed: 5, name: 'Kassettenrampe'),
     RampSpec('treppe', Pt(2.450, 7.300), Pt(3.300, 7.300), 0.000, -1.000, [Pt(2.850, 7.000), Pt(2.750, 5.600), Pt(2.900, 4.400), Pt(3.500, 4.500)], 1.000, 0.600, points: 750, minSpeed: 5, name: 'Treppe'),
     RampSpec('hufeisen', Pt(1.950, 10.950), Pt(2.650, 10.950), 0.000, -1.000, [Pt(2.300, 10.600), Pt(2.300, 8.300), Pt(1.800, 7.750), Pt(1.250, 8.300), Pt(1.200, 10.400), Pt(1.600, 11.200)], 1.400, 2.200, points: 750, minSpeed: 5, name: 'Hufeisenbahn'),
-    RampSpec('boulevard', Pt(0.200, 11.200), Pt(0.950, 11.200), 0.000, -1.000, [Pt(0.550, 10.800), Pt(0.500, 7.800), Pt(0.600, 3.800), Pt(1.500, 2.100), Pt(3.000, 1.550), Pt(6.100, 1.600), Pt(8.400, 2.300), Pt(9.000, 4.400), Pt(8.950, 8.000), Pt(8.550, 11.400)], 0.000, 3.000, points: 1000, minSpeed: 5, name: 'Boulevard'),
-    RampSpec('strand', Pt(8.350, 7.550), Pt(9.200, 7.550), 0.200, -1.000, [Pt(8.800, 7.200), Pt(9.000, 4.200), Pt(8.600, 2.700), Pt(7.600, 2.100), Pt(6.400, 2.050)], -2.000, 1.000, points: 750, minSpeed: 5, name: 'Strandstraße'),
+    RampSpec('boulevard', Pt(0.150, 11.150), Pt(1.850, 11.150), 0.000, -1.000, [Pt(0.550, 10.800), Pt(0.500, 7.800), Pt(0.600, 3.800), Pt(1.500, 2.100), Pt(3.000, 1.550), Pt(6.100, 1.600), Pt(8.400, 2.300), Pt(9.000, 4.400), Pt(8.950, 8.000), Pt(8.550, 11.400)], 0.000, 3.000, points: 1000, minSpeed: 5, name: 'Boulevard'),
   ],
   missions: [
     MissionSpec('Tanzwettbewerb: 20 Bumper', MissionKind.bumper, 20),
@@ -78,6 +77,87 @@ const paintedNeon2Table = TableSpec(
     MissionSpec('Highscore-Jagd: Spielhalle', MissionKind.targets, 3),
     MissionSpec('Kassettentausch: Kassettenrampe 2 mal', MissionKind.ramp, 2, id: 'kassette'),
     MissionSpec('Sonnenaufgang: Gassen N-E-O', MissionKind.lanes, 1, id: 'top'),
+  ],
+  locksForMultiball: 3,
+);
+
+const paintedStation2Table = TableSpec(
+  id: 'station2',
+  name: 'Weltraumstation',
+  blurb: 'Sternentor, Hyperraum-Spirale, Hangar mit Oberflipper und Reaktorkern',
+  theme: TableTheme(
+    top: Color(0xFF0B1430),
+    mid: Color(0xFF101C40),
+    bottom: Color(0xFF070C1E),
+    wall: Color(0xFF7FD8FF),
+    bumper: Color(0xFFFF9100),
+    sling: Color(0xFFFF6D00),
+    flipper: Color(0xFFECEFF1),
+    accent: Color(0xFF40C4FF),
+    light: Color(0xFFFFB300),
+    ramp: Color(0xFFFF9100),
+    dmd: Color(0xFF40C4FF),
+    art: 'painted:station2',
+  ),
+  walls: [
+    WallSpec([Pt(0.000, 18.200), Pt(0.000, 2.600), Pt(0.600, 1.400), Pt(1.600, 0.600), Pt(3.000, 0.350), Pt(5.000, 0.300), Pt(5.324, 0.308), Pt(5.646, 0.332), Pt(5.966, 0.372), Pt(6.281, 0.428), Pt(6.591, 0.499), Pt(6.894, 0.585), Pt(7.189, 0.687), Pt(7.475, 0.802), Pt(7.750, 0.932), Pt(8.013, 1.075), Pt(8.264, 1.231), Pt(8.500, 1.398), Pt(8.722, 1.577), Pt(8.927, 1.767), Pt(9.116, 1.967), Pt(9.287, 2.175), Pt(9.440, 2.391), Pt(9.573, 2.615), Pt(9.687, 2.845), Pt(9.781, 3.079), Pt(9.855, 3.318), Pt(9.908, 3.561), Pt(9.939, 3.805), Pt(9.950, 4.050), Pt(9.950, 18.200)], visible: false),
+    WallSpec([Pt(0.950, 13.500), Pt(0.950, 15.600), Pt(2.200, 15.950)], visible: false),
+    WallSpec([Pt(8.650, 13.500), Pt(8.650, 15.600), Pt(7.450, 15.950)], visible: false),
+    WallSpec([Pt(2.150, 16.350), Pt(1.550, 18.200)], visible: false),
+    WallSpec([Pt(7.500, 16.350), Pt(8.100, 18.200)], visible: false),
+    WallSpec([Pt(4.450, 4.250), Pt(3.350, 4.250), Pt(3.300, 1.600), Pt(4.000, 0.600), Pt(4.850, 0.380), Pt(5.700, 0.600), Pt(6.500, 1.600), Pt(6.500, 4.250), Pt(5.250, 4.250), Pt(5.250, 3.000), Pt(4.450, 3.000), Pt(4.450, 4.250)], bounce: 0.4, visible: false),
+    WallSpec([Pt(3.600, 4.650), Pt(3.600, 5.600)], visible: false),
+    WallSpec([Pt(4.400, 4.650), Pt(4.400, 5.600)], visible: false),
+    WallSpec([Pt(5.250, 4.650), Pt(5.250, 5.600)], visible: false),
+    WallSpec([Pt(6.000, 4.650), Pt(6.000, 5.600)], visible: false),
+    WallSpec([Pt(6.750, 4.650), Pt(6.750, 5.600)], visible: false),
+    WallSpec([Pt(6.950, 2.950), Pt(6.950, 1.750), Pt(7.800, 1.350), Pt(8.750, 1.750), Pt(8.750, 2.950)], visible: false),
+    WallSpec([Pt(3.000, 7.650), Pt(4.900, 7.250), Pt(6.800, 7.650), Pt(6.800, 9.150), Pt(6.200, 9.350), Pt(3.600, 9.350), Pt(3.000, 9.150), Pt(3.000, 7.650)], visible: false),
+    WallSpec([Pt(8.600, 11.200), Pt(8.600, 7.250), Pt(9.250, 7.000)], visible: false),
+  ],
+  flippers: [
+    FlipperSpec(Pt(2.300, 16.150), 1, length: 1.6),
+    FlipperSpec(Pt(7.350, 16.150), -1, length: 1.6),
+    FlipperSpec(Pt(8.550, 4.300), -1, length: 1.15),
+  ],
+  bumpers: [BumperSpec(3.580, 6.100, radius: 0.480), BumperSpec(4.970, 6.000, radius: 0.480), BumperSpec(6.110, 6.120, radius: 0.480), BumperSpec(4.950, 11.150, radius: 0.900)],
+  slings: [SlingSpec(Pt(1.600, 13.350), Pt(2.550, 15.850), Pt(1.600, 15.350)), SlingSpec(Pt(8.050, 13.350), Pt(7.100, 15.850), Pt(8.050, 15.350))],
+  lanes: [
+    LaneSpec(3.990, 5.150, group: 'top', halfWidth: 0.300),
+    LaneSpec(4.810, 5.150, group: 'top', halfWidth: 0.300),
+    LaneSpec(5.620, 5.150, group: 'top', halfWidth: 0.300),
+    LaneSpec(6.370, 5.150, group: 'top', halfWidth: 0.300),
+    LaneSpec(0.600, 14.300, group: 'out', halfWidth: 0.300),
+    LaneSpec(1.280, 14.300, group: 'in', halfWidth: 0.300),
+    LaneSpec(8.350, 14.300, group: 'in', halfWidth: 0.300),
+    LaneSpec(8.950, 14.300, group: 'out', halfWidth: 0.300),
+  ],
+  drops: [
+    DropBankSpec('schilde', [Pt(4.150, 9.950), Pt(4.920, 9.950), Pt(5.730, 9.950)], angle: 0.000, length: 0.500),
+  ],
+  targets: [
+    TargetBankSpec('bruecke', [Pt(4.240, 9.450), Pt(4.970, 9.450), Pt(5.620, 9.450)], angle: 0.000, length: 0.450),
+  ],
+  spinners: [SpinnerSpec('spinner', Pt(0.300, 12.050), Pt(0.950, 12.050))],
+  saucers: [
+    SaucerSpec('tor', 4.850, 3.450, 0.000, 4.000, lock: false),
+    SaucerSpec('lock', 8.930, 7.700, 0.000, 3.500, lock: true),
+  ],
+  ramps: [
+    RampSpec('aussen', Pt(0.250, 11.500), Pt(1.000, 11.500), 0.000, -1.000, [Pt(0.650, 11.200), Pt(0.600, 8.000), Pt(0.650, 4.000), Pt(1.300, 1.500), Pt(2.400, 0.600), Pt(5.000, 0.450), Pt(7.400, 0.600), Pt(8.400, 1.000), Pt(8.100, 3.100), Pt(7.600, 3.500)], 0.400, 0.800, points: 1000, minSpeed: 5, name: 'Außenring'),
+    RampSpec('hyper', Pt(1.550, 11.300), Pt(2.400, 11.300), 0.000, -1.000, [Pt(1.950, 11.000), Pt(1.700, 9.500), Pt(1.500, 7.800), Pt(1.600, 6.200), Pt(2.100, 4.600), Pt(2.100, 3.200), Pt(2.600, 2.600), Pt(2.100, 2.000), Pt(1.600, 2.600), Pt(2.100, 3.300), Pt(1.200, 4.600), Pt(0.900, 7.000), Pt(0.950, 10.000), Pt(1.280, 13.200)], 0.000, 3.000, points: 1000, minSpeed: 5, name: 'Hyperraum'),
+    RampSpec('quadrant', Pt(2.450, 11.000), Pt(3.300, 11.000), 0.300, -1.000, [Pt(2.900, 10.700), Pt(2.800, 9.000), Pt(3.000, 7.500), Pt(3.300, 6.900)], 0.600, -1.600, points: 750, minSpeed: 5, name: 'Quadrant'),
+    RampSpec('hangar', Pt(7.300, 8.600), Pt(8.300, 8.600), 0.150, -1.000, [Pt(7.800, 8.300), Pt(7.900, 7.000), Pt(8.100, 5.600), Pt(8.000, 4.600), Pt(7.700, 3.400)], 0.300, 0.600, points: 1000, minSpeed: 5, name: 'Hangar'),
+  ],
+  missions: [
+    MissionSpec('Hüllenbruch: Schilde abräumen', MissionKind.drops, 3),
+    MissionSpec('Asteroidenfeld: 20 Bumper', MissionKind.bumper, 20),
+    MissionSpec('Warpsprung: Gassen W-A-R-P', MissionKind.lanes, 1, id: 'top'),
+    MissionSpec('Andockmanöver: 2 Kugeln sperren', MissionKind.lock, 2),
+    MissionSpec('Raumschlacht: Brücke treffen', MissionKind.targets, 3),
+    MissionSpec('Erstkontakt: Hangar 2 mal', MissionKind.ramp, 2, id: 'hangar'),
+    MissionSpec('Reaktorüberlastung: Hyperraum 2 mal', MissionKind.ramp, 2, id: 'hyper'),
+    MissionSpec('Rettungskapsel: 4 Rampen', MissionKind.anyRamp, 4),
   ],
   locksForMultiball: 3,
 );
@@ -112,8 +192,6 @@ const paintedEifelringTable = TableSpec(
     WallSpec([Pt(6.800, 0.700), Pt(6.800, 1.700)], visible: false),
     WallSpec([Pt(2.700, 4.550), Pt(3.050, 4.000), Pt(5.000, 3.600), Pt(7.000, 4.000), Pt(7.300, 4.550), Pt(6.950, 5.300), Pt(3.050, 5.300), Pt(2.700, 4.550)], bounce: 0.45, visible: false),
     WallSpec([Pt(7.350, 6.050), Pt(8.050, 5.600), Pt(8.750, 6.050), Pt(8.750, 8.000), Pt(8.250, 8.150), Pt(7.350, 8.000), Pt(7.350, 6.050)], visible: false),
-    WallSpec([Pt(2.850, 7.300), Pt(2.950, 7.700)], visible: false),
-    WallSpec([Pt(6.950, 7.300), Pt(6.850, 7.700)], visible: false),
   ],
   flippers: [
     FlipperSpec(Pt(2.450, 15.600), 1, length: 1.6),
@@ -162,7 +240,8 @@ const paintedEifelringTable = TableSpec(
 /// Spielfeldbild je gemaltem Tisch (848 × 1536 px = 9,95 × 18 Einheiten).
 const paintedBackgrounds = <String, String>{
   'neon2': 'assets/pinball/painted/neon2.webp',
+  'station2': 'assets/pinball/painted/station2.webp',
   'eifelring': 'assets/pinball/painted/eifelring.webp',
 };
 
-const paintedTables = [paintedNeon2Table, paintedEifelringTable];
+const paintedTables = [paintedNeon2Table, paintedStation2Table, paintedEifelringTable];
