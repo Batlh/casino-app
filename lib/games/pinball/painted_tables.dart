@@ -121,7 +121,7 @@ const paintedStation2Table = TableSpec(
     FlipperSpec(Pt(7.250, 16.150), -1, length: 2.0),
     FlipperSpec(Pt(8.550, 4.300), -1, length: 1.15),
   ],
-  bumpers: [BumperSpec(3.580, 6.100, radius: 0.480), BumperSpec(4.970, 6.000, radius: 0.480), BumperSpec(6.110, 6.120, radius: 0.480), BumperSpec(4.950, 11.350, radius: 0.550)],
+  bumpers: [BumperSpec(4.400, 6.150, radius: 0.420), BumperSpec(5.220, 6.050, radius: 0.420), BumperSpec(6.000, 6.200, radius: 0.420), BumperSpec(4.950, 11.350, radius: 0.550)],
   slings: [SlingSpec(Pt(1.650, 13.100), Pt(2.550, 15.000), Pt(1.650, 14.600)), SlingSpec(Pt(8.000, 13.100), Pt(7.100, 15.000), Pt(8.000, 14.600))],
   lanes: [
     LaneSpec(3.990, 5.150, group: 'top', halfWidth: 0.300),
@@ -139,15 +139,15 @@ const paintedStation2Table = TableSpec(
   targets: [
     TargetBankSpec('bruecke', [Pt(4.240, 9.450), Pt(4.970, 9.450), Pt(5.620, 9.450)], angle: 0.000, length: 0.450),
   ],
-  spinners: [SpinnerSpec('spinner', Pt(0.300, 12.050), Pt(0.950, 12.050))],
+  spinners: [SpinnerSpec('spinner', Pt(0.300, 12.750), Pt(0.950, 12.750))],
   saucers: [
-    SaucerSpec('tor', 4.850, 3.450, 0.000, 4.000, lock: false),
+    SaucerSpec('tor', 4.850, 3.800, 0.000, 4.000, lock: false),
     SaucerSpec('lock', 8.930, 7.700, 0.000, 3.500, lock: true),
   ],
   ramps: [
     RampSpec('_abfahrt_abschuss', Pt(9.300, 3.200), Pt(9.950, 3.200), 0.000, -1.000, [Pt(9.600, 2.900), Pt(9.400, 1.400), Pt(8.600, 0.600), Pt(7.400, 0.500), Pt(6.750, 1.400), Pt(6.800, 3.600), Pt(6.500, 4.400)], -1.400, 0.800, points: 0, minSpeed: 5, name: 'Abschussbogen'),
-    RampSpec('aussen', Pt(0.200, 11.500), Pt(1.500, 11.500), 0.000, -1.000, [Pt(0.650, 11.200), Pt(0.600, 8.000), Pt(0.650, 4.000), Pt(1.300, 1.500), Pt(2.400, 0.600), Pt(5.000, 0.450), Pt(7.400, 0.600), Pt(8.400, 1.000), Pt(8.100, 3.100), Pt(7.600, 3.500)], 0.400, 0.800, points: 1000, minSpeed: 5, name: 'Außenring'),
-    RampSpec('hyper', Pt(1.550, 11.300), Pt(2.400, 11.300), 0.000, -1.000, [Pt(1.950, 11.000), Pt(1.700, 9.500), Pt(1.500, 7.800), Pt(1.600, 6.200), Pt(2.100, 4.600), Pt(2.100, 3.200), Pt(2.600, 2.600), Pt(2.100, 2.000), Pt(1.600, 2.600), Pt(2.100, 3.300), Pt(1.200, 4.600), Pt(0.900, 7.000), Pt(0.950, 10.000), Pt(1.280, 13.200)], 0.000, 3.000, points: 1000, minSpeed: 5, name: 'Hyperraum'),
+    RampSpec('aussen', Pt(0.200, 12.400), Pt(1.450, 12.400), 0.000, -1.000, [Pt(0.650, 12.000), Pt(0.650, 11.200), Pt(0.600, 8.000), Pt(0.650, 4.000), Pt(1.300, 1.500), Pt(2.400, 0.600), Pt(5.000, 0.450), Pt(7.400, 0.600), Pt(8.400, 1.000), Pt(8.100, 3.100), Pt(7.600, 3.500)], 0.400, 0.800, points: 1000, minSpeed: 5, name: 'Außenring'),
+    RampSpec('hyper', Pt(1.500, 12.200), Pt(2.450, 12.200), 0.000, -1.000, [Pt(1.950, 11.900), Pt(1.950, 11.000), Pt(1.700, 9.500), Pt(1.500, 7.800), Pt(1.600, 6.200), Pt(2.100, 4.600), Pt(2.100, 3.200), Pt(2.600, 2.600), Pt(2.100, 2.000), Pt(1.600, 2.600), Pt(2.100, 3.300), Pt(1.200, 4.600), Pt(0.900, 7.000), Pt(0.950, 10.000), Pt(1.280, 13.200)], 0.000, 3.000, points: 1000, minSpeed: 5, name: 'Hyperraum'),
     RampSpec('quadrant', Pt(2.450, 11.000), Pt(3.300, 11.000), 0.300, -1.000, [Pt(2.900, 10.700), Pt(2.800, 9.000), Pt(3.000, 7.500), Pt(3.300, 6.900)], 0.900, -3.200, points: 750, minSpeed: 5, name: 'Quadrant'),
     RampSpec('hangar', Pt(7.300, 8.600), Pt(8.300, 8.600), 0.150, -1.000, [Pt(7.800, 8.300), Pt(7.900, 7.000), Pt(8.100, 5.600), Pt(8.000, 4.600), Pt(7.700, 3.400)], 0.300, 0.600, points: 1000, minSpeed: 5, name: 'Hangar'),
   ],
