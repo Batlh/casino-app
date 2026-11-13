@@ -27,6 +27,7 @@ flutter:
   assets:
     - assets/sfx/
     - assets/pinball/neonstadt/
+    - assets/pinball/painted/
   fonts:
     - family: Shrikhand
       fonts:

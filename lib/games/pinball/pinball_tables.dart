@@ -3,6 +3,7 @@
 
 import 'dart:ui' show Color;
 
+import 'painted_tables.dart';
 import 'pinball_layout.dart';
 
 const neonNightTable = TableSpec(
@@ -1850,11 +1851,13 @@ const cityTable = TableSpec(
 );
 
 /// Alle Tische in der Reihenfolge der Auswahl.
-const pinballTables = [
+const pinballTables = [cityTable, ...paintedTables];
+
+/// Die bisherigen, mit Formen gezeichneten Tische (nur noch als Referenz).
+const classicTables = [
   neonNightTable,
   spaceTable,
   pirateTable,
   hauntedTable,
   racingTable,
-  cityTable,
 ];

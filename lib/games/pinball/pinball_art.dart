@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'pinball_table.dart';
 import 'neonstadt_assets.dart';
+import 'painted_assets.dart';
 import 'neonstadt_rules.dart';
 
 part 'neonstadt_art.dart';
@@ -168,7 +169,13 @@ class TablePainter extends CustomPainter {
     this.time,
     this.sparks,
     Listenable repaint,
-  ) : super(repaint: Listenable.merge([repaint, NeonstadtAssets.instance]));
+  ) : super(
+         repaint: Listenable.merge([
+           repaint,
+           NeonstadtAssets.instance,
+           PaintedAssets.instance,
+         ]),
+       );
 
   /// Standbild für die Tischauswahl.
   TablePainter.preview(TableSpec s)
@@ -176,7 +183,12 @@ class TablePainter extends CustomPainter {
       spec = (() => s),
       time = (() => 0.0),
       sparks = (() => const []),
-      super(repaint: NeonstadtAssets.instance);
+      super(
+        repaint: Listenable.merge([
+          NeonstadtAssets.instance,
+          PaintedAssets.instance,
+        ]),
+      );
 
   final PinballTable? Function() table;
   final TableSpec Function() spec;
@@ -202,6 +214,27 @@ class TablePainter extends CustomPainter {
       _text(
         canvas,
         failed ? 'Grafiken nicht verfügbar' : 'Neonstadt wird geladen …',
+        Offset(size.width / 2, size.height / 2),
+        math.min(16, size.width / 18),
+        th.accent,
+      );
+      return;
+    }
+    final paintedId = PaintedAssets.idOf(th.art);
+    final painted = paintedId == null
+        ? null
+        : PaintedAssets.instance.image(paintedId);
+    if (paintedId != null && painted == null) {
+      PaintedAssets.instance.load(paintedId);
+      canvas.drawRect(
+        Offset.zero & size,
+        Paint()..color = const Color(0xFF080E19),
+      );
+      _text(
+        canvas,
+        PaintedAssets.instance.hasError(paintedId)
+            ? 'Grafik nicht verfügbar'
+            : '${sp.name} wird geladen …',
         Offset(size.width / 2, size.height / 2),
         math.min(16, size.width / 18),
         th.accent,
@@ -234,6 +267,49 @@ class TablePainter extends CustomPainter {
     final rr = RRect.fromRectAndRadius(field, const Radius.circular(0.4));
     canvas.save();
     canvas.clipRRect(rr);
+    if (painted != null) {
+      canvas.drawImageRect(
+        painted,
+        Rect.fromLTWH(0, 0, painted.width.toDouble(), painted.height.toDouble()),
+        field,
+        Paint()..filterQuality = FilterQuality.medium,
+      );
+      _paintedDynamic(canvas, t, th, now, idle);
+      for (final f in t.flippers) {
+        _flipper(canvas, f, th);
+      }
+      for (final b in t.balls) {
+        if (b.raised) continue;
+        final p = b.pos;
+        _ball(
+          canvas,
+          Offset(p.x, p.y),
+          PinballTable.ballRadius * (b.saucer != null ? 0.85 : 1),
+        );
+      }
+      for (final b in t.balls) {
+        if (!b.raised) continue;
+        final p = b.pos;
+        canvas.drawCircle(
+          Offset(p.x + 0.12, p.y + 0.18),
+          PinballTable.ballRadius * 1.1,
+          Paint()..color = Colors.black38,
+        );
+        _ball(canvas, Offset(p.x, p.y), PinballTable.ballRadius * 1.15);
+      }
+      if (PaintedAssets.showPhysics) _paintedPhysics(canvas, t);
+      for (final sp in sparks()) {
+        canvas.drawCircle(
+          Offset(sp.x, sp.y),
+          0.05 + 0.08 * sp.life,
+          Paint()
+            ..color = sp.color.withValues(alpha: (sp.life * 2).clamp(0, 1)),
+        );
+      }
+      canvas.restore();
+      canvas.restore();
+      return;
+    }
     canvas.drawRect(
       field,
       Paint()
@@ -609,6 +685,143 @@ class TablePainter extends CustomPainter {
     }
     canvas.restore();
     canvas.restore();
+  }
+
+  /// Bewegliche Zustände über dem gemalten Spielfeld: Lichter, Blitze, gefallene Ziele.
+  void _paintedDynamic(
+    Canvas canvas,
+    PinballTable t,
+    TableTheme th,
+    double now,
+    bool idle,
+  ) {
+    void glow(Offset c, double r, Color color, double strength) {
+      if (strength <= 0.01) return;
+      canvas.drawCircle(
+        c,
+        r,
+        Paint()
+          ..color = color.withValues(alpha: (0.55 * strength).clamp(0, 1))
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.6),
+      );
+    }
+
+    for (var i = 0; i < t.lanes.length; i++) {
+      final l = t.lanes[i];
+      final chase = idle && ((now * 4).floor() % t.lanes.length) == i;
+      final on = l.lit || chase || l.flash > 0.5;
+      if (on) glow(Offset(l.spec.x, l.spec.y), 0.32, th.light, 0.8);
+    }
+    for (final b in t.bumpers) {
+      final pulse = idle ? 0.25 + 0.25 * math.sin(now * 2 + b.x) : b.glow;
+      glow(Offset(b.x, b.y), b.spec.radius * 1.3, th.bumper, pulse);
+    }
+    for (final sl in t.slings) {
+      if (sl.glow <= 0.01) continue;
+      final p = Path()
+        ..moveTo(sl.a.x, sl.a.y)
+        ..lineTo(sl.b.x, sl.b.y)
+        ..lineTo(sl.c.x, sl.c.y)
+        ..close();
+      canvas.drawPath(
+        p,
+        Paint()..color = th.sling.withValues(alpha: 0.45 * sl.glow),
+      );
+    }
+    for (final bank in t.dropBanks) {
+      for (final d in bank.targets) {
+        if (d.sink > 0.5) {
+          _bar(
+            canvas,
+            d.c,
+            bank.spec.angle,
+            bank.spec.length,
+            0.2,
+            Colors.black.withValues(alpha: 0.65 * d.sink),
+          );
+        }
+      }
+      if (bank.flash > 0) {
+        for (final d in bank.targets) {
+          glow(Offset(d.c.x, d.c.y), 0.3, Colors.white, bank.flash);
+        }
+      }
+    }
+    for (final bank in t.targetBanks) {
+      for (final d in bank.targets) {
+        final c = Offset(d.c.x, d.c.y);
+        if (d.lit) glow(c, 0.28, th.light, 0.7);
+        glow(c, 0.3, Colors.white, d.flash);
+      }
+    }
+    for (final sc in t.saucers) {
+      final c = Offset(sc.spec.x, sc.spec.y);
+      if (sc.held != null) {
+        glow(c, 0.55, th.accent, 0.6 + 0.4 * math.sin(now * 10));
+      }
+      glow(c, 0.5, Colors.white, sc.flash);
+    }
+    if (t.multiball && (now * 6).floor().isEven) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, PinballTable.width, t.spec.playfieldHeight),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.16
+          ..color = th.accent.withValues(alpha: 0.6),
+      );
+    }
+  }
+
+  /// Wände, Rampeneinfahrten und Ziele als Linien – zum Abgleich mit dem Bild.
+  void _paintedPhysics(Canvas canvas, PinballTable t) {
+    final wall = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.05
+      ..color = const Color(0xCC00E5FF);
+    for (final w in t.walls) {
+      final path = Path()..moveTo(w.points.first.x, w.points.first.y);
+      for (final p in w.points.skip(1)) {
+        path.lineTo(p.x, p.y);
+      }
+      canvas.drawPath(path, wall);
+    }
+    final ramp = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.08
+      ..color = const Color(0xCC76FF03);
+    for (final r in t.ramps) {
+      canvas.drawLine(
+        Offset(r.spec.a.x, r.spec.a.y),
+        Offset(r.spec.b.x, r.spec.b.y),
+        ramp,
+      );
+      final path = Path()..moveTo(r.spec.path.first.x, r.spec.path.first.y);
+      for (final p in r.spec.path.skip(1)) {
+        path.lineTo(p.x, p.y);
+      }
+      canvas.drawPath(path, ramp..strokeWidth = 0.03);
+      ramp.strokeWidth = 0.08;
+    }
+    final other = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.04
+      ..color = const Color(0xCCFF4081);
+    for (final b in t.bumpers) {
+      canvas.drawCircle(Offset(b.x, b.y), b.spec.radius, other);
+    }
+    for (final sl in t.slings) {
+      canvas.drawPath(
+        Path()
+          ..moveTo(sl.a.x, sl.a.y)
+          ..lineTo(sl.b.x, sl.b.y)
+          ..lineTo(sl.c.x, sl.c.y)
+          ..close(),
+        other,
+      );
+    }
+    for (final sc in t.saucers) {
+      canvas.drawCircle(Offset(sc.spec.x, sc.spec.y), 0.34, other);
+    }
   }
 
   void _ball(Canvas canvas, Offset c, double r) {

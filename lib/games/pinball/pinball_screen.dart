@@ -11,6 +11,7 @@ import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
 import 'pinball_art.dart';
 import 'neonstadt_assets.dart';
+import 'painted_assets.dart';
 import 'neonstadt_rules.dart';
 import 'pinball_table.dart';
 import 'pinball_tables.dart';
@@ -45,7 +46,7 @@ class _DmdMessage {
 class _PinballScreenState extends State<PinballScreen>
     with SingleTickerProviderStateMixin {
   PinballTable? _table;
-  TableSpec _spec = neonNightTable;
+  TableSpec _spec = pinballTables.first;
   bool _choosing = false;
   final _frame = ValueNotifier<int>(0);
   final _focus = FocusNode();
@@ -126,6 +127,12 @@ class _PinballScreenState extends State<PinballScreen>
   }
 
   void _start() {
+    final paintedId = PaintedAssets.idOf(_spec.theme.art);
+    if (paintedId != null && !PaintedAssets.instance.isReady(paintedId)) {
+      unawaited(PaintedAssets.instance.load(paintedId));
+      setState(() => _message = '${_spec.name} lädt die Grafik. Gleich geht es los.');
+      return;
+    }
     if (_spec.theme.art == 'city' && !NeonstadtAssets.instance.isReady) {
       setState(
         () => _message = NeonstadtAssets.instance.hasError
@@ -377,6 +384,10 @@ class _PinballScreenState extends State<PinballScreen>
       _plunger(down && !up);
       return KeyEventResult.handled;
     }
+    if (k == LogicalKeyboardKey.keyP && e is KeyDownEvent) {
+      setState(() => PaintedAssets.showPhysics = !PaintedAssets.showPhysics);
+      return KeyEventResult.handled;
+    }
     if (k == LogicalKeyboardKey.keyT && e is KeyDownEvent) {
       t.nudge();
       return KeyEventResult.handled;
@@ -566,6 +577,13 @@ class _PinballScreenState extends State<PinballScreen>
           label: 'Tisch wechseln',
           onPressed: () => setState(() => _choosing = true),
         ),
+        if (PaintedAssets.idOf(_spec.theme.art) != null)
+          ActionButton(
+            label: PaintedAssets.showPhysics ? 'Physik aus' : 'Physik zeigen',
+            onPressed: () => setState(
+              () => PaintedAssets.showPhysics = !PaintedAssets.showPhysics,
+            ),
+          ),
       ],
     );
     final keysHelp = Text(
