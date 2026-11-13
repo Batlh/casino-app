@@ -23,6 +23,7 @@ void main() {
         t.charge = 0.3 + rng.nextDouble() * 0.7;
         t.launch();
         var hold = 0.0;
+        var rest = 0.0;
         var left = true;
         final timing = 0.08 + rng.nextDouble() * 0.3;
         for (var i = 0; i < 120 * 20 && !t.gameOver; i++) {
@@ -31,11 +32,14 @@ void main() {
           if (p.y > spec.flippers.first.pivot.y - 1.0 - timing &&
               p.x > 2.0 &&
               p.x < 7.2 &&
-              hold <= 0) {
+              hold <= 0 &&
+              rest <= 0) {
             hold = 0.12 + rng.nextDouble() * 0.2;
+            rest = hold + 0.35;
             left = p.x < 4.6;
           }
           hold -= 1 / 120;
+          rest -= 1 / 120;
           t.leftPressed = hold > 0 && left;
           t.rightPressed = hold > 0 && !left;
           t.step(1 / 120);
