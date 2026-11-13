@@ -101,8 +101,8 @@ const paintedStation2Table = TableSpec(
   ),
   walls: [
     WallSpec([Pt(0.000, 18.200), Pt(0.000, 2.600), Pt(0.600, 1.400), Pt(1.600, 0.600), Pt(3.000, 0.350), Pt(5.000, 0.300), Pt(5.324, 0.308), Pt(5.646, 0.332), Pt(5.966, 0.372), Pt(6.281, 0.428), Pt(6.591, 0.499), Pt(6.894, 0.585), Pt(7.189, 0.687), Pt(7.475, 0.802), Pt(7.750, 0.932), Pt(8.013, 1.075), Pt(8.264, 1.231), Pt(8.500, 1.398), Pt(8.722, 1.577), Pt(8.927, 1.767), Pt(9.116, 1.967), Pt(9.287, 2.175), Pt(9.440, 2.391), Pt(9.573, 2.615), Pt(9.687, 2.845), Pt(9.781, 3.079), Pt(9.855, 3.318), Pt(9.908, 3.561), Pt(9.939, 3.805), Pt(9.950, 4.050), Pt(9.950, 18.200)], visible: false),
-    WallSpec([Pt(0.950, 13.500), Pt(0.950, 15.600), Pt(2.200, 15.950)], visible: false),
-    WallSpec([Pt(8.650, 13.500), Pt(8.650, 15.600), Pt(7.450, 15.950)], visible: false),
+    WallSpec([Pt(0.950, 13.500), Pt(0.950, 15.600), Pt(2.350, 15.950)], visible: false),
+    WallSpec([Pt(8.650, 13.500), Pt(8.650, 15.600), Pt(7.350, 15.950)], visible: false),
     WallSpec([Pt(2.150, 16.350), Pt(1.550, 18.200)], visible: false),
     WallSpec([Pt(7.500, 16.350), Pt(8.100, 18.200)], visible: false),
     WallSpec([Pt(4.450, 4.250), Pt(3.350, 4.250), Pt(3.300, 1.600), Pt(4.000, 0.600), Pt(4.850, 0.380), Pt(5.700, 0.600), Pt(6.500, 1.600), Pt(6.500, 4.250), Pt(5.250, 4.250), Pt(5.250, 3.000), Pt(4.450, 3.000), Pt(4.450, 4.250)], bounce: 0.4, visible: false),
@@ -192,7 +192,6 @@ const paintedPirat2Table = TableSpec(
     WallSpec([Pt(4.800, 1.750), Pt(4.800, 2.750)], visible: false),
     WallSpec([Pt(5.450, 1.750), Pt(5.450, 2.750)], visible: false),
     WallSpec([Pt(6.080, 1.750), Pt(6.080, 2.750)], visible: false),
-    WallSpec([Pt(3.400, 4.400), Pt(3.800, 5.400), Pt(5.500, 5.750), Pt(7.200, 5.400), Pt(7.650, 4.400)], bounce: 0.4, visible: false),
     WallSpec([Pt(0.000, 4.850), Pt(0.000, 2.700), Pt(2.600, 3.500), Pt(2.400, 4.850), Pt(0.000, 4.850)], visible: false),
     WallSpec([Pt(4.250, 8.350), Pt(3.900, 7.000), Pt(4.850, 6.300), Pt(5.850, 7.000), Pt(5.500, 8.350)], visible: false),
     WallSpec([Pt(7.600, 9.350), Pt(7.750, 7.750), Pt(8.500, 7.250), Pt(9.250, 7.600), Pt(9.250, 9.350), Pt(7.600, 9.350)], visible: false),
@@ -262,8 +261,8 @@ const paintedSpuk2Table = TableSpec(
   ),
   walls: [
     WallSpec([Pt(0.000, 18.200), Pt(0.000, 2.600), Pt(0.600, 1.400), Pt(1.600, 0.600), Pt(3.000, 0.350), Pt(5.000, 0.300), Pt(5.324, 0.308), Pt(5.646, 0.332), Pt(5.966, 0.372), Pt(6.281, 0.428), Pt(6.591, 0.499), Pt(6.894, 0.585), Pt(7.189, 0.687), Pt(7.475, 0.802), Pt(7.750, 0.932), Pt(8.013, 1.075), Pt(8.264, 1.231), Pt(8.500, 1.398), Pt(8.722, 1.577), Pt(8.927, 1.767), Pt(9.116, 1.967), Pt(9.287, 2.175), Pt(9.440, 2.391), Pt(9.573, 2.615), Pt(9.687, 2.845), Pt(9.781, 3.079), Pt(9.855, 3.318), Pt(9.908, 3.561), Pt(9.939, 3.805), Pt(9.950, 4.050), Pt(9.950, 18.200)], visible: false),
-    WallSpec([Pt(1.150, 12.300), Pt(1.150, 15.000), Pt(2.750, 15.850)], visible: false),
-    WallSpec([Pt(8.550, 12.300), Pt(8.550, 15.000), Pt(6.850, 15.850)], visible: false),
+    WallSpec([Pt(1.150, 12.300), Pt(1.150, 15.000), Pt(2.900, 16.000)], visible: false),
+    WallSpec([Pt(8.550, 12.300), Pt(8.550, 15.000), Pt(6.750, 16.000)], visible: false),
     WallSpec([Pt(2.750, 16.250), Pt(2.200, 18.200)], visible: false),
     WallSpec([Pt(6.850, 16.250), Pt(7.400, 18.200)], visible: false),
     WallSpec([Pt(3.600, 1.000), Pt(3.600, 2.250)], visible: false),
@@ -281,7 +280,7 @@ const paintedSpuk2Table = TableSpec(
     FlipperSpec(Pt(6.650, 16.200), -1, length: 1.45),
     FlipperSpec(Pt(9.050, 5.650), -1, length: 0.9),
   ],
-  bumpers: [BumperSpec(3.750, 4.100, radius: 0.450), BumperSpec(4.950, 3.600, radius: 0.450), BumperSpec(6.100, 4.100, radius: 0.450)],
+  bumpers: [BumperSpec(4.450, 3.550, radius: 0.420), BumperSpec(5.500, 3.550, radius: 0.420), BumperSpec(4.970, 4.450, radius: 0.420)],
   slings: [SlingSpec(Pt(2.000, 13.000), Pt(2.950, 15.300), Pt(2.000, 14.800)), SlingSpec(Pt(7.700, 13.000), Pt(6.700, 15.300), Pt(7.700, 14.800))],
   lanes: [
     LaneSpec(4.070, 1.550, group: 'top', halfWidth: 0.300),
@@ -382,7 +381,7 @@ const paintedEifelringTable = TableSpec(
     RampSpec('fuchs', Pt(1.500, 9.900), Pt(2.450, 9.900), 0.000, -1.000, [Pt(2.000, 9.600), Pt(2.100, 7.600), Pt(2.300, 5.900), Pt(1.900, 4.400), Pt(1.600, 3.200), Pt(1.150, 4.600), Pt(0.800, 7.000), Pt(0.750, 9.500), Pt(1.300, 11.000)], 0.000, 3.000, points: 1000, minSpeed: 5, name: 'Fuchsröhre'),
     RampSpec('gp', Pt(2.500, 8.600), Pt(3.250, 8.600), 0.000, -1.000, [Pt(2.850, 8.300), Pt(2.550, 7.300), Pt(2.750, 6.350), Pt(4.700, 6.200), Pt(7.000, 6.350), Pt(7.300, 7.050), Pt(7.200, 8.200), Pt(7.100, 8.800)], -0.600, 2.800, points: 1000, minSpeed: 5, name: 'Grand-Prix-Kurs'),
     RampSpec('motor', Pt(3.900, 7.950), Pt(5.500, 7.950), 0.000, -1.000, [Pt(4.700, 7.700), Pt(4.500, 6.700), Pt(3.300, 6.000), Pt(2.300, 5.400), Pt(1.700, 3.600), Pt(1.400, 1.800), Pt(1.250, 1.050), Pt(2.400, 0.900), Pt(3.800, 1.400), Pt(4.400, 2.100)], 0.800, 1.200, points: 1000, minSpeed: 5, name: 'Motor'),
-    RampSpec('bruen', Pt(7.950, 9.950), Pt(8.900, 9.950), 0.000, -1.000, [Pt(8.400, 9.600), Pt(8.600, 7.400), Pt(8.850, 5.200), Pt(8.450, 3.600), Pt(7.700, 3.200), Pt(6.900, 2.500)], -1.200, 1.000, points: 1000, minSpeed: 5, name: 'Brünnchen'),
+    RampSpec('bruen', Pt(7.850, 9.950), Pt(9.200, 9.950), 0.000, -1.000, [Pt(8.400, 9.600), Pt(8.600, 7.400), Pt(8.850, 5.200), Pt(8.450, 3.600), Pt(7.700, 3.200), Pt(6.900, 2.500)], -1.200, 1.000, points: 1000, minSpeed: 3.5, name: 'Brünnchen'),
   ],
   missions: [
     MissionSpec('Qualifikation: 3 Rampen', MissionKind.anyRamp, 3),
