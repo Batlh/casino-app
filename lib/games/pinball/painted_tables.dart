@@ -121,8 +121,8 @@ const paintedStation2Table = TableSpec(
     FlipperSpec(Pt(7.250, 16.150), -1, length: 2.0),
     FlipperSpec(Pt(8.550, 4.300), -1, length: 1.15),
   ],
-  bumpers: [BumperSpec(3.580, 6.100, radius: 0.480), BumperSpec(4.970, 6.000, radius: 0.480), BumperSpec(6.110, 6.120, radius: 0.480), BumperSpec(4.950, 11.150, radius: 0.720)],
-  slings: [SlingSpec(Pt(1.650, 13.350), Pt(2.550, 15.400), Pt(1.650, 14.900)), SlingSpec(Pt(8.000, 13.350), Pt(7.100, 15.400), Pt(8.000, 14.900))],
+  bumpers: [BumperSpec(3.580, 6.100, radius: 0.480), BumperSpec(4.970, 6.000, radius: 0.480), BumperSpec(6.110, 6.120, radius: 0.480), BumperSpec(4.950, 11.350, radius: 0.550)],
+  slings: [SlingSpec(Pt(1.650, 13.100), Pt(2.550, 15.000), Pt(1.650, 14.600)), SlingSpec(Pt(8.000, 13.100), Pt(7.100, 15.000), Pt(8.000, 14.600))],
   lanes: [
     LaneSpec(3.990, 5.150, group: 'top', halfWidth: 0.300),
     LaneSpec(4.810, 5.150, group: 'top', halfWidth: 0.300),
