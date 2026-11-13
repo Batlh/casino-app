@@ -13,6 +13,7 @@ void main() {
       var saucers = 0;
       var drops = 0;
       var bumpers = 0;
+      final ends = <String, int>{};
       for (var trial = 0; trial < 300; trial++) {
         final rng = Random(1000 + trial);
         final t = PinballTable(rng: rng, spec: spec);
@@ -48,7 +49,15 @@ void main() {
           t.events.clear();
           if (t.ballInLane) break;
         }
+        final q = t.ball;
+        if (q != null && !t.gameOver) {
+          final key = '(${q.x.toStringAsFixed(0)},${q.y.toStringAsFixed(0)})';
+          ends[key] = (ends[key] ?? 0) + 1;
+        }
       }
+      final top = ends.entries.toList()..sort((a, b) => b.value - a.value);
+      // ignore: avoid_print
+      print('${spec.name}: Kugel nach 20 s noch bei ${top.take(6).map((e) => '${e.key}×${e.value}').join(' ')}');
       // ignore: avoid_print
       print(
         '${spec.name}: Rampen $hits, Löcher $saucers, Fallziele $drops, Bumper $bumpers',

@@ -32,8 +32,8 @@ const paintedNeon2Table = TableSpec(
     WallSpec([Pt(5.500, 1.300), Pt(5.500, 2.600)], visible: false),
     WallSpec([Pt(6.550, 1.350), Pt(6.550, 2.600)], visible: false),
     WallSpec([Pt(5.520, 4.050), Pt(5.359, 4.439), Pt(4.970, 4.600), Pt(4.581, 4.439), Pt(4.420, 4.050), Pt(4.581, 3.661), Pt(4.970, 3.500), Pt(5.359, 3.661), Pt(5.520, 4.050)], bounce: 0.5, visible: false),
-    WallSpec([Pt(3.450, 6.550), Pt(5.000, 6.150), Pt(6.550, 6.550), Pt(6.550, 7.200), Pt(5.400, 7.500), Pt(4.550, 7.500), Pt(3.450, 7.200), Pt(3.450, 6.550)], visible: false),
-    WallSpec([Pt(7.350, 8.750), Pt(8.300, 8.300), Pt(9.250, 8.750), Pt(9.250, 9.950), Pt(7.350, 9.950), Pt(7.350, 8.750)], visible: false),
+    WallSpec([Pt(3.450, 6.550), Pt(5.000, 6.150), Pt(6.550, 6.550), Pt(6.550, 7.200), Pt(5.500, 7.350), Pt(5.250, 7.620), Pt(4.700, 7.620), Pt(4.450, 7.350), Pt(3.450, 7.200), Pt(3.450, 6.550)], visible: false),
+    WallSpec([Pt(7.350, 8.850), Pt(9.250, 8.250), Pt(9.250, 9.950), Pt(7.350, 9.950), Pt(7.350, 8.850)], visible: false),
   ],
   flippers: [
     FlipperSpec(Pt(2.550, 15.550), 1, length: 1.6),
@@ -59,7 +59,7 @@ const paintedNeon2Table = TableSpec(
   ],
   spinners: [],
   saucers: [
-    SaucerSpec('dj', 4.970, 7.850, 0.000, 4.000, lock: true),
+    SaucerSpec('dj', 4.970, 7.950, 0.000, 4.000, lock: true),
   ],
   ramps: [
     RampSpec('platte', Pt(1.500, 7.550), Pt(2.350, 7.550), -0.300, -1.000, [Pt(1.950, 7.300), Pt(1.400, 6.000), Pt(1.100, 4.600), Pt(1.700, 3.400), Pt(3.000, 2.950), Pt(5.000, 3.100), Pt(7.000, 3.400), Pt(8.300, 5.000), Pt(8.600, 8.000), Pt(8.500, 11.400)], 0.000, 3.000, points: 1000, minSpeed: 5, name: 'Plattenrampe'),
@@ -162,6 +162,84 @@ const paintedStation2Table = TableSpec(
   locksForMultiball: 3,
 );
 
+const paintedPirat2Table = TableSpec(
+  id: 'pirat2',
+  name: 'Piratenbucht',
+  blurb: 'Galeone mit Fass-Bumpern, Strudel-Rampe, Mastspirale, Schatzhöhle und Kraken',
+  theme: TableTheme(
+    top: Color(0xFF2A1A0E),
+    mid: Color(0xFF3B2414),
+    bottom: Color(0xFF1A0F08),
+    wall: Color(0xFFFFCC80),
+    bumper: Color(0xFFFFB300),
+    sling: Color(0xFFD84315),
+    flipper: Color(0xFFFFF3E0),
+    accent: Color(0xFFFFD54F),
+    light: Color(0xFFFFC107),
+    ramp: Color(0xFF4FC3F7),
+    dmd: Color(0xFFFFB300),
+    art: 'painted:pirat2',
+  ),
+  walls: [
+    WallSpec([Pt(0.000, 18.200), Pt(0.000, 2.600), Pt(0.600, 1.400), Pt(1.600, 0.600), Pt(3.000, 0.350), Pt(5.000, 0.300), Pt(5.324, 0.308), Pt(5.646, 0.332), Pt(5.966, 0.372), Pt(6.281, 0.428), Pt(6.591, 0.499), Pt(6.894, 0.585), Pt(7.189, 0.687), Pt(7.475, 0.802), Pt(7.750, 0.932), Pt(8.013, 1.075), Pt(8.264, 1.231), Pt(8.500, 1.398), Pt(8.722, 1.577), Pt(8.927, 1.767), Pt(9.116, 1.967), Pt(9.287, 2.175), Pt(9.440, 2.391), Pt(9.573, 2.615), Pt(9.687, 2.845), Pt(9.781, 3.079), Pt(9.855, 3.318), Pt(9.908, 3.561), Pt(9.939, 3.805), Pt(9.950, 4.050), Pt(9.950, 18.200)], visible: false),
+    WallSpec([Pt(0.900, 12.200), Pt(0.900, 14.600), Pt(2.400, 15.250)], visible: false),
+    WallSpec([Pt(8.650, 12.200), Pt(8.650, 14.600), Pt(7.400, 15.250)], visible: false),
+    WallSpec([Pt(2.400, 15.650), Pt(1.700, 18.200)], visible: false),
+    WallSpec([Pt(7.400, 15.650), Pt(8.100, 18.200)], visible: false),
+    WallSpec([Pt(4.120, 1.750), Pt(4.120, 2.750)], visible: false),
+    WallSpec([Pt(4.800, 1.750), Pt(4.800, 2.750)], visible: false),
+    WallSpec([Pt(5.450, 1.750), Pt(5.450, 2.750)], visible: false),
+    WallSpec([Pt(6.080, 1.750), Pt(6.080, 2.750)], visible: false),
+    WallSpec([Pt(3.400, 4.400), Pt(3.800, 5.400), Pt(5.500, 5.750), Pt(7.200, 5.400), Pt(7.650, 4.400)], bounce: 0.4, visible: false),
+    WallSpec([Pt(0.300, 4.850), Pt(0.300, 3.000), Pt(1.400, 2.700), Pt(2.600, 3.400), Pt(2.400, 4.850), Pt(0.300, 4.850)], visible: false),
+    WallSpec([Pt(4.250, 8.350), Pt(3.900, 7.000), Pt(4.850, 6.300), Pt(5.850, 7.000), Pt(5.500, 8.350)], visible: false),
+    WallSpec([Pt(7.450, 9.350), Pt(7.600, 7.750), Pt(8.450, 7.250), Pt(9.250, 7.600), Pt(9.250, 9.350), Pt(7.450, 9.350)], visible: false),
+  ],
+  flippers: [
+    FlipperSpec(Pt(2.500, 15.400), 1, length: 1.6),
+    FlipperSpec(Pt(7.300, 15.400), -1, length: 1.6),
+    FlipperSpec(Pt(8.850, 2.750), -1, length: 1.2),
+  ],
+  bumpers: [BumperSpec(5.130, 3.260, radius: 0.450), BumperSpec(4.320, 3.990, radius: 0.450), BumperSpec(6.030, 3.990, radius: 0.450)],
+  slings: [SlingSpec(Pt(1.950, 13.000), Pt(2.850, 14.600), Pt(1.950, 14.300)), SlingSpec(Pt(7.750, 13.000), Pt(6.850, 14.600), Pt(7.750, 14.300))],
+  lanes: [
+    LaneSpec(4.460, 2.300, group: 'top', halfWidth: 0.300),
+    LaneSpec(5.130, 2.300, group: 'top', halfWidth: 0.300),
+    LaneSpec(5.770, 2.300, group: 'top', halfWidth: 0.300),
+    LaneSpec(0.550, 13.000, group: 'out', halfWidth: 0.300),
+    LaneSpec(1.400, 13.000, group: 'in', halfWidth: 0.300),
+    LaneSpec(8.200, 13.000, group: 'in', halfWidth: 0.300),
+    LaneSpec(8.950, 13.000, group: 'out', halfWidth: 0.300),
+  ],
+  drops: [
+    DropBankSpec('schaedel', [Pt(0.950, 5.150), Pt(1.400, 5.150), Pt(1.850, 5.150)], angle: 0.000, length: 0.400),
+  ],
+  targets: [
+    TargetBankSpec('kraken', [Pt(7.950, 9.620), Pt(8.400, 9.620), Pt(8.850, 9.620)], angle: 0.000, length: 0.400),
+  ],
+  spinners: [SpinnerSpec('steuerrad', Pt(0.350, 9.950), Pt(1.300, 9.950))],
+  saucers: [
+    SaucerSpec('hoehle', 4.870, 7.750, 0.000, 4.000, lock: true),
+  ],
+  ramps: [
+    RampSpec('riff', Pt(0.350, 9.550), Pt(1.300, 9.550), 0.000, -1.000, [Pt(0.800, 9.200), Pt(0.750, 7.500), Pt(1.000, 6.000), Pt(0.500, 5.000), Pt(0.450, 2.600), Pt(1.400, 1.500), Pt(2.800, 1.200), Pt(3.900, 1.450), Pt(4.450, 1.750)], 0.300, 1.200, points: 1000, minSpeed: 5, name: 'Riffpassage'),
+    RampSpec('mast', Pt(2.200, 9.600), Pt(3.150, 9.600), 0.000, -1.000, [Pt(2.650, 9.300), Pt(2.600, 8.000), Pt(3.400, 7.000), Pt(2.400, 6.000), Pt(3.400, 5.000), Pt(2.400, 4.000), Pt(3.200, 3.000), Pt(3.000, 2.000), Pt(2.200, 3.200), Pt(1.900, 6.000), Pt(1.600, 10.000), Pt(1.400, 12.400)], 0.000, 3.000, points: 1000, minSpeed: 5, name: 'Mastspirale'),
+    RampSpec('strudel', Pt(5.950, 8.150), Pt(6.850, 8.150), 0.200, -1.000, [Pt(6.400, 7.850), Pt(6.800, 7.000), Pt(7.300, 6.000), Pt(8.300, 4.600), Pt(8.600, 3.400), Pt(8.350, 2.450), Pt(7.300, 2.300), Pt(6.600, 1.350), Pt(4.800, 1.200), Pt(3.000, 1.500), Pt(2.200, 2.800), Pt(1.700, 6.500), Pt(1.450, 10.500), Pt(1.400, 12.400)], 0.000, 3.000, points: 1000, minSpeed: 5, name: 'Strudel-Rampe'),
+    RampSpec('planke', Pt(6.950, 7.000), Pt(7.600, 7.000), -0.300, -1.000, [Pt(7.250, 6.600), Pt(7.000, 5.800), Pt(6.500, 5.100), Pt(6.000, 4.600)], -0.600, -0.400, points: 750, minSpeed: 5, name: 'Planke'),
+  ],
+  missions: [
+    MissionSpec('Enterangriff: 15 Fass-Bumper', MissionKind.bumper, 15),
+    MissionSpec('Schatzsuche: Schatzhöhle 2 mal', MissionKind.saucer, 2),
+    MissionSpec('Meuterei: Schädelinsel abräumen', MissionKind.drops, 3),
+    MissionSpec('Seeschlacht: Strudel-Rampe 2 mal', MissionKind.ramp, 2, id: 'strudel'),
+    MissionSpec('Sturm: Steuerrad 20 Umdrehungen', MissionKind.spinner, 20),
+    MissionSpec('Geisterschiff: Mastspirale 2 mal', MissionKind.ramp, 2, id: 'mast'),
+    MissionSpec('Krakenkampf: Kraken treffen', MissionKind.targets, 3),
+    MissionSpec('Flucht vor der Flotte: 4 Rampen', MissionKind.anyRamp, 4),
+  ],
+  locksForMultiball: 3,
+);
+
 const paintedEifelringTable = TableSpec(
   id: 'eifelring',
   name: 'Eifelring',
@@ -241,7 +319,8 @@ const paintedEifelringTable = TableSpec(
 const paintedBackgrounds = <String, String>{
   'neon2': 'assets/pinball/painted/neon2.webp',
   'station2': 'assets/pinball/painted/station2.webp',
+  'pirat2': 'assets/pinball/painted/pirat2.webp',
   'eifelring': 'assets/pinball/painted/eifelring.webp',
 };
 
-const paintedTables = [paintedNeon2Table, paintedStation2Table, paintedEifelringTable];
+const paintedTables = [paintedNeon2Table, paintedStation2Table, paintedPirat2Table, paintedEifelringTable];
