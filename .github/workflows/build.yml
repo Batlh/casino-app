@@ -23,6 +23,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -45,6 +47,7 @@ jobs:
           name: bilder
           path: test_golden/goldens/
           if-no-files-found: ignore
+          retention-days: 1
       - name: Bilder unter Releases bereitstellen
         if: always()
         continue-on-error: true
@@ -110,6 +113,7 @@ jobs:
           name: android-apk
           path: gluckspfennig.apk
           if-no-files-found: error
+          retention-days: 1
       - name: Unter Releases bereitstellen
         env:
           GH_TOKEN: ${{ github.token }}
@@ -117,6 +121,28 @@ jobs:
           gh release view latest >/dev/null 2>&1 || \
             gh release create latest --prerelease --title "Aktueller Stand" --notes "Wird bei jedem Build ersetzt."
           gh release upload latest gluckspfennig.apk --clobber
+      - name: Neue Version ins Versionsarchiv
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Jede Version einmal im Release „versionen“ ablegen, mit den Änderungen seit der Vorversion
+          v=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d+ -f1)
+          if gh release view versionen --json assets --jq '.assets[].name' | grep -qx "gluckspfennig-$v.apk"; then
+            echo "Version $v ist schon im Archiv"; exit 0
+          fi
+          cp gluckspfennig.apk "gluckspfennig-$v.apk"
+          gh release upload versionen "gluckspfennig-$v.apk"
+          prev=$(git log --format=%H -G'^version:' -- pubspec.yaml | sed -n 2p)
+          gh release view versionen --json body --jq .body > alt.md
+          {
+            head -2 alt.md
+            echo "### $v ($(date +%F), Commit ${GITHUB_SHA:0:7})"
+            git log --no-merges --format='- %s' ${prev:+$prev..}HEAD | sed 's/ *\[skip ci\]//' | head -25
+            echo
+            tail -n +3 alt.md
+          } > notes.md
+          gh release edit versionen --notes-file notes.md
 
   # Linux läuft bei jedem Push mit, weil sich dieser Build direkt bedienen und prüfen lässt
   linux:
@@ -143,10 +169,21 @@ jobs:
           name: linux
           path: out/*
           if-no-files-found: error
+          retention-days: 1
       - name: Unter Releases bereitstellen
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload latest out/* --clobber
+      - name: Neue Version ins Versionsarchiv
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d+ -f1)
+          name="gluckspfennig-$v-linux.tar.gz"
+          if ! gh release view versionen --json assets --jq '.assets[].name' | grep -qx "$name"; then
+            cp out/gluckspfennig-linux.tar.gz "$name" && gh release upload versionen "$name"
+          fi
 
   desktop:
     if: ${{ !cancelled() && (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.desktop)) }}
@@ -178,8 +215,21 @@ jobs:
           name: ${{ matrix.target }}
           path: out/*
           if-no-files-found: error
+          retention-days: 1
       - name: Unter Releases bereitstellen
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload latest out/* --clobber
+      - name: Neue Version ins Versionsarchiv
+        if: matrix.target == 'windows'
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d+ -f1)
+          name="gluckspfennig-$v-windows.zip"
+          if ! gh release view versionen --json assets --jq '.assets[].name' | grep -qx "$name"; then
+            cp out/gluckspfennig-windows.zip "$name" && gh release upload versionen "$name"
+          fi
