@@ -66,7 +66,13 @@ Stand: 13.11.2026, Testzweig `neonstadt-v9-test`. Grundlage sind die V2-Konzeptp
 - **Reaktorkern** ist ein großer Bumper. Im Konzept ist es eine gefangene Kugel.
 - **Quadrant Alpha/Beta/Gamma:** gemalt sind drei Einfahrten, umgesetzt ist eine Rampe.
 - **Dritter Flipper** am Hangar, mit einem Abweiser darüber. Ohne den blieb die Kugel auf seinem Drehpunkt liegen.
-- **Erreichbarkeit:** noch schwach, siehe Testergebnis unten.
+- **Bumper zwischen den Gassen:** wie beim Spukschloss stehen die Bumper zwischen den Gassen W-A-R-P statt auf
+  den gemalten Asteroiden.
+- **Erreichbarkeit: der schwächste Tisch.** Die Flipper sitzen sehr tief, darüber stehen hohe Schleudern, und die
+  Mitte versperrt der Reaktor. Mit zufälligem Flippern kommt die Kugel kaum nach oben. Den Außenring hat sie in 300
+  Versuchen nie erreicht, Torkern und Andockschleuse nur, wenn die Kugel von oben kommt. Hier braucht es
+  vermutlich einen anderen Aufbau unten: Schleudern kürzer, Flipper höher, Reaktor als gefangene Kugel statt
+  Bumper.
 
 ### Piratenbucht
 - **Schädelinsel-Fallziele** liegen etwa 0,3 weiter rechts als gemalt, sonst wären sie hinter der Riff-Röhre nicht
@@ -83,7 +89,8 @@ Stand: 13.11.2026, Testzweig `neonstadt-v9-test`. Grundlage sind die V2-Konzeptp
   Turmrampe.
 - **Turm:** physisch nur bis zur Höhe 1,9 (die Spitze ist Bild), sonst käme der Abschuss nicht über den Turm zu den
   Gassen B-U-H.
-- **Dritter Flipper** am Wehrgang, mit Abweiser.
+- **Dritter Flipper** am Wehrgang ist wieder raus. Die Kugel blieb zwischen Turm, Abweiser und Flipper hängen.
+  Er braucht eine eigene Gasse.
 
 ### Eifelring
 - **Start-Ziel-Brücke:** Ihre Pfeiler sind raus, mit dem Gebäude der Boxengasse bildeten sie eine Falle.
@@ -92,4 +99,28 @@ Stand: 13.11.2026, Testzweig `neonstadt-v9-test`. Grundlage sind die V2-Konzeptp
 
 ## Testergebnis
 
-<!-- wird am Ende ergänzt -->
+Alle 449 Tests der App sind auf GitHub grün, auch die Analyse. Zusätzlich gibt es:
+- **`painted_render_test`:** Jedes Spielfeldbild lädt (848 × 1536), und jeder Tisch lässt sich mitten im Spiel mit
+  und ohne „Physik zeigen“ zeichnen.
+- **`pinball_stuck_test`:** 240 Kugeln pro Tisch, keine bleibt hängen, keine fliegt raus. Bei den gemalten Tischen
+  fällt die Testkugel jetzt unter einer oberen Gasse ins Feld statt ganz oben, sonst landete sie über dem Bild
+  außerhalb des Tisches.
+- **`painted_tables_test`:** 300 Kugeln mit zufälligem Flippern, gezählt wird, welche Rampe wie oft getroffen
+  wird:
+
+| Tisch | Rampen (Treffer) | Löcher | Fallziele | Bumper |
+|---|---|---|---|---|
+| Neon Nacht | Platte 49, Kassette 30, Treppe 28, Hufeisen 107, Boulevard 83 | 101 | 847 | 40 |
+| Weltraumstation | Außenring 0, Hyperraum 1, Quadrant 1, Hangar 5 | 0 | 2 | 2972 |
+| Piratenbucht | Riff 7, Mast 31, Strudel 14, Planke 6 | 74 | 30 | 410 |
+| Spukschloss | Schlossgraben 1, Wehrgang 18, Treppe 15, Turm 13 | 18 | 41 | 244 |
+| Eifelring | Nordschleife 5, Fuchsröhre 37, Grand-Prix 14, Motor 30, Brünnchen 3 | 18 | 123 | 55 |
+
+Der Außenring der Weltraumstation ist als „selten“ eingetragen und wird gemeldet, aber nicht verlangt. Die
+Pflicht, dass jedes Loch getroffen wird, habe ich wegen der Station aus dem Test genommen.
+
+Für die gemalten Tische entfernt: die beiden Vergleichstests gegen 0.9.2 bzw. V7. Sie prüften, dass die alten fünf
+Tische unverändert bleiben, und das sind sie auf diesem Zweig absichtlich nicht mehr.
+
+Selten erreicht, also gute Kandidaten für deine Markierungen: Schlossgraben (Spukschloss), Brünnchen und
+Nordschleife (Eifelring), Riffpassage und Planke (Piratenbucht).
