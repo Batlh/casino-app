@@ -1,8 +1,8 @@
 name: Versionen als Releases sichern
 
 # Einmalig von Hand starten: holt für jede Version den letzten Build aus den
-# Artefakten und legt ihn als eigenes Release ab. Release-Dateien zählen nicht
-# zum Actions-Speicher. Bereits vorhandene Releases werden übersprungen.
+# Artefakten und legt ihn im Release „versionen“ ab. Release-Dateien zählen nicht
+# zum Actions-Speicher. Schon hochgeladene Versionen werden übersprungen.
 on:
   workflow_dispatch:
 
@@ -22,32 +22,41 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # Ein Sammel-Release am aktuellen Stand. Tags auf alten Commits darf das
+          # Workflow-Token nicht anlegen, weil sich dort die Workflow-Dateien unterscheiden.
+          if ! gh release view versionen >/dev/null 2>&1; then
+            gh release create versionen --target "$GITHUB_SHA" --title "Ältere Versionen" \
+              --notes "Wird gefüllt …" --latest=false
+          fi
+          vorhanden=$(gh release view versionen --json assets --jq '.assets[].name')
           prev=""
+          {
+            echo "Alle bisherigen Versionen zum Herunterladen. Kein Echtgeld, nur Spielmünzen."
+            echo
+          } > notes.md
           while read -r v sha apk lin win datum; do
             [ -z "$v" ] && continue
-            tag="v$v"
-            if gh release view "$tag" >/dev/null 2>&1; then
-              echo "$tag gibt es schon"; prev="$sha"; continue
-            fi
             rm -rf d up && mkdir -p d up
-            gh run download "$apk" -n android-apk -D d/apk
-            cp "$(find d/apk -name '*.apk' | head -1)" "up/gluckspfennig-$v.apk"
-            if [ "$lin" != "-" ] && gh run download "$lin" -n linux -D d/lin; then
-              f=$(find d/lin -name '*.tar.gz' | head -1); [ -n "$f" ] && cp "$f" "up/gluckspfennig-$v-linux.tar.gz"
+            if ! grep -qx "gluckspfennig-$v.apk" <<<"$vorhanden"; then
+              gh run download "$apk" -n android-apk -D d/apk
+              cp "$(find d/apk -name '*.apk' | head -1)" "up/gluckspfennig-$v.apk"
+              if [ "$lin" != "-" ] && gh run download "$lin" -n linux -D d/lin; then
+                f=$(find d/lin -name '*.tar.gz' | head -1); [ -n "$f" ] && cp "$f" "up/gluckspfennig-$v-linux.tar.gz"
+              fi
+              if [ "$win" != "-" ] && gh run download "$win" -n windows -D d/win; then
+                f=$(find d/win -name '*.zip' | head -1); [ -n "$f" ] && cp "$f" "up/gluckspfennig-$v-windows.zip"
+              fi
+              gh release upload versionen up/* --clobber
+              echo "$v hochgeladen: $(ls up | tr '\n' ' ')"
             fi
-            if [ "$win" != "-" ] && gh run download "$win" -n windows -D d/win; then
-              f=$(find d/win -name '*.zip' | head -1); [ -n "$f" ] && cp "$f" "up/gluckspfennig-$v-windows.zip"
-            fi
+            if [ -n "$prev" ]; then range="$prev..$sha"; else range="$sha"; fi
             {
-              echo "Stand vom $datum (Commit ${sha:0:7})."
+              echo "### $v ($datum, Commit ${sha:0:7})"
+              git log --no-merges --format='- %s' $range | sed 's/ *\[skip ci\]//' | head -25
               echo
-              echo "Änderungen seit der Vorversion:"
-              if [ -n "$prev" ]; then range="$prev..$sha"; else range="$sha"; fi
-              git log --no-merges --format='- %s' $range | sed 's/ *\[skip ci\]//' | head -40
-            } > notes.md
-            gh release create "$tag" --target "$sha" --title "Glückspfennig $v" \
-              --notes-file notes.md --latest=false up/*
-            echo "$tag angelegt: $(ls up | tr '\n' ' ')"
+            } > teil.md
+            # neueste Version oben
+            { head -2 notes.md; cat teil.md; tail -n +3 notes.md; } > neu.md && mv neu.md notes.md
             prev="$sha"
           done <<'LISTE'
             0.1.0 9acc02f3a325204bf4cd94724e07bba5f7ceea4e 41587342939 - - 2026-11-03
@@ -75,4 +84,4 @@ jobs:
             0.9.1 d279aa88f3d3ead7bee437287f9da0c5d95eb02d 43174788208 43174788208 43174788208 2026-11-12
             0.9.2 87d0f7db004eac93d530b3d0f9d16c3e850d895e 43177383485 43177383485 43177383485 2026-11-12
           LISTE
-          gh release edit v0.9.2 --latest
+          gh release edit versionen --notes-file notes.md
