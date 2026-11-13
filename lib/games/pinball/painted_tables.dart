@@ -3,6 +3,85 @@ import 'dart:ui' show Color;
 
 import 'pinball_layout.dart';
 
+const paintedNeon2Table = TableSpec(
+  id: 'neon2',
+  name: 'Neon Nacht',
+  blurb: 'DJ-Bühne mit Discokugel, überkreuzte Platten- und Kassettenrampe, Spielhalle',
+  theme: TableTheme(
+    top: Color(0xFF1A0B2E),
+    mid: Color(0xFF2A0F45),
+    bottom: Color(0xFF12061F),
+    wall: Color(0xFFFF4FD8),
+    bumper: Color(0xFF00E5FF),
+    sling: Color(0xFFFF2BD6),
+    flipper: Color(0xFFF5F5F5),
+    accent: Color(0xFFFFD54F),
+    light: Color(0xFFFFB300),
+    ramp: Color(0xFFFF4FD8),
+    dmd: Color(0xFFFF4FD8),
+    art: 'painted:neon2',
+  ),
+  walls: [
+    WallSpec([Pt(0.000, 18.200), Pt(0.000, 3.550), Pt(0.600, 2.350), Pt(1.600, 1.550), Pt(3.000, 1.300), Pt(5.000, 1.250), Pt(5.324, 1.258), Pt(5.646, 1.282), Pt(5.966, 1.322), Pt(6.281, 1.378), Pt(6.591, 1.449), Pt(6.894, 1.535), Pt(7.189, 1.637), Pt(7.475, 1.752), Pt(7.750, 1.882), Pt(8.013, 2.025), Pt(8.264, 2.181), Pt(8.500, 2.348), Pt(8.722, 2.527), Pt(8.927, 2.717), Pt(9.116, 2.917), Pt(9.287, 3.125), Pt(9.440, 3.341), Pt(9.573, 3.565), Pt(9.687, 3.795), Pt(9.781, 4.029), Pt(9.855, 4.268), Pt(9.908, 4.511), Pt(9.939, 4.755), Pt(9.950, 5.000), Pt(9.950, 18.200)], visible: false),
+    WallSpec([Pt(1.000, 12.000), Pt(1.000, 14.600), Pt(2.450, 15.400)], visible: false),
+    WallSpec([Pt(8.750, 12.000), Pt(8.750, 14.600), Pt(7.500, 15.400)], visible: false),
+    WallSpec([Pt(2.350, 15.750), Pt(1.600, 18.200)], visible: false),
+    WallSpec([Pt(7.600, 15.750), Pt(8.350, 18.200)], visible: false),
+    WallSpec([Pt(3.400, 1.350), Pt(3.400, 2.600)], visible: false),
+    WallSpec([Pt(4.450, 1.300), Pt(4.450, 2.600)], visible: false),
+    WallSpec([Pt(5.500, 1.300), Pt(5.500, 2.600)], visible: false),
+    WallSpec([Pt(6.550, 1.350), Pt(6.550, 2.600)], visible: false),
+    WallSpec([Pt(5.520, 4.050), Pt(5.359, 4.439), Pt(4.970, 4.600), Pt(4.581, 4.439), Pt(4.420, 4.050), Pt(4.581, 3.661), Pt(4.970, 3.500), Pt(5.359, 3.661), Pt(5.520, 4.050)], bounce: 0.5, visible: false),
+    WallSpec([Pt(3.450, 6.550), Pt(5.000, 6.150), Pt(6.550, 6.550), Pt(6.550, 7.200), Pt(5.400, 7.500), Pt(4.550, 7.500), Pt(3.450, 7.200), Pt(3.450, 6.550)], visible: false),
+    WallSpec([Pt(7.350, 8.700), Pt(8.150, 8.300), Pt(8.950, 8.700), Pt(8.950, 9.950), Pt(7.350, 9.950), Pt(7.350, 8.700)], visible: false),
+  ],
+  flippers: [
+    FlipperSpec(Pt(2.550, 15.550), 1, length: 1.6),
+    FlipperSpec(Pt(7.400, 15.550), -1, length: 1.6),
+  ],
+  bumpers: [BumperSpec(3.750, 5.300, radius: 0.450), BumperSpec(6.110, 5.300, radius: 0.450), BumperSpec(4.970, 5.750, radius: 0.450)],
+  slings: [SlingSpec(Pt(1.550, 12.400), Pt(2.950, 15.000), Pt(1.550, 14.500)), SlingSpec(Pt(8.300, 12.400), Pt(6.950, 15.000), Pt(8.300, 14.500))],
+  lanes: [
+    LaneSpec(3.920, 2.000, group: 'top', halfWidth: 0.300),
+    LaneSpec(4.970, 2.000, group: 'top', halfWidth: 0.300),
+    LaneSpec(6.030, 2.000, group: 'top', halfWidth: 0.300),
+    LaneSpec(0.550, 12.800, group: 'out', halfWidth: 0.300),
+    LaneSpec(1.280, 12.800, group: 'in', halfWidth: 0.300),
+    LaneSpec(8.500, 12.800, group: 'in', halfWidth: 0.300),
+    LaneSpec(9.000, 12.800, group: 'out', halfWidth: 0.300),
+  ],
+  drops: [
+    DropBankSpec('eq_links', [Pt(3.420, 8.800), Pt(3.860, 8.800), Pt(4.320, 8.800)], angle: 0.000, length: 0.380),
+    DropBankSpec('eq_rechts', [Pt(5.720, 8.800), Pt(6.170, 8.800), Pt(6.620, 8.800)], angle: 0.000, length: 0.380),
+  ],
+  targets: [
+    TargetBankSpec('arcade', [Pt(7.700, 10.200), Pt(8.120, 10.200), Pt(8.540, 10.200)], angle: 0.000, length: 0.360),
+  ],
+  spinners: [],
+  saucers: [
+    SaucerSpec('dj', 4.970, 7.850, 0.000, 4.000, lock: true),
+  ],
+  ramps: [
+    RampSpec('platte', Pt(1.500, 7.550), Pt(2.350, 7.550), -0.300, -1.000, [Pt(1.950, 7.300), Pt(1.400, 6.000), Pt(1.100, 4.600), Pt(1.700, 3.400), Pt(3.000, 2.950), Pt(5.000, 3.100), Pt(7.000, 3.400), Pt(8.300, 5.000), Pt(8.600, 8.000), Pt(8.500, 11.400)], 0.000, 3.000, points: 1000, minSpeed: 5, name: 'Plattenrampe'),
+    RampSpec('kassette', Pt(7.200, 7.550), Pt(8.300, 7.550), 0.300, -1.000, [Pt(7.750, 7.300), Pt(8.200, 6.000), Pt(8.500, 4.600), Pt(8.000, 3.400), Pt(6.900, 2.950), Pt(4.900, 3.100), Pt(2.900, 3.400), Pt(1.700, 5.000), Pt(1.400, 8.000), Pt(1.300, 11.400)], 0.000, 3.000, points: 1000, minSpeed: 5, name: 'Kassettenrampe'),
+    RampSpec('treppe', Pt(2.450, 7.300), Pt(3.300, 7.300), 0.000, -1.000, [Pt(2.850, 7.000), Pt(2.750, 5.600), Pt(2.900, 4.400), Pt(3.500, 4.500)], 1.000, 0.600, points: 750, minSpeed: 5, name: 'Treppe'),
+    RampSpec('hufeisen', Pt(1.950, 10.950), Pt(2.650, 10.950), 0.000, -1.000, [Pt(2.300, 10.600), Pt(2.300, 8.300), Pt(1.800, 7.750), Pt(1.250, 8.300), Pt(1.200, 10.400), Pt(1.600, 11.200)], 1.400, 2.200, points: 750, minSpeed: 5, name: 'Hufeisenbahn'),
+    RampSpec('boulevard', Pt(0.200, 11.200), Pt(0.950, 11.200), 0.000, -1.000, [Pt(0.550, 10.800), Pt(0.500, 7.800), Pt(0.600, 3.800), Pt(1.500, 2.100), Pt(3.000, 1.550), Pt(6.100, 1.600), Pt(8.400, 2.300), Pt(9.000, 4.400), Pt(8.950, 8.000), Pt(8.550, 11.400)], 0.000, 3.000, points: 1000, minSpeed: 5, name: 'Boulevard'),
+    RampSpec('strand', Pt(8.350, 7.550), Pt(9.200, 7.550), 0.200, -1.000, [Pt(8.800, 7.200), Pt(9.000, 4.200), Pt(8.600, 2.700), Pt(7.600, 2.100), Pt(6.400, 2.050)], -2.000, 1.000, points: 750, minSpeed: 5, name: 'Strandstraße'),
+  ],
+  missions: [
+    MissionSpec('Tanzwettbewerb: 20 Bumper', MissionKind.bumper, 20),
+    MissionSpec('Plattenjagd: Plattenrampe 2 mal', MissionKind.ramp, 2, id: 'platte'),
+    MissionSpec('Lichtshow: Equalizer abräumen', MissionKind.drops, 6),
+    MissionSpec('Stromausfall: 4 Rampen', MissionKind.anyRamp, 4),
+    MissionSpec('Rollschuhdisko: Hufeisenbahn 2 mal', MissionKind.ramp, 2, id: 'hufeisen'),
+    MissionSpec('Highscore-Jagd: Spielhalle', MissionKind.targets, 3),
+    MissionSpec('Kassettentausch: Kassettenrampe 2 mal', MissionKind.ramp, 2, id: 'kassette'),
+    MissionSpec('Sonnenaufgang: Gassen N-E-O', MissionKind.lanes, 1, id: 'top'),
+  ],
+  locksForMultiball: 3,
+);
+
 const paintedEifelringTable = TableSpec(
   id: 'eifelring',
   name: 'Eifelring',
@@ -22,7 +101,7 @@ const paintedEifelringTable = TableSpec(
     art: 'painted:eifelring',
   ),
   walls: [
-    WallSpec([Pt(0.000, 13.200), Pt(0.000, 2.400), Pt(2.200, 0.000), Pt(5.000, 0.000), Pt(5.324, 0.009), Pt(5.646, 0.034), Pt(5.966, 0.077), Pt(6.281, 0.136), Pt(6.591, 0.212), Pt(6.894, 0.304), Pt(7.189, 0.413), Pt(7.475, 0.536), Pt(7.750, 0.674), Pt(8.013, 0.827), Pt(8.264, 0.993), Pt(8.500, 1.172), Pt(8.722, 1.363), Pt(8.927, 1.565), Pt(9.116, 1.778), Pt(9.287, 2.000), Pt(9.440, 2.231), Pt(9.573, 2.469), Pt(9.687, 2.714), Pt(9.781, 2.965), Pt(9.855, 3.220), Pt(9.908, 3.478), Pt(9.939, 3.738), Pt(9.950, 4.000), Pt(9.950, 18.200)], visible: false),
+    WallSpec([Pt(0.000, 18.200), Pt(0.000, 2.400), Pt(2.200, 0.000), Pt(5.000, 0.000), Pt(5.324, 0.009), Pt(5.646, 0.034), Pt(5.966, 0.077), Pt(6.281, 0.136), Pt(6.591, 0.212), Pt(6.894, 0.304), Pt(7.189, 0.413), Pt(7.475, 0.536), Pt(7.750, 0.674), Pt(8.013, 0.827), Pt(8.264, 0.993), Pt(8.500, 1.172), Pt(8.722, 1.363), Pt(8.927, 1.565), Pt(9.116, 1.778), Pt(9.287, 2.000), Pt(9.440, 2.231), Pt(9.573, 2.469), Pt(9.687, 2.714), Pt(9.781, 2.965), Pt(9.855, 3.220), Pt(9.908, 3.478), Pt(9.939, 3.738), Pt(9.950, 4.000), Pt(9.950, 18.200)], visible: false),
     WallSpec([Pt(0.900, 12.000), Pt(0.900, 14.000), Pt(2.350, 15.450)], visible: false),
     WallSpec([Pt(8.300, 12.000), Pt(8.300, 14.000), Pt(6.850, 15.450)], visible: false),
     WallSpec([Pt(2.250, 15.800), Pt(1.550, 18.200)], visible: false),
@@ -31,8 +110,8 @@ const paintedEifelringTable = TableSpec(
     WallSpec([Pt(5.300, 0.550), Pt(5.300, 1.700)], visible: false),
     WallSpec([Pt(6.050, 0.600), Pt(6.050, 1.700)], visible: false),
     WallSpec([Pt(6.800, 0.700), Pt(6.800, 1.700)], visible: false),
-    WallSpec([Pt(2.700, 4.550), Pt(3.050, 3.800), Pt(7.000, 3.800), Pt(7.300, 4.550), Pt(6.950, 5.300), Pt(3.050, 5.300), Pt(2.700, 4.550)], bounce: 0.45, visible: false),
-    WallSpec([Pt(7.350, 5.750), Pt(8.750, 5.750), Pt(8.750, 8.000), Pt(8.250, 8.150), Pt(7.350, 8.000), Pt(7.350, 5.750)], visible: false),
+    WallSpec([Pt(2.700, 4.550), Pt(3.050, 4.000), Pt(5.000, 3.600), Pt(7.000, 4.000), Pt(7.300, 4.550), Pt(6.950, 5.300), Pt(3.050, 5.300), Pt(2.700, 4.550)], bounce: 0.45, visible: false),
+    WallSpec([Pt(7.350, 6.050), Pt(8.050, 5.600), Pt(8.750, 6.050), Pt(8.750, 8.000), Pt(8.250, 8.150), Pt(7.350, 8.000), Pt(7.350, 6.050)], visible: false),
     WallSpec([Pt(2.850, 7.300), Pt(2.950, 7.700)], visible: false),
     WallSpec([Pt(6.950, 7.300), Pt(6.850, 7.700)], visible: false),
   ],
@@ -82,7 +161,8 @@ const paintedEifelringTable = TableSpec(
 
 /// Spielfeldbild je gemaltem Tisch (848 × 1536 px = 9,95 × 18 Einheiten).
 const paintedBackgrounds = <String, String>{
+  'neon2': 'assets/pinball/painted/neon2.webp',
   'eifelring': 'assets/pinball/painted/eifelring.webp',
 };
 
-const paintedTables = [paintedEifelringTable];
+const paintedTables = [paintedNeon2Table, paintedEifelringTable];

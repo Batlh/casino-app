@@ -37,8 +37,8 @@ void main() {
           t.step(1 / 120);
           for (final e in t.events) {
             if (e.kind == PinballEventKind.ramp) {
-              for (final r in t.ramps) {
-                if (r.flash > 0.9) hits[r.spec.id] = hits[r.spec.id]! + 1;
+              for (final r in spec.ramps) {
+                if (r.name == e.text) hits[r.id] = hits[r.id]! + 1;
               }
             }
             if (e.kind == PinballEventKind.saucer) saucers++;
