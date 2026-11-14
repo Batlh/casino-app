@@ -24,3 +24,13 @@ if [ -f macos/Runner/Configs/AppInfo.xcconfig ]; then
   sed -i.bak "s/^PRODUCT_NAME = .*/PRODUCT_NAME = Glueckspfennig/" macos/Runner/Configs/AppInfo.xcconfig
 fi
 find . -name '*.bak' -not -path './.dart_tool/*' -delete
+# Lint der Plugins beim Release-Build abschalten: Die Lint-Prüfung stürzt bei
+# url_launcher_android ab (Fehler in Lint selbst), der Build bricht sonst ab.
+if [ -f android/build.gradle.kts ] && ! grep -q 'lintVital' android/build.gradle.kts; then
+  cat >> android/build.gradle.kts <<'EOF'
+
+subprojects {
+    tasks.matching { it.name.startsWith("lintVital") }.configureEach { enabled = false }
+}
+EOF
+fi

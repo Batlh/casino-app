@@ -12,6 +12,9 @@ const fontLicenses = {
 /// Quellcode der App.
 const repoUrl = 'https://github.com/Batlh/casino-app';
 
+/// Neueste Version mit APK und Windows-Datei.
+const releasesUrl = '$repoUrl/releases/latest';
+
 /// Zeile unter dem App-Namen auf der Lizenzseite.
 const appLegalese = '© 2026 Batlh · MIT-Lizenz\nNur Spielmünzen, kein Echtgeld.\n$repoUrl';
 

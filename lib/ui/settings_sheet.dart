@@ -242,120 +242,44 @@ Widget _general(BuildContext context) {
       ),
       ListTile(
         contentPadding: EdgeInsets.zero,
+        title: Text('Neueste Version herunterladen', style: TextStyle(color: p.ink, fontSize: 17)),
+        subtitle: Text(
+          'Updates für Android und PC auf GitHub (installiert: $appVersion)',
+          style: TextStyle(color: p.inkSoft, fontSize: 14),
+        ),
+        trailing: Icon(Icons.system_update_alt, color: p.ink),
+        onTap: () => openLink(context, releasesUrl),
+        onLongPress: () => _copyLink(context, releasesUrl),
+      ),
+      ListTile(
+        contentPadding: EdgeInsets.zero,
         title: Text('Quellcode auf GitHub', style: TextStyle(color: p.ink, fontSize: 17)),
         subtitle: Text(
           repoUrl.replaceFirst('https://', ''),
           style: TextStyle(color: p.inkSoft, fontSize: 14),
         ),
         trailing: Icon(Icons.open_in_new, color: p.ink),
-        onTap: () => openRepo(context),
-        onLongPress: () => _copyRepoUrl(context),
+        onTap: () => openLink(context, repoUrl),
+        onLongPress: () => _copyLink(context, repoUrl),
       ),
     ],
   );
 }
 
-/// Öffnet das Repository im Browser. Klappt das nicht, wird der Link kopiert.
-Future<void> openRepo(BuildContext context) async {
+/// Öffnet einen Link im Browser. Klappt das nicht, wird er kopiert.
+Future<void> openLink(BuildContext context, String url) async {
   var ok = false;
   try {
-    ok = await launchUrl(Uri.parse(repoUrl), mode: LaunchMode.externalApplication);
+    ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   } catch (_) {
     ok = false;
   }
-  if (!ok && context.mounted) _copyRepoUrl(context);
+  if (!ok && context.mounted) _copyLink(context, url);
 }
 
-void _copyRepoUrl(BuildContext context) {
-  Clipboard.setData(const ClipboardData(text: repoUrl));
+void _copyLink(BuildContext context, String url) {
+  Clipboard.setData(ClipboardData(text: url));
   ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-    const SnackBar(content: Text('Link kopiert: $repoUrl')),
-  );
-}
-
-/// Regeln mit eigenem Schalter: Mau Mau.
-Widget _mauMau(BuildContext context) {
-  final app = AppScope.of(context);
-  final p = Palette.of(context);
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(
-              'Nach Strafkarten ist der Zug vorbei',
-              style: TextStyle(color: p.ink, fontSize: 16),
-            ),
-            subtitle: Text(
-              app.settings.penaltyEndsTurn
-                  ? 'Wer für eine Sieben zieht, darf nicht mehr legen'
-                  : 'Wer für eine Sieben zieht, darf danach normal weiterspielen',
-              style: TextStyle(color: p.inkSoft, fontSize: 14),
-            ),
-            value: app.settings.penaltyEndsTurn,
-            onChanged: (v) => app.settings.penaltyEndsTurn = v,
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(
-              'Bube auf Bube erlaubt',
-              style: TextStyle(color: p.ink, fontSize: 16),
-            ),
-            value: app.settings.jackOnJack,
-            onChanged: (v) => app.settings.jackOnJack = v,
-          ),
-          const SizedBox(height: 8),
-    ],
-  );
-}
-
-/// Regeln mit eigenem Schalter: Eins!
-Widget _eins(BuildContext context) {
-  final app = AppScope.of(context);
-  final p = Palette.of(context);
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text('Plus-Karten stapeln', style: TextStyle(color: p.ink, fontSize: 16)),
-            subtitle: Text(
-              'Gleicher oder höherer Wert. Bei Gnadenlos immer an',
-              style: TextStyle(color: p.inkSoft, fontSize: 14),
-            ),
-            value: app.settings.einsStackDraws,
-            onChanged: (v) => app.settings.einsStackDraws = v,
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text('Eins! rufen ist Pflicht', style: TextStyle(color: p.ink, fontSize: 16)),
-            subtitle: Text(
-              'Wer bei der vorletzten Karte nicht ruft, zieht zwei',
-              style: TextStyle(color: p.inkSoft, fontSize: 14),
-            ),
-            value: app.settings.einsCallRequired,
-            onChanged: (v) => app.settings.einsCallRequired = v,
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text('Anzweifeln', style: TextStyle(color: p.ink, fontSize: 16)),
-            subtitle: Text(
-              'Farbwahl +4, +2 und Ziehen bis zur Farbe nur ohne passende Farbe. Der Nächste darf anzweifeln',
-              style: TextStyle(color: p.inkSoft, fontSize: 14),
-            ),
-            value: app.settings.einsChallenge,
-            onChanged: (v) => app.settings.einsChallenge = v,
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text('Gnadenlos mit Erweiterung', style: TextStyle(color: p.ink, fontSize: 16)),
-            subtitle: Text(
-              '24 Zusatzkarten und Münzen. Gilt ab der nächsten Runde',
-              style: TextStyle(color: p.inkSoft, fontSize: 14),
-            ),
-            value: app.settings.einsExpansion,
-            onChanged: (v) => app.settings.einsExpansion = v,
-          ),
-    ],
+    SnackBar(content: Text('Link kopiert: $url')),
   );
 }
