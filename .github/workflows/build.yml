@@ -2,7 +2,8 @@ name: Build
 on:
   push:
     branches: [main]
-    tags: ["v*"]
+    # Kein Tag-Auslöser: Versions-Releases legt der Build selbst an. Ein Tag auf einem alten
+    # Commit würde sonst den alten Build mit altem Workflow starten.
   workflow_dispatch:
     inputs:
       desktop:
