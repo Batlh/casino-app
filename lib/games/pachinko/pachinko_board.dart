@@ -37,6 +37,13 @@ class PachinkoBoard {
   static const double boardHeight = 16;
   static const double ballRadius = 0.14;
   static const double pegRadius = 0.065;
+
+  /// Mindestabstand zwischen zwei Nägeln (Mitte zu Mitte). Kugel (0,28) und zwei Nagelradien
+  /// brauchen 0,41; darunter kann eine Kugel auf zwei Nägeln liegen bleiben.
+  static const double minPegDistance = 0.5;
+
+  /// Mindestabstand eines Nagels zum linken Rand und zur Abschussbahn.
+  static const double wallClear = 0.45;
   static const double laneX = 9.2;
   static const int ballCost = 10;
   static const int tulipPay = 25;
@@ -118,8 +125,19 @@ class PachinkoBoard {
     ground.createFixture(FixtureDef(shape, friction: 0.05, restitution: 0.55));
   }
 
+  /// Kein anderer Nagel näher als [minPegDistance].
+  bool _clearOfPegs(double x, double y) {
+    for (final p in pegs) {
+      if ((p.x - x) * (p.x - x) + (p.y - y) * (p.y - y) < minPegDistance * minPegDistance) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   bool _freeForPeg(double x, double y) {
     if (_lcdDistance(x, y) < lcdClear) return false;
+    if (!_clearOfPegs(x, y)) return false;
     for (final (sx, sy) in spec.spinners) {
       if ((x - sx) * (x - sx) + (y - sy) * (y - sy) < 0.95 * 0.95) return false;
     }
@@ -195,7 +213,7 @@ class PachinkoBoard {
       final y = 2.2 + row * 0.8;
       for (var col = 0; col < 10; col++) {
         final x = 0.75 + col * 0.92 + (row.isOdd ? 0.46 : 0) + _patternShift(row);
-        if (x > laneX - 0.35) continue;
+        if (x > laneX - wallClear) continue;
         // Bogen freihalten
         final dx = (x - cx) / rx;
         final dy = (y - cy) / ry;
@@ -241,10 +259,8 @@ class PachinkoBoard {
   /// Zusätzliche Nägel: Blütenkränze über den Tulpen, Tempelstufen neben dem Anzeigefeld.
   void _extraPegs(Body ground) {
     void add(double x, double y) {
-      if (x < 0.4 || x > laneX - 0.35) return;
-      for (final p in pegs) {
-        if ((p.x - x) * (p.x - x) + (p.y - y) * (p.y - y) < 0.45 * 0.45) return;
-      }
+      if (x < 0.2 + wallClear || x > laneX - wallClear) return;
+      if (!_clearOfPegs(x, y)) return;
       if (_lcdDistance(x, y) < lcdClear) return;
       _peg(ground, x, y);
     }

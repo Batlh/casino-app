@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gluckspfennig/games/pachinko/pachinko_board.dart';
+import 'package:gluckspfennig/games/pachinko/pachinko_machines.dart';
 
 void main() {
   for (final m in pachinkoMachines) {
@@ -41,6 +42,39 @@ void main() {
         expect(rtp, inInclusiveRange(0.6, 1.2));
         expect(refund, lessThan(balls));
         expect(counts[PachinkoEventKind.stuck] ?? 0, lessThan(balls ~/ 100), reason: 'Kaum hängende Bälle');
+      }
+    });
+
+    test('${m.name}: Zwischen zwei Nägeln bleibt keine Kugel liegen', () {
+      final board = PachinkoBoard(rng: Random(1), spec: m);
+      final pegs = board.pegs;
+      const min = PachinkoBoard.minPegDistance - 1e-6;
+      for (var i = 0; i < pegs.length; i++) {
+        for (var j = i + 1; j < pegs.length; j++) {
+          final d = sqrt(pow(pegs[i].x - pegs[j].x, 2) + pow(pegs[i].y - pegs[j].y, 2));
+          expect(d, greaterThan(min),
+              reason: 'Nägel (${pegs[i].x.toStringAsFixed(2)}, ${pegs[i].y.toStringAsFixed(2)}) und '
+                  '(${pegs[j].x.toStringAsFixed(2)}, ${pegs[j].y.toStringAsFixed(2)}) zu eng');
+        }
+      }
+    });
+
+    test('${m.name}: Kugeln fallen über jeder Tulpe durch', () {
+      // Über und neben jeder Tulpe fallen lassen: Nach 4 s darf keine Kugel mehr dort liegen.
+      for (final p in m.pockets.where((p) => p.kind != PocketKind.gate)) {
+        for (final dx in [-0.45, -0.25, 0.0, 0.25, 0.45]) {
+          for (final x in [p.left + dx, p.right + dx]) {
+            final board = PachinkoBoard(rng: Random(2), spec: m);
+            board.dropAt(x, p.top - 0.9);
+            for (var i = 0; i < 240; i++) {
+              board.step(1 / 60);
+            }
+            if (board.ballsInPlay == 0) continue;
+            final b = board.balls.first;
+            final near = (b.x - x).abs() < 0.8 && (b.y - p.top).abs() < 0.8;
+            expect(near, isFalse, reason: 'Kugel bei x=${x.toStringAsFixed(2)} hängt an der Tulpe (${b.x.toStringAsFixed(2)}, ${b.y.toStringAsFixed(2)})');
+          }
+        }
       }
     });
 
