@@ -15,7 +15,8 @@ jobs:
     steps:
       - name: Releases anlegen
         env:
-          GH_TOKEN: ${{ github.token }}
+          # Tags auf alten Commits darf nur ein Token mit Workflow-Recht anlegen (RELEASE_TOKEN, danach löschen)
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -uo pipefail
