@@ -12,3 +12,6 @@ linux/
 macos/
 windows/
 web/
+
+# Python-Zwischenspeicher
+__pycache__/

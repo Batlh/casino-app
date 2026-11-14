@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../core/licenses.dart';
 import '../core/scope.dart';
 import '../core/settings.dart';
 import '../core/theme.dart';
+import '../core/version.dart';
 import '../games/cards/playing_card.dart';
 import 'backup_section.dart';
 import 'debug_screen.dart';
@@ -218,6 +220,22 @@ Widget _general(BuildContext context) {
             style: TextStyle(color: p.inkSoft, fontSize: 14),
           ),
           children: const [DebugSection()],
+        ),
+      ),
+      const SizedBox(height: 8),
+      ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text('Lizenzen', style: TextStyle(color: p.ink, fontSize: 17)),
+        subtitle: Text(
+          'Verwendete Schriften und Pakete',
+          style: TextStyle(color: p.inkSoft, fontSize: 14),
+        ),
+        trailing: Icon(Icons.chevron_right, color: p.ink),
+        onTap: () => showLicensePage(
+          context: context,
+          applicationName: 'Glückspfennig',
+          applicationVersion: appVersion,
+          applicationLegalese: appLegalese,
         ),
       ),
     ],

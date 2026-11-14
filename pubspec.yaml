@@ -26,6 +26,10 @@ flutter:
   uses-material-design: true
   assets:
     - assets/sfx/
+    # Lizenztexte der Schriften, erscheinen unter Einstellungen → Lizenzen
+    - assets/fonts/Barlow-OFL.txt
+    - assets/fonts/Shrikhand-OFL.txt
+    - assets/fonts/NotoSerifJP-OFL.txt
   fonts:
     - family: Shrikhand
       fonts:

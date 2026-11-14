@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/backup.dart';
 import 'core/debug_log.dart';
+import 'core/licenses.dart';
 import 'core/scope.dart';
 import 'core/settings.dart';
 import 'core/sfx.dart';
@@ -18,6 +19,7 @@ Future<void> main() async {
   // Alle Fehler landen im Protokoll (Einstellungen → Fehlersuche), die App läuft weiter
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+    registerFontLicenses();
     FlutterError.onError = (details) {
       FlutterError.presentError(details);
       debugLog.error('flutter', details.exceptionAsString(), details.stack);
