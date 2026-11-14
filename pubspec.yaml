@@ -1,7 +1,7 @@
 name: gluckspfennig
 description: Privates Offline-Casino zum Zeitvertreib. Spielmünzen ohne jeden Geldwert.
 publish_to: none
-version: 0.9.32+27
+version: 0.9.33+28
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
@@ -15,6 +15,8 @@ dependencies:
   # 0.15 ersetzt die reine Dart-Engine durch native Bindungen, darum bei 0.14 bleiben
   forge2d: ">=0.14.2 <0.15.0"
   shared_preferences: ^2.3.0
+  # Link zum Quellcode auf GitHub im Browser öffnen
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:

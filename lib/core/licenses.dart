@@ -9,8 +9,11 @@ const fontLicenses = {
   'Noto Serif JP (Schrift)': 'assets/fonts/NotoSerifJP-OFL.txt',
 };
 
+/// Quellcode der App.
+const repoUrl = 'https://github.com/Batlh/casino-app';
+
 /// Zeile unter dem App-Namen auf der Lizenzseite.
-const appLegalese = '© 2026 Batlh · MIT-Lizenz\nNur Spielmünzen, kein Echtgeld.';
+const appLegalese = '© 2026 Batlh · MIT-Lizenz\nNur Spielmünzen, kein Echtgeld.\n$repoUrl';
 
 var _registered = false;
 

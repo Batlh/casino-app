@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/licenses.dart';
 import '../core/scope.dart';
@@ -238,7 +240,36 @@ Widget _general(BuildContext context) {
           applicationLegalese: appLegalese,
         ),
       ),
+      ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text('Quellcode auf GitHub', style: TextStyle(color: p.ink, fontSize: 17)),
+        subtitle: Text(
+          repoUrl.replaceFirst('https://', ''),
+          style: TextStyle(color: p.inkSoft, fontSize: 14),
+        ),
+        trailing: Icon(Icons.open_in_new, color: p.ink),
+        onTap: () => openRepo(context),
+        onLongPress: () => _copyRepoUrl(context),
+      ),
     ],
+  );
+}
+
+/// Öffnet das Repository im Browser. Klappt das nicht, wird der Link kopiert.
+Future<void> openRepo(BuildContext context) async {
+  var ok = false;
+  try {
+    ok = await launchUrl(Uri.parse(repoUrl), mode: LaunchMode.externalApplication);
+  } catch (_) {
+    ok = false;
+  }
+  if (!ok && context.mounted) _copyRepoUrl(context);
+}
+
+void _copyRepoUrl(BuildContext context) {
+  Clipboard.setData(const ClipboardData(text: repoUrl));
+  ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+    const SnackBar(content: Text('Link kopiert: $repoUrl')),
   );
 }
 
