@@ -283,3 +283,90 @@ void _copyLink(BuildContext context, String url) {
     SnackBar(content: Text('Link kopiert: $url')),
   );
 }
+
+/// Regeln mit eigenem Schalter: Mau Mau.
+Widget _mauMau(BuildContext context) {
+  final app = AppScope.of(context);
+  final p = Palette.of(context);
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              'Nach Strafkarten ist der Zug vorbei',
+              style: TextStyle(color: p.ink, fontSize: 16),
+            ),
+            subtitle: Text(
+              app.settings.penaltyEndsTurn
+                  ? 'Wer für eine Sieben zieht, darf nicht mehr legen'
+                  : 'Wer für eine Sieben zieht, darf danach normal weiterspielen',
+              style: TextStyle(color: p.inkSoft, fontSize: 14),
+            ),
+            value: app.settings.penaltyEndsTurn,
+            onChanged: (v) => app.settings.penaltyEndsTurn = v,
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              'Bube auf Bube erlaubt',
+              style: TextStyle(color: p.ink, fontSize: 16),
+            ),
+            value: app.settings.jackOnJack,
+            onChanged: (v) => app.settings.jackOnJack = v,
+          ),
+          const SizedBox(height: 8),
+    ],
+  );
+}
+
+/// Regeln mit eigenem Schalter: Eins!
+Widget _eins(BuildContext context) {
+  final app = AppScope.of(context);
+  final p = Palette.of(context);
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text('Plus-Karten stapeln', style: TextStyle(color: p.ink, fontSize: 16)),
+            subtitle: Text(
+              'Gleicher oder höherer Wert. Bei Gnadenlos immer an',
+              style: TextStyle(color: p.inkSoft, fontSize: 14),
+            ),
+            value: app.settings.einsStackDraws,
+            onChanged: (v) => app.settings.einsStackDraws = v,
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text('Eins! rufen ist Pflicht', style: TextStyle(color: p.ink, fontSize: 16)),
+            subtitle: Text(
+              'Wer bei der vorletzten Karte nicht ruft, zieht zwei',
+              style: TextStyle(color: p.inkSoft, fontSize: 14),
+            ),
+            value: app.settings.einsCallRequired,
+            onChanged: (v) => app.settings.einsCallRequired = v,
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text('Anzweifeln', style: TextStyle(color: p.ink, fontSize: 16)),
+            subtitle: Text(
+              'Farbwahl +4, +2 und Ziehen bis zur Farbe nur ohne passende Farbe. Der Nächste darf anzweifeln',
+              style: TextStyle(color: p.inkSoft, fontSize: 14),
+            ),
+            value: app.settings.einsChallenge,
+            onChanged: (v) => app.settings.einsChallenge = v,
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text('Gnadenlos mit Erweiterung', style: TextStyle(color: p.ink, fontSize: 16)),
+            subtitle: Text(
+              '24 Zusatzkarten und Münzen. Gilt ab der nächsten Runde',
+              style: TextStyle(color: p.inkSoft, fontSize: 14),
+            ),
+            value: app.settings.einsExpansion,
+            onChanged: (v) => app.settings.einsExpansion = v,
+          ),
+    ],
+  );
+}
