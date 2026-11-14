@@ -94,7 +94,19 @@ jobs:
           cat "$WRAP"
           mkdir -p ~/.gradle/init.d
           cp ci/maven-mirror.gradle ci/compile-sdk.gradle ~/.gradle/init.d/
+      - name: Signierschlüssel entschlüsseln
+        env:
+          PW: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          # Ohne Secret nicht mit dem öffentlichen Debug-Schlüssel weiterbauen
+          if [ -z "$PW" ]; then echo "::error::Secret ANDROID_KEY_PASSWORD fehlt"; exit 1; fi
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in ci/release.keystore.enc \
+            -out "$RUNNER_TEMP/release.keystore" -pass env:PW
       - name: APK bauen
+        env:
+          GP_KEYSTORE: ${{ runner.temp }}/release.keystore
+          GP_KEYSTORE_PW: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          GP_KEY_ALIAS: gluckspfennig
         run: |
           # Der Gradle-Download bricht manchmal mit 504 ab, dann neu versuchen
           for try in 1 2 3; do
@@ -107,7 +119,8 @@ jobs:
         run: |
           SIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
           "$SIGNER" verify --print-certs gluckspfennig.apk | tee signatur.txt
-          grep -qi "b9c621e6c129aeb69e9ff166c190a26fb6f124b2e8a991a237e517a7087cc501" signatur.txt
+          # Fingerabdruck des eigenen Schlüssels (seit 0.9.3; davor der öffentliche Debug-Schlüssel)
+          grep -qi "51c72022026bb67a144045b265980cf487e66ffc135e1dd486066dfd8e81bfff" signatur.txt
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk
