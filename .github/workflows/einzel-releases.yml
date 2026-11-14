@@ -1,0 +1,78 @@
+name: Versionen als einzelne Releases
+
+# Einmalig von Hand starten: macht aus dem Sammel-Release „versionen“ je Version ein
+# eigenes Release vX.Y.Z am Commit der Version. Schon vorhandene werden übersprungen.
+# Klappt alles, wird das Sammel-Release gelöscht.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  einzeln:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Releases anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+          gh release view versionen --json body --jq .body > alle.md
+          fehler=""
+          while read -r v sha datum; do
+            [ -z "$v" ] && continue
+            tag="v$v"
+            if gh release view "$tag" >/dev/null 2>&1; then echo "$tag gibt es schon"; continue; fi
+            awk -v h="### $v (" 'index($0,h)==1{f=1;next} /^### /{f=0} f' alle.md | sed '/^$/d' > teil.md
+            {
+              echo "Stand vom $datum (Commit ${sha:0:7})."
+              echo
+              echo "Änderungen seit der Vorversion:"
+              if [ -s teil.md ]; then cat teil.md; else echo "- Sicherheit: eigener Signierschlüssel; App einmal neu installieren (vorher Spielstand sichern)"; fi
+            } > notes.md
+            rm -rf up && mkdir up
+            for f in "gluckspfennig-$v.apk" "gluckspfennig-$v-linux.tar.gz" "gluckspfennig-$v-windows.zip"; do
+              gh release download versionen -D up -p "$f" 2>/dev/null || true
+            done
+            ls up
+            if gh release create "$tag" --target "$sha" --title "Glückspfennig $v" --notes-file notes.md --latest=false up/*; then
+              echo "$tag angelegt"
+            else
+              fehler="$fehler $tag"
+            fi
+          done <<'LISTE'
+            0.1.0 9acc02f3a325204bf4cd94724e07bba5f7ceea4e 2026-11-03
+            0.1.1 329e75dec18dc2c504f8aaab171653d01ad9ef54 2026-11-03
+            0.1.2 4c12f4b943782ff8d2e3d716ccaf2bf4ff30a3c3 2026-11-04
+            0.1.3 2a2c88800f2d8a830a7e0694af10cc4a6fee9626 2026-11-04
+            0.2.0 abf9b9a7a22336cb7c77bba896244e2fe7339888 2026-11-04
+            0.2.1 cadf40b440433faf848aeb351f90f9bba3ed80d8 2026-11-04
+            0.3.0 6d6dd82f2c4dbf030ccb3fbac3f0a00d1c11b863 2026-11-07
+            0.3.1 2d23ea5df2e147d4489fffd7029b4878f8a7d418 2026-11-08
+            0.4.0 86bd504ef27e8bffe3e0b771a3571e16f8b7dcf2 2026-11-08
+            0.5.0 73c0aa73bd00eb62cba6ae2618f050500b68f806 2026-11-08
+            0.6.0 ffadcec245cc447bcdc747570e04baffa436e055 2026-11-08
+            0.6.1 ecaf34ae9734a88f1c566411f768ebd6595d77e9 2026-11-08
+            0.7.0 3f6e4900ff60d9611fde071fb12f374e60953558 2026-11-09
+            0.7.1 8553563e21690dcf107bf2e8101c24ba9253fc3d 2026-11-09
+            0.8.0 037ff6631e9190caa109d9006ca6030233e2836e 2026-11-09
+            0.8.1 4b783e471a87c1b578ed417a79d3672c81d767df 2026-11-09
+            0.8.2 872daf7a26eb12c5c392249276b724065949fcc2 2026-11-10
+            0.8.3 b3695d9746acafd7faae87cf41a6e9b3b2d036a1 2026-11-11
+            0.8.4 701c92a7370fc8b80edf06b1f7bd6d7b6f6a050d 2026-11-11
+            0.8.5 ae6a03638bc11ca907fd15b53d06faa345995489 2026-11-11
+            0.8.6 01da2fc2ab685f759b8d426afd0958c05cac3786 2026-11-12
+            0.9.0 8587223137bb587879d6b9f828d0886ab8c667c9 2026-11-12
+            0.9.1 d279aa88f3d3ead7bee437287f9da0c5d95eb02d 2026-11-12
+            0.9.2 87d0f7db004eac93d530b3d0f9d16c3e850d895e 2026-11-12
+            0.9.3 3f57867a058d2b9c29aea90a615e41223285638c 2026-11-14
+          LISTE
+          if [ -n "$fehler" ]; then
+            echo "::warning::Nicht angelegt:$fehler"
+          else
+            gh release edit v0.9.3 --latest
+            gh release delete versionen --cleanup-tag -y
+            echo "Alle Versionen einzeln angelegt, Sammel-Release gelöscht"
+          fi

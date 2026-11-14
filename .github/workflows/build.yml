@@ -131,31 +131,34 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view latest >/dev/null 2>&1 || \
-            gh release create latest --prerelease --title "Aktueller Stand" --notes "Wird bei jedem Build ersetzt."
-          gh release upload latest gluckspfennig.apk --clobber
-      - name: Neue Version ins Versionsarchiv
+          # „Aktueller Stand“ jedes Mal neu am aktuellen Commit anlegen: steht dann oben
+          # in der Liste, und der Quellcode-Download passt zum Build.
+          v=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d+ -f1)
+          gh release delete latest --cleanup-tag -y >/dev/null 2>&1 || true
+          files="gluckspfennig.apk"
+          [ -f bilder.zip ] && files="$files bilder.zip"
+          gh release create latest --prerelease --target "$GITHUB_SHA" --title "Aktueller Stand" \
+            --notes "Wird bei jedem Build ersetzt. Version $v, Commit ${GITHUB_SHA:0:7}." $files
+      - name: Neue Version als eigenes Release
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Jede Version einmal im Release „versionen“ ablegen, mit den Änderungen seit der Vorversion
+          # Jede Version bekommt beim ersten Build ein eigenes Release vX.Y.Z mit den Änderungen seit der Vorversion
           v=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d+ -f1)
-          if gh release view versionen --json assets --jq '.assets[].name' | grep -qx "gluckspfennig-$v.apk"; then
-            echo "Version $v ist schon im Archiv"; exit 0
+          if gh release view "v$v" >/dev/null 2>&1; then
+            echo "Release v$v gibt es schon"; exit 0
           fi
           cp gluckspfennig.apk "gluckspfennig-$v.apk"
-          gh release upload versionen "gluckspfennig-$v.apk"
           prev=$(git log --format=%H -G'^version:' -- pubspec.yaml | sed -n 2p)
-          gh release view versionen --json body --jq .body > alt.md
           {
-            head -2 alt.md
-            echo "### $v ($(date +%F), Commit ${GITHUB_SHA:0:7})"
-            git log --no-merges --format='- %s' ${prev:+$prev..}HEAD | sed 's/ *\[skip ci\]//' | head -25
+            echo "Stand vom $(date +%F) (Commit ${GITHUB_SHA:0:7})."
             echo
-            tail -n +3 alt.md
+            echo "Änderungen seit der Vorversion:"
+            git log --no-merges --format='- %s' ${prev:+$prev..}HEAD | sed 's/ *\[skip ci\]//' | head -25
           } > notes.md
-          gh release edit versionen --notes-file notes.md
+          gh release create "v$v" --target "$GITHUB_SHA" --title "Glückspfennig $v" --notes-file notes.md \
+            --latest "gluckspfennig-$v.apk"
 
   # Linux läuft bei jedem Push mit, weil sich dieser Build direkt bedienen und prüfen lässt
   linux:
@@ -187,15 +190,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload latest out/* --clobber
-      - name: Neue Version ins Versionsarchiv
+      - name: Ins Release der Version
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           v=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d+ -f1)
           name="gluckspfennig-$v-linux.tar.gz"
-          if ! gh release view versionen --json assets --jq '.assets[].name' | grep -qx "$name"; then
-            cp out/gluckspfennig-linux.tar.gz "$name" && gh release upload versionen "$name"
+          if ! gh release view "v$v" --json assets --jq '.assets[].name' | grep -qx "$name"; then
+            cp out/gluckspfennig-linux.tar.gz "$name" && gh release upload "v$v" "$name"
           fi
 
   desktop:
@@ -234,7 +237,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload latest out/* --clobber
-      - name: Neue Version ins Versionsarchiv
+      - name: Ins Release der Version
         if: matrix.target == 'windows'
         continue-on-error: true
         shell: bash
@@ -243,6 +246,6 @@ jobs:
         run: |
           v=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d+ -f1)
           name="gluckspfennig-$v-windows.zip"
-          if ! gh release view versionen --json assets --jq '.assets[].name' | grep -qx "$name"; then
-            cp out/gluckspfennig-windows.zip "$name" && gh release upload versionen "$name"
+          if ! gh release view "v$v" --json assets --jq '.assets[].name' | grep -qx "$name"; then
+            cp out/gluckspfennig-windows.zip "$name" && gh release upload "v$v" "$name"
           fi
