@@ -38,7 +38,7 @@ class PdCardView extends StatelessWidget {
     return ListenableBuilder(listenable: settings, builder: (context, _) => _joker(c, h, settings.illustratedCards));
   }
 
-  /// Schlichter Joker der einfachen Grafik: Stern und Schriftzug.
+  /// Joker der ursprünglichen Grafik: Stern und Schriftzug.
   Widget _plainJoker(double h) => Container(
         width: width,
         height: h,

@@ -136,7 +136,7 @@ Widget _general(BuildContext context) {
               showSelectedIcon: false,
               segments: const [
                 ButtonSegment(value: true, label: Text('Klassisch')),
-                ButtonSegment(value: false, label: Text('Einfach')),
+                ButtonSegment(value: false, label: Text('Original')),
               ],
               selected: {app.settings.illustratedCards},
               onSelectionChanged: (s) => app.settings.illustratedCards = s.first,

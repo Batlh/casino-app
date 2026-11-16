@@ -61,7 +61,7 @@ class Settings extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Kartenbild: true die gezeichneten Bilder aus assets/cards, false die einfache Grafik der App.
+  /// Kartenbild: true die gezeichneten Bilder aus assets/cards (Klassisch), false die ursprüngliche Grafik der App (Original).
   bool get illustratedCards => _prefs.getBool('settings.illustratedCards') ?? true;
   set illustratedCards(bool value) {
     _prefs.setBool('settings.illustratedCards', value);
