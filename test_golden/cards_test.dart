@@ -71,5 +71,6 @@ void main() {
   }
 
   testWidgets('Spielkarten', (tester) => sheet(tester, 'spielkarten', {}));
+  testWidgets('Spielkarten original', (tester) => sheet(tester, 'spielkarten_original', {'settings.illustratedCards': false}));
   testWidgets('Spielkarten deutsch', (tester) => sheet(tester, 'spielkarten_deutsch', {'settings.cardNames': 'deutsch'}));
 }
