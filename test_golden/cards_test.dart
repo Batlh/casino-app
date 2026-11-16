@@ -46,12 +46,12 @@ class _Sheet extends StatelessWidget {
 }
 
 void main() {
-  testWidgets('Spielkarten', (tester) async {
+  Future<void> sheet(WidgetTester tester, String name, Map<String, Object> prefsValues) async {
     await loadFonts();
     tester.view.physicalSize = const Size(1500, 1000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(prefsValues);
     final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(GluckspfennigApp(wallet: Wallet(prefs), sfx: Sfx(prefs, silent: true), settings: Settings(prefs)));
     await tester.pump();
@@ -67,6 +67,9 @@ void main() {
       });
       await tester.pump();
     }
-    await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/spielkarten.png'));
-  });
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/$name.png'));
+  }
+
+  testWidgets('Spielkarten', (tester) => sheet(tester, 'spielkarten', {}));
+  testWidgets('Spielkarten deutsch', (tester) => sheet(tester, 'spielkarten_deutsch', {'settings.cardNames': 'deutsch'}));
 }
