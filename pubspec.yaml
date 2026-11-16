@@ -28,6 +28,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/sfx/
+    - assets/cards/
+    - assets/cards/index/
     # Lizenztexte der Schriften, erscheinen unter Einstellungen → Lizenzen
     - assets/fonts/Barlow-OFL.txt
     - assets/fonts/Shrikhand-OFL.txt

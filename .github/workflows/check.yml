@@ -22,3 +22,11 @@ jobs:
       - run: flutter analyze --no-fatal-infos --no-fatal-warnings lib test
       - if: always()
         run: flutter test --reporter expanded ${{ inputs.tests }}
+      # Mit "--update-goldens test_golden/..." in tests entstehen Bilder zur Sichtprüfung.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bilder
+          path: test_golden/goldens/
+          if-no-files-found: ignore
+          retention-days: 1

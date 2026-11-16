@@ -8,6 +8,7 @@ import '../core/theme.dart';
 import '../core/wallet.dart';
 import '../games/cards/playing_card.dart';
 import 'card_art.dart';
+import 'card_face_image.dart';
 import 'guide.dart';
 import 'settings_sheet.dart';
 
@@ -693,12 +694,15 @@ class PlayingCardView extends StatelessWidget {
             borderRadius: radius,
             child: ListenableBuilder(
               listenable: settings,
-              builder: (context, _) => CustomPaint(
-                size: Size(width, height),
-                painter: back || c == null
-                    ? CardBackPainter(settings.cardBack)
-                    : CardFacePainter(c, c.rankLabel(settings.cardNames), strip: strip),
-              ),
+              builder: (context, _) {
+                if (back || c == null) {
+                  return CustomPaint(size: Size(width, height), painter: CardBackPainter(settings.cardBack));
+                }
+                final label = c.rankLabel(settings.cardNames);
+                final drawn = CustomPaint(size: Size(width, height), painter: CardFacePainter(c, label, strip: strip));
+                if (!settings.illustratedCards) return drawn;
+                return CardFaceImage.card(c, label: label, width: width, height: height, strip: strip, fallback: drawn);
+              },
             ),
           ),
         );

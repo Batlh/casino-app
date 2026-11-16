@@ -7,6 +7,7 @@ import '../../core/scope.dart';
 import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
+import '../../ui/card_face_image.dart';
 import '../../ui/guide.dart';
 import '../../ui/widgets.dart';
 import '../board/seats.dart';
@@ -33,6 +34,26 @@ class PdCardView extends StatelessWidget {
     final c = card;
     if (c == null || !c.joker) return PlayingCardView(width: width, card: c?.card, highlighted: highlighted);
     final h = width / cardAspect;
+    final settings = AppScope.of(context).settings;
+    return ListenableBuilder(listenable: settings, builder: (context, _) => _joker(c, h, settings.illustratedCards));
+  }
+
+  /// Schlichter Joker der einfachen Grafik: Stern und Schriftzug.
+  Widget _plainJoker(double h) => Container(
+        width: width,
+        height: h,
+        color: const Color(0xFFFFF8E7),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.star_rounded, size: width * 0.5, color: const Color(0xFFC8321F)),
+            Text('JOKER', style: TextStyle(fontSize: width * 0.17, fontWeight: FontWeight.w900, color: const Color(0xFF241410))),
+          ],
+        ),
+      );
+
+  Widget _joker(PdCard c, double h, bool illustrated) {
+    final radius = BorderRadius.circular(width * 0.09);
     return Semantics(
       label: 'Joker',
       excludeSemantics: true,
@@ -40,17 +61,16 @@ class PdCardView extends StatelessWidget {
         width: width,
         height: h,
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF8E7),
-          borderRadius: BorderRadius.circular(width * 0.09),
+          borderRadius: radius,
           border: Border.all(color: highlighted ? const Color(0xFFFFC95C) : const Color(0x33000000), width: highlighted ? 3 : 1),
           boxShadow: const [BoxShadow(blurRadius: 5, offset: Offset(0, 2), color: Color(0x66000000))],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.star_rounded, size: width * 0.5, color: const Color(0xFFC8321F)),
-            Text('JOKER', style: TextStyle(fontSize: width * 0.17, fontWeight: FontWeight.w900, color: const Color(0xFF241410))),
-          ],
+        child: ClipRRect(
+          borderRadius: radius,
+          child: illustrated
+              // Drei rote und drei schwarze Joker im Spiel.
+              ? CardFaceImage.joker(red: c.id.isEven, width: width, height: h, fallback: _plainJoker(h))
+              : _plainJoker(h),
         ),
       ),
     );

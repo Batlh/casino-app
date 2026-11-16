@@ -74,7 +74,7 @@ class _SettingsSheet extends StatelessWidget {
                         style: TextStyle(color: p.ink, fontSize: 17, fontWeight: FontWeight.w700),
                       ),
                       subtitle: Text(
-                        'Ton, Tempo, Bildkarten, Kartenrücken, Kartengröße, Mahjong-Hilfszahlen, Spielstand',
+                        'Ton, Tempo, Bildkarten, Kartenbild, Kartenrücken, Kartengröße, Mahjong-Hilfszahlen, Spielstand',
                         style: TextStyle(color: p.inkSoft, fontSize: 14),
                       ),
                       children: [_general(context)],
@@ -125,6 +125,21 @@ Widget _general(BuildContext context) {
               ],
               selected: {app.settings.cardNames},
               onSelectionChanged: (s) => app.settings.cardNames = s.first,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text('Kartenbild', style: TextStyle(color: p.ink, fontSize: 17)),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<bool>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: true, label: Text('Klassisch')),
+                ButtonSegment(value: false, label: Text('Einfach')),
+              ],
+              selected: {app.settings.illustratedCards},
+              onSelectionChanged: (s) => app.settings.illustratedCards = s.first,
             ),
           ),
           const SizedBox(height: 16),
