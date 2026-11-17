@@ -57,6 +57,7 @@ Future<void> showAmCard(BuildContext context, {List<(AmConcrete, int)> near = co
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: p.panel,
     builder: (context) => DraggableScrollableSheet(
       expand: false,

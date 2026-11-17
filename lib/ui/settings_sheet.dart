@@ -18,6 +18,7 @@ void showSettingsSheet(BuildContext context, {GameSettings? game}) {
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
+    useSafeArea: true,
     builder: (_) => _SettingsSheet(game: game),
   );
 }

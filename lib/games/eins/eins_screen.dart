@@ -268,6 +268,7 @@ class _EinsScreenState extends State<EinsScreen> {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) {
         final p = Palette.of(context);
         return SafeArea(
@@ -548,6 +549,7 @@ class _EinsScreenState extends State<EinsScreen> {
       isDismissible: false,
       enableDrag: false,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) => StatefulBuilder(
         builder: (context, setSheet) => SafeArea(
           child: SingleChildScrollView(
@@ -1179,6 +1181,7 @@ class _EinsScreenState extends State<EinsScreen> {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) {
         final p = Palette.of(context);
         return SafeArea(

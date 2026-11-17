@@ -163,6 +163,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) => _PayTableSheet(game: widget.game, stake: _stake),
     );
   }
