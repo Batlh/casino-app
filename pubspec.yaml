@@ -1,7 +1,7 @@
 name: gluckspfennig
 description: Privates Offline-Casino zum Zeitvertreib. Spielmünzen ohne jeden Geldwert.
 publish_to: none
-version: 0.9.33+28
+version: 0.9.34+29
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
@@ -17,6 +17,8 @@ dependencies:
   shared_preferences: ^2.3.0
   # Link zum Quellcode auf GitHub im Browser öffnen
   url_launcher: ^6.3.0
+  # Bildschirm anlassen (Einstellung)
+  wakelock_plus: ^1.2.8
 
 dev_dependencies:
   flutter_test:

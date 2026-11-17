@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'core/backup.dart';
 import 'core/debug_log.dart';
@@ -51,21 +52,54 @@ class _RootState extends State<_Root> {
   late Settings _settings;
   Key _key = UniqueKey();
 
+  late final AppLifecycleListener _lifecycle;
+
   @override
   void initState() {
     super.initState();
     _load();
+    // Beim Zurückkehren in die App die Einstellung erneut anwenden, beim Verlassen freigeben.
+    _lifecycle = AppLifecycleListener(
+      onResume: _applyScreen,
+      onHide: () => _setScreen(false),
+    );
     restartApp = () => setState(() {
+          _settings.removeListener(_applyScreen);
           _load();
           _key = UniqueKey();
           debugLog.info('app', 'Neu geladen nach Spielstand-Import');
         });
   }
 
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    _settings.removeListener(_applyScreen);
+    super.dispose();
+  }
+
   void _load() {
     _wallet = Wallet(widget.prefs);
     _sfx = Sfx(widget.prefs);
     _settings = Settings(widget.prefs);
+    _settings.addListener(_applyScreen);
+    _applyScreen();
+  }
+
+  bool? _screenOn;
+
+  void _applyScreen() => _setScreen(_settings.keepScreenOn);
+
+  /// Hält den Bildschirm an oder gibt ihn frei. Fehler (z. B. ohne Unterstützung auf dem System) nur protokollieren.
+  Future<void> _setScreen(bool on) async {
+    if (_screenOn == on) return;
+    _screenOn = on;
+    try {
+      await WakelockPlus.toggle(enable: on);
+      debugLog.info('app', on ? 'Bildschirm bleibt an' : 'Bildschirm darf aus');
+    } catch (e, st) {
+      debugLog.error('bildschirm', e, st);
+    }
   }
 
   @override

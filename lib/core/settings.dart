@@ -61,6 +61,13 @@ class Settings extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Bildschirm bleibt an, solange die App im Vordergrund ist. Umgesetzt in main.dart.
+  bool get keepScreenOn => _prefs.getBool('settings.keepScreenOn') ?? false;
+  set keepScreenOn(bool value) {
+    _prefs.setBool('settings.keepScreenOn', value);
+    notifyListeners();
+  }
+
   static const _cardNamesKey = 'settings.cardNames';
   static const _penaltyKey = 'settings.mauPenaltyEndsTurn';
   static const _jackKey = 'settings.mauJackOnJack';

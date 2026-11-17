@@ -103,6 +103,13 @@ Widget _general(BuildContext context) {
             value: app.sfx.enabled,
             onChanged: (_) => app.sfx.toggle(),
           ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text('Bildschirm anlassen', style: TextStyle(color: p.ink, fontSize: 17)),
+            subtitle: Text('Solange die App offen ist. Kostet am Handy mehr Akku.', style: TextStyle(color: p.inkSoft)),
+            value: app.settings.keepScreenOn,
+            onChanged: (v) => app.settings.keepScreenOn = v,
+          ),
           const SizedBox(height: 8),
           Text(
             'Bildkarten',
