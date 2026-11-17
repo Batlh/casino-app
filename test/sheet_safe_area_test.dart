@@ -12,7 +12,9 @@ void main() {
     await pumpApp(tester, const Size(393, 852));
     final context = tester.element(find.byType(Navigator).first);
     showSettingsSheet(context);
-    await tester.pumpAndSettle();
+    // Die Lobby ist dauerhaft animiert, deshalb feste Zeit statt pumpAndSettle.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
     final top = tester.getTopLeft(find.byType(BottomSheet)).dy;
     expect(top, greaterThanOrEqualTo(40));
     expect(tester.takeException(), isNull);
