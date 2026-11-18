@@ -228,7 +228,9 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
                         sharedStake(0);
                       },
               ),
-              if (!sharedActive && MediaQuery.sizeOf(context).width < 420) ActionButton(label: 'Im Netzwerk', onPressed: sharedOpenPanel),
+              // Auf sehr kleinen Handys reicht der Platz unter dem Rad nicht
+              if (!sharedActive && MediaQuery.sizeOf(context).width < 420 && MediaQuery.sizeOf(context).height >= 640)
+                ActionButton(label: 'Im Netzwerk', onPressed: sharedOpenPanel),
             ]),
             const SizedBox(height: 12),
             Text('Einsatz ${formatCoins(_total)}', style: TextStyle(color: p.onFelt)),
