@@ -221,6 +221,7 @@ w += [
     dict(p=[(3.85, 7.0), (4.6, 6.55), (5.35, 7.0)], b=0.2),  # Dach
 ]
 f = f + [((0.55, 10.4), 1, 1.35)]  # dritter Flipper oben links
+w.append(dict(p=[(0, 9.6), (0.6, 9.95)], b=0.2))  # Abweiser: keine Kugel in der Ecke zwischen Wand und Drehpunkt
 TABLES.append(dict(
     id='jungle', name='Dschungeltempel', blurb='Drei Fallziele öffnen das Tempeltor, dahinter die Schatzkammer; dritter Flipper',
     theme=dict(top=0xFF12301A, mid=0xFF1D4A24, bottom=0xFF0A1A0E, wall=0xFFE6C77A, bumper=0xFF8BC34A, sling=0xFF4CAF50,

@@ -432,6 +432,7 @@ const jungleTable = TableSpec(
     WallSpec([Pt(3.850, 8.700), Pt(3.850, 7.000)]),
     WallSpec([Pt(5.350, 8.700), Pt(5.350, 7.000)]),
     WallSpec([Pt(3.850, 7.000), Pt(4.600, 6.550), Pt(5.350, 7.000)], bounce: 0.2),
+    WallSpec([Pt(0.000, 9.600), Pt(0.600, 9.950)], bounce: 0.2),
   ],
   flippers: [
     FlipperSpec(Pt(2.600, 15.300), 1),
