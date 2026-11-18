@@ -330,7 +330,8 @@ class _BingoScreenState extends State<BingoScreen> {
           children: [
             for (final c in me.cards)
               SizedBox(
-                width: me.cards.length > 1 && !wide ? (box.maxWidth - 34) / 2 : cardW,
+                // 90er-Karten sind breit: auf dem Handy untereinander, 75er passen zu zweit nebeneinander
+                width: me.cards.length > 1 && !wide && g.variant == BingoVariant.us75 ? (box.maxWidth - 34) / 2 : cardW,
                 child: _CardView(
                   card: c,
                   variant: g.variant,
