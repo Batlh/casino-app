@@ -153,7 +153,7 @@ mixin NetDuelScreen<T extends StatefulWidget> on State<T> {
         setState(() => _netMsg = '');
         duelStart(names, seat);
       }
-      ..onMove = (m) => mounted && duelApply(m)
+      ..onMove = ((m) => mounted && duelApply(m))
       ..onGone = () {
         if (mounted) setState(() => _netMsg = 'Der Gegner hat den Tisch verlassen');
       };
