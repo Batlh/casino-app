@@ -185,6 +185,7 @@ class GameFrame extends StatefulWidget {
     this.guide,
     this.settings,
     this.actions = const [],
+    this.network,
   });
 
   final String title;
@@ -199,6 +200,9 @@ class GameFrame extends StatefulWidget {
 
   /// Zusätzliche Knöpfe in der Kopfzeile (z. B. Steinkunde bei Mahjong).
   final List<Widget> actions;
+
+  /// Spiel kann im lokalen Netz gespielt werden: Eintrag in den Einstellungen.
+  final VoidCallback? network;
 
   @override
   State<GameFrame> createState() => _GameFrameState();
@@ -295,7 +299,7 @@ class _GameFrameState extends State<GameFrame> {
                       visualDensity: dense,
                       tooltip: 'Einstellungen',
                       icon: Icon(Icons.settings, color: p.ink),
-                      onPressed: () => showSettingsSheet(context, game: widget.settings),
+                      onPressed: () => showSettingsSheet(context, game: widget.settings, network: widget.network),
                     ),
                     const BalanceBadge(),
                   ],

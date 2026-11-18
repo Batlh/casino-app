@@ -326,6 +326,7 @@ class _DameScreenState extends State<DameScreen> with NetDuelScreen {
       title: 'Dame',
       guide: dameGuide,
       actions: duelActions(context),
+      network: duelActive ? null : duelOpenPanel,
       child: duelScreen() ?? (g == null
           ? const SizedBox.shrink()
           : Column(

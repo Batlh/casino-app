@@ -244,6 +244,7 @@ class _ReversiScreenState extends State<ReversiScreen> with NetDuelScreen {
       title: 'Reversi',
       guide: reversiGuide,
       actions: duelActions(context),
+      network: duelActive ? null : duelOpenPanel,
       child: net ?? (g == null
           ? const SizedBox.shrink()
           : Column(

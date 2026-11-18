@@ -300,6 +300,7 @@ class _ChessScreenState extends State<ChessScreen> with NetDuelScreen {
       guide: chessGuide,
       background: const BoxDecoration(color: Color(0xFF2A1A12)),
       actions: duelActions(context),
+      network: duelActive ? null : duelOpenPanel,
       child: duelScreen() ?? LayoutBuilder(builder: (context, box) => _layout(box)),
     );
   }

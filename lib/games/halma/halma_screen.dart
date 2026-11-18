@@ -308,6 +308,7 @@ class _HalmaScreenState extends State<HalmaScreen> with NetReplayScreen {
       title: 'Halma',
       guide: halmaGuide,
       actions: replayActions(context),
+      network: replayActive ? null : replayOpenPanel,
       child: replayScreen() ?? (g == null
           ? const SizedBox.shrink()
           : LayoutBuilder(builder: (context, box) {

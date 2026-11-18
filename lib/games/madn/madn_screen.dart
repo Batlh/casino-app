@@ -335,6 +335,7 @@ class _MadnScreenState extends State<MadnScreen> with NetReplayScreen {
       guide: madnGuide,
       settings: GameSettings('Mensch ärgere dich nicht', (context) => _RulesPanel(rules: _rules, onChanged: _setRules)),
       actions: replayActions(context),
+      network: replayActive ? null : replayOpenPanel,
       child: replayScreen() ?? (g == null
           ? const SizedBox.shrink()
           : LayoutBuilder(builder: (context, box) {

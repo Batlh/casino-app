@@ -298,6 +298,7 @@ class _KniffelScreenState extends State<KniffelScreen> with NetReplayScreen {
       title: 'Kniffel',
       guide: kniffelGuide,
       actions: replayActions(context),
+      network: replayActive ? null : replayOpenPanel,
       child: replayScreen() ?? (g == null
           ? const SizedBox.shrink()
           : LayoutBuilder(builder: (context, box) {

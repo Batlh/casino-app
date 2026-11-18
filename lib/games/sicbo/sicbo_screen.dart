@@ -6,6 +6,7 @@ import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_shared_mixin.dart';
 import '../../ui/widgets.dart';
 
 /// Sic Bo: drei Würfel, viele Wetten.
@@ -144,7 +145,7 @@ class SicBoScreen extends StatefulWidget {
   State<SicBoScreen> createState() => _SicBoScreenState();
 }
 
-class _SicBoScreenState extends State<SicBoScreen> {
+class _SicBoScreenState extends State<SicBoScreen> with NetSharedTable {
   late final math.Random _rng = widget.seed == null ? math.Random.secure() : math.Random(widget.seed);
   final Map<SicBet, int> _bets = {};
   int _chip = 10;
@@ -157,6 +158,31 @@ class _SicBoScreenState extends State<SicBoScreen> {
   AppScope get _app => AppScope.of(context);
   int get _total => _bets.values.fold(0, (a, b) => a + b);
 
+  @override
+  void dispose() {
+    sharedDispose();
+    super.dispose();
+  }
+
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get sharedGame => 'sicbo';
+  @override
+  String get sharedTitle => 'Sic Bo';
+  List<int>? _pending;
+
+  @override
+  void sharedResult(Object? outcome) {
+    if (outcome is! List || outcome.length != 3) return;
+    final d = [for (final v in outcome) ((v as num).toInt()).clamp(1, 6)];
+    if (_rolling) {
+      _pending = d;
+      return;
+    }
+    _rollTo(d);
+  }
+
   void _place(SicBet b) {
     if (_rolling || !_app.wallet.canAfford(_total + _chip)) return;
     _app.sfx.play(Sound.chip);
@@ -164,10 +190,21 @@ class _SicBoScreenState extends State<SicBoScreen> {
       _bets[b] = (_bets[b] ?? 0) + _chip;
       _winners = {};
     });
+    sharedStake(_total);
   }
 
   Future<void> _roll() async {
-    if (_rolling || _total == 0 || !_app.wallet.spend(_total)) return;
+    if (_rolling || sharedGuest) return;
+    // Am Netztisch würfelt der Gastgeber auch ohne eigenen Einsatz
+    if (_total == 0 && !sharedHost) return;
+    if (!_app.wallet.canAfford(_total)) return;
+    final d = [for (var k = 0; k < 3; k++) 1 + _rng.nextInt(6)];
+    sharedSend(d);
+    await _rollTo(d);
+  }
+
+  Future<void> _rollTo(List<int> d) async {
+    if (_total > 0 && !_app.wallet.spend(_total)) _bets.clear();
     setState(() {
       _rolling = true;
       _message = '';
@@ -178,7 +215,6 @@ class _SicBoScreenState extends State<SicBoScreen> {
       _app.sfx.play(Sound.tick);
       setState(() => _dice = [for (var k = 0; k < 3; k++) 1 + _rng.nextInt(6)]);
     }
-    final d = [for (var k = 0; k < 3; k++) 1 + _rng.nextInt(6)];
     var paid = 0;
     final won = <SicBet>{};
     for (final e in _bets.entries) {
@@ -187,16 +223,20 @@ class _SicBoScreenState extends State<SicBoScreen> {
       paid += p;
     }
     if (paid > 0) _app.wallet.credit(paid);
+    final played = _total > 0;
     final net = paid - _total;
-    _app.sfx.play(net > 0 ? Sound.win : Sound.lose);
+    if (played) _app.sfx.play(net > 0 ? Sound.win : Sound.lose);
     setState(() {
       _dice = d;
       _rolling = false;
       _winners = won;
       _big = net >= 20 * _chip && net > 0;
       _message = 'Gewürfelt: ${d.join(' · ')} = ${_sum(d)}${_triple(d) ? ' (Drilling)' : ''}. '
-          '${net > 0 ? 'Gewinn ${formatCoins(net)}' : (paid > 0 ? 'Zurück ${formatCoins(paid)}' : 'Verloren')}';
+          '${!played ? '' : net > 0 ? 'Gewinn ${formatCoins(net)}' : (paid > 0 ? 'Zurück ${formatCoins(paid)}' : 'Verloren')}';
     });
+    final next = _pending;
+    _pending = null;
+    if (next != null && mounted) _rollTo(next);
   }
 
   @override
@@ -205,7 +245,9 @@ class _SicBoScreenState extends State<SicBoScreen> {
       title: 'Sic Bo',
       guide: sicBoGuide,
       background: const BoxDecoration(gradient: RadialGradient(radius: 1.2, colors: [Color(0xFF6B1F1F), Color(0xFF240808)])),
-      child: SingleChildScrollView(
+      actions: sharedActions(context),
+      network: sharedActive ? null : sharedOpenPanel,
+      child: sharedScreen() ?? SingleChildScrollView(
         padding: const EdgeInsets.all(12),
         child: Center(
           child: ConstrainedBox(
@@ -218,6 +260,7 @@ class _SicBoScreenState extends State<SicBoScreen> {
                 ),
                 const SizedBox(height: 8),
                 ResultBanner(text: _message, highlight: _big, maxLines: 2),
+                sharedStakesBar(),
                 const SizedBox(height: 10),
                 Wrap(spacing: 6, runSpacing: 6, alignment: WrapAlignment.center, children: [for (final b in sicBets) _field(b)]),
                 const SizedBox(height: 10),
@@ -226,12 +269,21 @@ class _SicBoScreenState extends State<SicBoScreen> {
                 Wrap(
                   spacing: 8,
                   children: [
-                    ActionButton(label: 'Löschen', onPressed: _rolling || _bets.isEmpty ? null : () => setState(_bets.clear)),
+                    ActionButton(
+                      label: 'Löschen',
+                      onPressed: _rolling || _bets.isEmpty
+                          ? null
+                          : () {
+                              setState(_bets.clear);
+                              sharedStake(0);
+                            },
+                    ),
                     ActionButton(
                       primary: true,
-                      label: _total == 0 ? 'Würfeln' : 'Würfeln: ${formatCoins(_total)}',
-                      onPressed: _rolling || _total == 0 || !_app.wallet.canAfford(_total) ? null : _roll,
+                      label: sharedGuest ? 'Der Gastgeber würfelt' : (_total == 0 ? 'Würfeln' : 'Würfeln: ${formatCoins(_total)}'),
+                      onPressed: _rolling || sharedGuest || (_total == 0 && !sharedHost) || !_app.wallet.canAfford(_total) ? null : _roll,
                     ),
+                    if (!sharedActive && MediaQuery.sizeOf(context).width < 420) ActionButton(label: 'Im Netzwerk', onPressed: sharedOpenPanel),
                   ],
                 ),
               ],

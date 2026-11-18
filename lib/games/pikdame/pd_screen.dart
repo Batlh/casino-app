@@ -542,6 +542,7 @@ class _PikDameScreenState extends State<PikDameScreen> with NetReplayScreen {
         gradient: RadialGradient(radius: 1.2, colors: [Color(0xFF1E5631), Color(0xFF0B2414)]),
       ),
       actions: replayActions(context),
+      network: replayActive ? null : replayOpenPanel,
       child: replayScreen() ?? (_g == null ? _setup() : LayoutBuilder(builder: (context, box) => _layout(box))),
     );
   }

@@ -353,6 +353,7 @@ class _GoScreenState extends State<GoScreen> with NetDuelScreen {
       title: 'Go',
       guide: goGuide,
       actions: duelActions(context),
+      network: duelActive ? null : duelOpenPanel,
       child: duelScreen() ?? (g == null
           ? const SizedBox.shrink()
           : Column(

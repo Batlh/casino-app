@@ -326,6 +326,7 @@ class _MuehleScreenState extends State<MuehleScreen> with NetDuelScreen {
       title: 'Mühle',
       guide: muehleGuide,
       actions: duelActions(context),
+      network: duelActive ? null : duelOpenPanel,
       child: duelScreen() ?? (g == null
           ? const SizedBox.shrink()
           : Column(

@@ -314,6 +314,7 @@ class _ShogiScreenState extends State<ShogiScreen> with NetDuelScreen {
       guide: shogiGuide,
       background: const BoxDecoration(color: Color(0xFF3A2116)),
       actions: duelActions(context),
+      network: duelActive ? null : duelOpenPanel,
       child: duelScreen() ?? LayoutBuilder(builder: (context, box) => _layout(box)),
     );
   }

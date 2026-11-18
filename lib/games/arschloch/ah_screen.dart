@@ -436,6 +436,7 @@ class _ArschlochScreenState extends State<ArschlochScreen> with NetReplayScreen 
         gradient: RadialGradient(radius: 1.2, colors: [Color(0xFF6B3A1F), Color(0xFF2A160B)]),
       ),
       actions: replayActions(context),
+      network: replayActive ? null : replayOpenPanel,
       child: replayScreen() ?? LayoutBuilder(builder: (context, box) {
         final w = box.maxWidth;
         final badge = math.min(130.0, w / 3.3);

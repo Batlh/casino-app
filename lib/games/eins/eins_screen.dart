@@ -1280,6 +1280,7 @@ class _EinsScreenState extends State<EinsScreen> {
       settings: einsSettings,
       guide: einsGuide,
       title: _mode == EinsMode.classic ? 'Eins!' : 'Eins! ${modeName(_mode)}',
+      network: _net ? null : () => setState(() => _netPanel = true),
       actions: [
         // Auf schmalen Handys ist die Leiste voll, dort gibt es den Knopf am Rundenende
         if (!_net && !_netPanel && MediaQuery.sizeOf(context).width >= 420)

@@ -348,6 +348,7 @@ class _HeartsScreenState extends State<HeartsScreen> with NetReplayScreen {
       guide: heartsGuide,
       title: 'Schwarze Dame',
       actions: replayActions(context),
+      network: replayActive ? null : replayOpenPanel,
       child: replayScreen() ?? ListenableBuilder(
         listenable: _app.settings,
         builder: (context, _) => LayoutBuilder(

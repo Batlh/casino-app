@@ -14,13 +14,14 @@ import 'debug_screen.dart';
 
 /// Einstellungen öffnen. Aus einem Spiel heraus zeigt [game] zuerst die Einstellungen dieses Spiels,
 /// die allgemeinen Einstellungen stehen eingeklappt darunter. Aus der Lobby nur die allgemeinen.
-void showSettingsSheet(BuildContext context, {GameSettings? game}) {
+/// [network]: Spiel kann im lokalen Netz gespielt werden; der Eintrag öffnet die Netzwerk-Auswahl.
+void showSettingsSheet(BuildContext context, {GameSettings? game, VoidCallback? network}) {
   showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (_) => _SettingsSheet(game: game),
+    builder: (_) => _SettingsSheet(game: game, network: network),
   );
 }
 
@@ -35,8 +36,9 @@ const mauMauSettings = GameSettings('Mau Mau', _mauMau);
 const einsSettings = GameSettings('Eins!', _eins);
 
 class _SettingsSheet extends StatelessWidget {
-  const _SettingsSheet({this.game});
+  const _SettingsSheet({this.game, this.network});
   final GameSettings? game;
+  final VoidCallback? network;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +56,21 @@ class _SettingsSheet extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (network != null) ...[
+                  Card(
+                    color: p.panel,
+                    child: ListTile(
+                      leading: Icon(Icons.wifi, color: p.ink),
+                      title: Text('Im Netzwerk spielen', style: TextStyle(color: p.ink, fontWeight: FontWeight.w700, fontSize: 17)),
+                      subtitle: Text('Mit anderen Geräten im selben WLAN', style: TextStyle(color: p.inkSoft, fontSize: 14)),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        network!();
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 if (game == null) ...[
                   Text('Einstellungen', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 8),

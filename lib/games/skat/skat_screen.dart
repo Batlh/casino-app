@@ -409,6 +409,7 @@ class _SkatScreenState extends State<SkatScreen> {
       title: 'Skat',
       guide: skatGuide,
       background: const BoxDecoration(gradient: RadialGradient(radius: 1.2, colors: [Color(0xFF15553A), Color(0xFF082116)])),
+      network: _net ? null : () => setState(() => _netPanel = true),
       actions: [
         // Auf schmalen Handys ist die Leiste voll, dort gibt es den Knopf am Ende der Liste
         if (!_net && !_netPanel && MediaQuery.sizeOf(context).width >= 420)

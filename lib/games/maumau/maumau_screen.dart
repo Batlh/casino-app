@@ -528,6 +528,7 @@ class _MauMauScreenState extends State<MauMauScreen> {
       settings: mauMauSettings,
       guide: mauGuide,
       title: 'Mau Mau',
+      network: _net ? null : () => setState(() => _netPanel = true),
       actions: [
         // Auf schmalen Handys ist die Leiste voll, dort gibt es den Knopf am Rundenende
         if (!_net && !_netPanel && MediaQuery.sizeOf(context).width >= 420)

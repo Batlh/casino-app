@@ -255,6 +255,7 @@ class _LadderScreenState extends State<LadderScreen> with NetReplayScreen {
       title: 'Leiterspiel',
       guide: ladderGuide,
       actions: replayActions(context),
+      network: replayActive ? null : replayOpenPanel,
       child: replayScreen() ?? (g == null
           ? const SizedBox.shrink()
           : LayoutBuilder(

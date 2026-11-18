@@ -183,6 +183,7 @@ class _RouletteScreenState extends State<RouletteScreen>
       guide: rouletteGuide,
       title: 'Roulette',
       actions: sharedActions(context),
+      network: sharedActive ? null : sharedOpenPanel,
       child: sharedScreen() ?? LayoutBuilder(
         builder: (context, box) {
           final wide = box.maxWidth > box.maxHeight * 1.2;

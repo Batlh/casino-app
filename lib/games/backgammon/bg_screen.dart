@@ -444,6 +444,7 @@ class _BgScreenState extends State<BgScreen> with NetDuelScreen {
       title: 'Backgammon',
       guide: bgGuide,
       actions: duelActions(context),
+      network: duelActive ? null : duelOpenPanel,
       child: duelScreen() ?? (g == null
           ? const SizedBox.shrink()
           : Column(

@@ -6,6 +6,7 @@ import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_shared_mixin.dart';
 import '../../ui/widgets.dart';
 import '../sicbo/sicbo_screen.dart' show DieFace;
 
@@ -85,7 +86,7 @@ class CrapsScreen extends StatefulWidget {
   State<CrapsScreen> createState() => _CrapsScreenState();
 }
 
-class _CrapsScreenState extends State<CrapsScreen> {
+class _CrapsScreenState extends State<CrapsScreen> with NetSharedTable {
   late final math.Random _rng = widget.seed == null ? math.Random.secure() : math.Random(widget.seed);
   final Map<CrapsBet, int> _bets = {};
   int _chip = 10;
@@ -99,14 +100,53 @@ class _CrapsScreenState extends State<CrapsScreen> {
 
   bool _canPlace(CrapsBet b) => !_rolling && (_point == null || (b != CrapsBet.pass && b != CrapsBet.dontPass));
 
+  int get _staked => _bets.values.fold(0, (a, b) => a + b);
+
+  @override
+  void dispose() {
+    sharedDispose();
+    super.dispose();
+  }
+
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get sharedGame => 'craps';
+  @override
+  String get sharedTitle => 'Craps';
+  Map<String, Object?>? _pending;
+
+  /// Ergebnis vom Gastgeber: Würfel und Punkt vor dem Wurf (der Punkt gilt für den ganzen Tisch).
+  @override
+  void sharedResult(Object? outcome) {
+    if (outcome is! Map) return;
+    final m = outcome.cast<String, Object?>();
+    if (_rolling) {
+      _pending = m;
+      return;
+    }
+    final d = [for (final v in m['d'] as List) ((v as num).toInt()).clamp(1, 6)];
+    _point = (m['p'] as num?)?.toInt();
+    _rollTo(d);
+  }
+
   void _place(CrapsBet b) {
     if (!_canPlace(b) || !_app.wallet.spend(_chip)) return;
     _app.sfx.play(Sound.chip);
     setState(() => _bets[b] = (_bets[b] ?? 0) + _chip);
+    sharedStake(_staked);
   }
 
   Future<void> _roll() async {
-    if (_rolling || _bets.isEmpty) return;
+    if (_rolling || sharedGuest) return;
+    // Am Netztisch würfelt der Gastgeber auch ohne eigenen Einsatz
+    if (_bets.isEmpty && !sharedHost) return;
+    final d = [1 + _rng.nextInt(6), 1 + _rng.nextInt(6)];
+    sharedSend({'d': d, 'p': _point});
+    await _rollTo(d);
+  }
+
+  Future<void> _rollTo(List<int> d) async {
     setState(() => _rolling = true);
     for (var i = 0; i < 7; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 90));
@@ -114,7 +154,6 @@ class _CrapsScreenState extends State<CrapsScreen> {
       _app.sfx.play(Sound.tick);
       setState(() => _dice = [1 + _rng.nextInt(6), 1 + _rng.nextInt(6)]);
     }
-    final d = [1 + _rng.nextInt(6), 1 + _rng.nextInt(6)];
     final sum = d[0] + d[1];
     var paid = 0;
     var lost = 0;
@@ -140,6 +179,13 @@ class _CrapsScreenState extends State<CrapsScreen> {
     }
     if (paid > 0) _app.wallet.credit(paid);
     _app.sfx.play(paid > 0 ? Sound.win : (lost > 0 ? Sound.lose : Sound.tick));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      sharedStake(_staked);
+      final next = _pending;
+      _pending = null;
+      if (next != null) sharedResult(next);
+    });
     setState(() {
       _dice = d;
       _rolling = false;
@@ -158,7 +204,9 @@ class _CrapsScreenState extends State<CrapsScreen> {
       title: 'Craps',
       guide: crapsGuide,
       background: const BoxDecoration(gradient: RadialGradient(radius: 1.2, colors: [Color(0xFF1B5E20), Color(0xFF07240A)])),
-      child: SingleChildScrollView(
+      actions: sharedActions(context),
+      network: sharedActive ? null : sharedOpenPanel,
+      child: sharedScreen() ?? SingleChildScrollView(
         padding: const EdgeInsets.all(12),
         child: Center(
           child: ConstrainedBox(
@@ -182,6 +230,7 @@ class _CrapsScreenState extends State<CrapsScreen> {
                   ),
                 ),
                 ResultBanner(text: _message, highlight: _big, maxLines: 2),
+                sharedStakesBar(),
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 8,
@@ -217,7 +266,14 @@ class _CrapsScreenState extends State<CrapsScreen> {
                 const SizedBox(height: 10),
                 BetPicker(value: _chip, onChanged: (v) => setState(() => _chip = v), enabled: !_rolling),
                 const SizedBox(height: 10),
-                ActionButton(primary: true, label: 'Würfeln', onPressed: _rolling || _bets.isEmpty ? null : _roll),
+                Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
+                  ActionButton(
+                    primary: true,
+                    label: sharedGuest ? 'Der Gastgeber würfelt' : 'Würfeln',
+                    onPressed: _rolling || sharedGuest || (_bets.isEmpty && !sharedHost) ? null : _roll,
+                  ),
+                  if (!sharedActive && MediaQuery.sizeOf(context).width < 420) ActionButton(label: 'Im Netzwerk', onPressed: sharedOpenPanel),
+                ]),
               ],
             ),
           ),
