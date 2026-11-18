@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../core/scope.dart';
 import '../core/sfx.dart';
 import '../core/theme.dart';
+import '../core/updater.dart';
 import '../core/wallet.dart';
 import '../games/arschloch/ah_screen.dart';
 import '../games/baccarat/baccarat_screen.dart';
@@ -69,6 +70,15 @@ class LobbyScreen extends StatefulWidget {
 }
 
 class _LobbyScreenState extends State<LobbyScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Nach dem ersten Bild nach Updates schauen (nur wenn eingeschaltet, höchstens alle sechs Stunden)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) autoCheckForUpdate(context);
+    });
+  }
+
   void _open(Widget screen) {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
   }

@@ -1,6 +1,6 @@
 # Glückspfennig
 
-Privates Offline-Casino für Android, Windows, Linux und macOS. Es gibt nur Spielmünzen ohne Geldwert, keinen Shop, keine Werbung und keine Internet-Berechtigung.
+Privates Offline-Casino für Android, Windows, Linux und macOS. Es gibt nur Spielmünzen ohne Geldwert, keinen Shop, keine Werbung. Ins Internet geht die App nur für die abschaltbare Update-Prüfung: eine Anfrage an GitHub, ob es eine neue Version gibt, ohne Daten von dir.
 
 ## Bauen
 

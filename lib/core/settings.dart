@@ -61,6 +61,17 @@ class Settings extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Beim Start auf GitHub nach einer neuen Version suchen (core/updater.dart).
+  bool get autoUpdate => _prefs.getBool('settings.autoUpdate') ?? true;
+  set autoUpdate(bool value) {
+    _prefs.setBool('settings.autoUpdate', value);
+    notifyListeners();
+  }
+
+  /// Zeitpunkt der letzten Update-Prüfung (Millisekunden seit 1970).
+  int get lastUpdateCheck => _prefs.getInt('settings.lastUpdateCheck') ?? 0;
+  set lastUpdateCheck(int value) => _prefs.setInt('settings.lastUpdateCheck', value);
+
   /// Bildschirm bleibt an, solange die App im Vordergrund ist. Umgesetzt in main.dart.
   bool get keepScreenOn => _prefs.getBool('settings.keepScreenOn') ?? false;
   set keepScreenOn(bool value) {

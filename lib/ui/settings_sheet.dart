@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/licenses.dart';
 import '../core/scope.dart';
 import '../core/settings.dart';
+import '../core/updater.dart';
 import '../core/theme.dart';
 import '../core/version.dart';
 import '../games/cards/playing_card.dart';
@@ -110,6 +111,25 @@ Widget _general(BuildContext context) {
             subtitle: Text('Solange die App offen ist. Kostet am Handy mehr Akku.', style: TextStyle(color: p.inkSoft)),
             value: app.settings.keepScreenOn,
             onChanged: (v) => app.settings.keepScreenOn = v,
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text('Automatisch nach Updates suchen', style: TextStyle(color: p.ink, fontSize: 17)),
+            subtitle: Text(
+              'Fragt beim Start bei GitHub nach, ob es eine neue Version gibt, und bietet sie zum Installieren an. '
+              'Dabei wird nichts von dir übertragen, keine Kennung und kein Spielstand.',
+              style: TextStyle(color: p.inkSoft),
+            ),
+            value: app.settings.autoUpdate,
+            onChanged: (v) => app.settings.autoUpdate = v,
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => manualCheckForUpdate(context),
+              icon: const Icon(Icons.system_update),
+              label: const Text('Jetzt nach Updates suchen'),
+            ),
           ),
           const SizedBox(height: 8),
           Text(

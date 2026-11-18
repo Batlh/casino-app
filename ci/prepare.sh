@@ -8,6 +8,10 @@ dart run flutter_launcher_icons || echo "Icons wurden nicht erzeugt, Build läuf
 if [ -f android/app/src/main/AndroidManifest.xml ]; then
   sed -i.bak "s/android:label=\"[^\"]*\"/android:label=\"$NAME\"/" android/app/src/main/AndroidManifest.xml
 fi
+# Update-Funktion: Internet, Installationserlaubnis, FileProvider, eigene MainActivity
+if [ -f android/app/src/main/AndroidManifest.xml ]; then
+  python3 ci/patch_android.py . || python ci/patch_android.py .
+fi
 # Feste Signatur, sonst bekommt jede APK einen neuen Schlüssel und Updates scheitern
 GRADLE=android/app/build.gradle.kts
 if [ -f "$GRADLE" ]; then
