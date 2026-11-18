@@ -9,6 +9,7 @@ import '../core/updater.dart';
 import '../core/wallet.dart';
 import '../games/arschloch/ah_screen.dart';
 import '../games/baccarat/baccarat_screen.dart';
+import '../games/bingo/bingo_screen.dart';
 import '../games/blackjack/blackjack_screen.dart';
 import '../games/cards/playing_card.dart';
 import '../games/caribbean/caribbean_screen.dart';
@@ -234,6 +235,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF1F3A6B),
         _KenoArt.new,
         () => _open(const KenoScreen()),
+      ),
+      _Game(
+        'Bingo',
+        '75 Kugeln (USA) oder 90 Kugeln (UK) gegen Mitspieler',
+        const Color(0xFF8E2A5A),
+        _BingoArt.new,
+        () => _open(const BingoScreen()),
       ),
       _Game(
         'Rubbellose',
@@ -887,6 +895,37 @@ class _SicBoArt extends CustomPainter {
         canvas.drawCircle(p, d * 0.09, Paint()..color = i == 0 ? const Color(0xFFC62828) : const Color(0xFF241410));
       }
     }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _BingoArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cell = math.min(size.width * 0.5, size.height * 0.72) / 5;
+    final origin = Offset(size.width * 0.12, (size.height - cell * 5) / 2 + 4);
+    final rng = math.Random(9);
+    for (var r = 0; r < 5; r++) {
+      for (var c = 0; c < 5; c++) {
+        final rect = Rect.fromLTWH(origin.dx + c * cell, origin.dy + r * cell, cell, cell).deflate(1);
+        canvas.drawRect(rect, Paint()..color = const Color(0xFFFFF8E7));
+        if (r == c || (r == 2 && c == 2) || rng.nextDouble() < 0.25) {
+          canvas.drawCircle(rect.center, cell * 0.36, Paint()..color = r == c ? const Color(0xCCFFB300) : const Color(0x99E53935));
+        }
+      }
+    }
+    // Kugel daneben
+    final b = Offset(size.width * 0.8, size.height * 0.5);
+    final br = math.min(size.width, size.height) * 0.2;
+    canvas.drawCircle(b, br, Paint()..shader = const RadialGradient(center: Alignment(-0.3, -0.4), colors: [Color(0xFF90CAF9), Color(0xFF1565C0)]).createShader(Rect.fromCircle(center: b, radius: br)));
+    canvas.drawCircle(b, br * 0.6, Paint()..color = Colors.white);
+    final tp = TextPainter(
+      text: TextSpan(text: '42', style: TextStyle(fontFamily: bodyFont, color: const Color(0xFF241410), fontWeight: FontWeight.w900, fontSize: br * 0.7)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, b - Offset(tp.width / 2, tp.height / 2));
   }
 
   @override
