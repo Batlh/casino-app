@@ -230,7 +230,9 @@ void main() {
     await start(tester, SlotScreen(game: sakura));
     showWinBreakdown(tester.element(find.byType(Navigator).first), sakura, o.steps.single.grid,
         o.steps.single.wins.firstWhere((w) => w.symbol == t), stake: 300, multiplier: 1);
-    await tester.pump(const Duration(milliseconds: 600));
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     await snap('aufschluesselung_sakura');
     await finish(tester);
   });

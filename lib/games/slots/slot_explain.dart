@@ -13,6 +13,12 @@ import 'slot_games.dart';
 
 String _x(List<int> m) => m.map((v) => '×$v').join(', ');
 
+/// „2-, 5- oder 20-Fache“
+String _fold(List<int> v) => v.length == 1 ? '${v.first}-Fache' : '${v.take(v.length - 1).map((x) => '$x-').join(', ')} oder ${v.last}-Fache';
+
+/// Symbolname in Anführungszeichen, damit „6 oder mehr ‚Glücksmünze‘“ grammatisch passt.
+String _sym(SlotGame g, int s) => 'Symbole „${g.symbolNames[s]}“';
+
 /// Betrag als Text, auch mit Nachkommastelle (0,5).
 String _amount(num v) => v == v.roundToDouble() ? formatCoins(v.round()) : v.toStringAsFixed(2).replaceAll('.', ',').replaceAll(RegExp(r',?0+$'), '');
 
@@ -58,9 +64,9 @@ String cascadeText(SlotRules r) {
 String holdText(SlotGame g, {int? stake}) {
   final h = g.rules.holdSpin!;
   final cells = g.rules.reels * g.rules.rows;
-  String val(int tenths) => stake == null ? '${_amount(tenths / 10)}-fache Einsatz' : formatCoins(tenths * stake ~/ 10);
+  String val(int tenths) => stake == null ? '${_amount(tenths / 10)}-facher Einsatz' : formatCoins(tenths * stake ~/ 10);
   final jackpots = [for (final e in h.jackpots.entries) '${e.value} ${val(e.key)}'].join(', ');
-  return '${h.trigger} oder mehr ${g.symbolNames[symCoin]} auf einmal starten Hold & Spin. Jede Münze trägt einen Wert, '
+  return '${h.trigger} oder mehr ${_sym(g, symCoin)} auf einmal starten Hold & Spin. Jede Münze trägt einen Wert, '
       'manche einen Jackpot. Alle Münzen bleiben liegen, die übrigen Felder ($cells insgesamt) drehen neu. Du hast '
       '${h.respins} Respins. Landet in einem Respin mindestens eine neue Münze, bleibt sie liegen und die Respins stehen '
       'wieder auf ${h.respins}. Landet keine, ist einer verbraucht. Die Runde endet, wenn kein Respin mehr übrig ist oder alle '
@@ -78,7 +84,7 @@ String wheelText(SlotGame g, {int? stake}) {
         WheelKind.holdSpin => 'Hold & Spin mit ${s.amount} Startmünzen',
       },
   ].toSet().join(', ');
-  return '${w.trigger} oder mehr ${g.symbolNames[symBonus]} drehen das Glücksrad auf eigenem Bildschirm. Wo der Zeiger '
+  return '${w.trigger} oder mehr ${_sym(g, symBonus)} drehen das Glücksrad auf eigenem Bildschirm. Wo der Zeiger '
       'stehen bleibt, gibt es den Gewinn. Felder: $fields.';
 }
 
@@ -90,9 +96,9 @@ String freeSpinsText(SlotGame g) {
     if (r.stickyWildsInFree) 'Jeder Joker, der landet, bleibt bis zum Ende der Freispiele an seinem Platz liegen.',
     if (r.freeCascade.isNotEmpty) 'Die Kaskaden zählen mehr (siehe Kaskaden).',
   ].join(' ');
-  return 'Drei oder mehr ${g.symbolNames[symScatter]} irgendwo auf den Walzen zahlen das '
-      '${r.scatterPays.join('-, ')}-Fache des Einsatzes und starten ${r.freeSpins} Freispiele. Freispiele kosten nichts, '
-      'neue ${g.symbolNames[symScatter]} darin bringen weitere. $extra';
+  return 'Drei oder mehr ${_sym(g, symScatter)} irgendwo auf den Walzen zahlen das ${_fold(r.scatterPays)} des '
+      'Einsatzes und starten ${r.freeSpins} Freispiele. Freispiele kosten nichts, neue Symbole „${g.symbolNames[symScatter]}“ '
+      'darin bringen weitere. $extra';
 }
 
 /// Spielerklärung (?-Knopf), passend zu den Regeln des Automaten.
