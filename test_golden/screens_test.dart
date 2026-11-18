@@ -287,7 +287,8 @@ void main() {
       },
     );
     await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(seconds: 2));
+    // Länger als der Speicher-Takt des Protokolls (3 s), sonst bleibt ein Timer offen
+    await tester.pump(const Duration(seconds: 4));
   });
 
   testWidgets('Symbole', (tester) async {
