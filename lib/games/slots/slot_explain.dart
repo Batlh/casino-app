@@ -34,11 +34,22 @@ String waysText(SlotRules r) {
 }
 
 /// Rechenbeispiel zum Bild.
-String waysExampleText(SlotRules r) =>
-    'Beispiel im Bild: Das Symbol liegt auf Walze 1 zweimal, auf Walze 2 einmal plus ein Joker, auf Walze 3 einmal und '
-    'auf den Walzen 4 und 5 je zweimal. Das sind 2 × 2 × 1 × 2 × 2 = 16 Wege. Zahlt das Symbol für fünf gleiche 25, '
-    'gibt es 16 × 25 = 400 (bei Einsatz ${formatCoins(r.waysDivisor)}). Ein Joker zählt für jedes Symbol mit, auch für '
-    'mehrere Symbole gleichzeitig, und kann so mehrere Gewinne auf einmal auslösen.';
+/// Treffer je Walze im Beispiel: höchstens fünf Walzen, bei drei Walzen 2 · 2 · 1.
+List<int> _exampleCounts(SlotRules r) => const [2, 2, 1, 2, 2].take(math.min(r.reels, 5)).toList();
+
+int _exampleWays(SlotRules r) => _exampleCounts(r).fold(1, (a, b) => a * b);
+
+String waysExampleText(SlotRules r) {
+  final c = _exampleCounts(r);
+  final per = [
+    for (var i = 0; i < c.length; i++)
+      'Walze ${i + 1} ${i == 1 ? '${c[i] - 1}-mal plus ein Joker' : '${c[i]}-mal'}',
+  ].join(', ');
+  final n = _exampleWays(r);
+  return 'Beispiel im Bild: Das Symbol liegt auf $per. Das sind ${c.join(' × ')} = $n Wege. Zahlt das Symbol für '
+      '${c.length} gleiche 25, gibt es $n × 25 = ${formatCoins(n * 25)} (bei Einsatz ${formatCoins(r.waysDivisor)}). Ein Joker '
+      'zählt für jedes Symbol mit, auch für mehrere Symbole gleichzeitig, und kann so mehrere Gewinne auf einmal auslösen.';
+}
 
 String linesText(SlotRules r) =>
     'Es zählen nur die ${r.lineCount} Gewinnlinien. Gleiche Symbole müssen auf der ersten Walze links beginnen und ohne '
@@ -152,7 +163,7 @@ class WaysExample extends StatelessWidget {
           child: CustomPaint(painter: _WaysExamplePainter(game, p.ink)),
         ),
         const SizedBox(height: 4),
-        Text('2 × 2 × 1 × 2 × 2 = 16 Wege', style: TextStyle(color: p.ink, fontWeight: FontWeight.w700, fontSize: 16)),
+        Text('${_exampleCounts(game.rules).join(' × ')} = ${_exampleWays(game.rules)} Wege', style: TextStyle(color: p.ink, fontWeight: FontWeight.w700, fontSize: 16)),
       ],
     );
   }
@@ -164,18 +175,20 @@ class _WaysExamplePainter extends CustomPainter {
   final Color ink;
 
   // Treffer je Walze: Reihe → Symbol (0 = das Beispielsymbol, 6 = Joker)
-  static const _hits = [
-    {1: 0, 3: 0},
-    {0: 6, 2: 0},
-    {2: 0},
-    {0: 0, 3: 0},
-    {1: 0, 2: 0},
-  ];
-
   @override
   void paint(Canvas canvas, Size size) {
-    const reels = 5;
-    const rows = 4;
+    final counts = _exampleCounts(game.rules);
+    final reels = counts.length;
+    final rows = math.min(game.rules.rows, 4);
+    // Treffer je Walze verteilen; auf Walze 2 ist einer davon ein Joker
+    final hits = [
+      for (var r = 0; r < reels; r++)
+        counts[r] == 1
+            ? {rows ~/ 2: 0}
+            : r.isEven
+                ? {0: 0, rows - 1: 0}
+                : {0: r == 1 ? 6 : 0, rows ~/ 2: 0},
+    ];
     final labelH = size.height * 0.16;
     final cw = size.width / reels;
     final ch = (size.height - labelH) / rows;
@@ -186,7 +199,7 @@ class _WaysExamplePainter extends CustomPainter {
     for (var r = 0; r < reels; r++) {
       for (var row = 0; row < rows; row++) {
         final cell = Rect.fromLTWH(r * cw, row * ch, cw, ch).deflate(2);
-        final hit = _hits[r][row];
+        final hit = hits[r][row];
         canvas.drawRRect(RRect.fromRectAndRadius(cell, const Radius.circular(6)), Paint()..color = hit == null ? const Color(0x22808080) : const Color(0x33FFC95C));
         if (hit != null) {
           final s = math.min(cell.width, cell.height);
@@ -195,7 +208,7 @@ class _WaysExamplePainter extends CustomPainter {
         }
       }
       final tp = TextPainter(
-        text: TextSpan(text: '${_hits[r].length}', style: TextStyle(fontFamily: bodyFont, color: ink, fontWeight: FontWeight.w800, fontSize: labelH * 0.7)),
+        text: TextSpan(text: '${hits[r].length}', style: TextStyle(fontFamily: bodyFont, color: ink, fontWeight: FontWeight.w800, fontSize: labelH * 0.7)),
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, Offset(r * cw + cw / 2 - tp.width / 2, size.height - labelH + (labelH - tp.height) / 2));
