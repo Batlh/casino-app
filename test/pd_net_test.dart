@@ -16,7 +16,8 @@ String _state(PdGame g) => [
       g.current,
       g.pile.length,
       g.melds.length,
-      for (final p in g.players) '${p.hand.map((c) => c.id).join(',')}/${p.score}',
+      // Reihenfolge auf der Hand ist nur Anzeige (der Computer sortiert seine Hand)
+      for (final p in g.players) '${(p.hand.map((c) => c.id).toList()..sort()).join(',')}/${p.score}',
     ].join('|');
 
 void main() {
