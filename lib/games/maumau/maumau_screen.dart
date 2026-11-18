@@ -529,7 +529,8 @@ class _MauMauScreenState extends State<MauMauScreen> {
       guide: mauGuide,
       title: 'Mau Mau',
       actions: [
-        if (!_net && !_netPanel)
+        // Auf schmalen Handys ist die Leiste voll, dort gibt es den Knopf am Rundenende
+        if (!_net && !_netPanel && MediaQuery.sizeOf(context).width >= 420)
           IconButton(
             tooltip: 'Im Netzwerk spielen',
             icon: const Icon(Icons.wifi),
@@ -600,8 +601,10 @@ class _MauMauScreenState extends State<MauMauScreen> {
                 ActionButton(primary: true, label: 'Neue Runde', onPressed: _newRound),
               if (_net)
                 ActionButton(label: 'Tisch verlassen', onPressed: _closeNet)
-              else
+              else ...[
                 ActionButton(label: 'Mitspieler wählen', onPressed: _askOpponents),
+                ActionButton(label: 'Im Netzwerk', onPressed: () => setState(() => _netPanel = true)),
+              ],
             ]
           : [
               ActionButton(
