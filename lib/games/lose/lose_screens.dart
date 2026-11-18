@@ -193,7 +193,7 @@ class _RubbelScreenState extends State<RubbelScreen> {
       title: 'Rubbellose',
       guide: rubbelGuide(),
       child: _LosFrame(
-        chooser: _chips(rubbelSorten, _sorte, (s) => '${s.name} · ${losAmount(s.price)}', _active ? null : (s) => setState(() => _sorte = s)),
+        chooser: _chips<RubbelSorte>(rubbelSorten, _sorte, (s) => '${s.name} · ${losAmount(s.price)}', _active ? null : (s) => setState(() => _sorte = s)),
         ticket: SizedBox(
           width: 340,
           child: DecoratedBox(
@@ -425,7 +425,7 @@ class _PullTabScreenState extends State<PullTabScreen> {
       title: 'Pull-Tabs',
       guide: pullGuide(),
       child: _LosFrame(
-        chooser: _chips(pullSorten, _sorte, (s) => '${s.name} · ${losAmount(s.price)}', _active ? null : (s) => setState(() => _sorte = s)),
+        chooser: _chips<PullSorte>(pullSorten, _sorte, (s) => '${s.name} · ${losAmount(s.price)}', _active ? null : (s) => setState(() => _sorte = s)),
         ticket: Container(
           width: 340,
           padding: const EdgeInsets.all(12),
