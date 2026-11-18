@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gluckspfennig/games/lose/lose_screens.dart';
 import 'package:gluckspfennig/core/settings.dart';
 import 'package:gluckspfennig/core/sfx.dart';
 import 'package:gluckspfennig/core/wallet.dart';
@@ -74,6 +75,8 @@ void main() {
         SlotScreen(game: jadetempel),
         HoldemScreen(),
         HoldemScreen(draw: true),
+        RubbelScreen(),
+        PullTabScreen(),
         PachinkoScreen(),
         KlondikeScreen(),
         SpiderScreen(),

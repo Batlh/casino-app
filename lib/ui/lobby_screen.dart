@@ -16,6 +16,8 @@ import '../games/chess/chess_engine.dart';
 import '../games/chess/chess_pieces.dart';
 import '../games/chess/chess_screen.dart';
 import '../games/keno/keno_screen.dart';
+import '../games/lose/lose_art.dart';
+import '../games/lose/lose_screens.dart';
 import '../games/mahjong/american/am_guide.dart';
 import '../games/mahjong/classic/mj_rules.dart';
 import '../games/mahjong/classic/mj_variants_screen.dart';
@@ -232,6 +234,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF1F3A6B),
         _KenoArt.new,
         () => _open(const KenoScreen()),
+      ),
+      _Game(
+        'Rubbellose',
+        'Drei Sorten zum Freirubbeln, Hauptgewinn bis 1 Mio.',
+        const Color(0xFF2E5E2E),
+        () => _LosArt(false),
+        () => _open(const RubbelScreen()),
+      ),
+      _Game(
+        'Pull-Tabs',
+        'Aufreißlose aus den USA: drei Gleiche gewinnen',
+        const Color(0xFF7A1F3A),
+        () => _LosArt(true),
+        () => _open(const PullTabScreen()),
       ),
       _Game(
         'Pachinko',
@@ -871,6 +887,52 @@ class _SicBoArt extends CustomPainter {
         canvas.drawCircle(p, d * 0.09, Paint()..color = i == 0 ? const Color(0xFFC62828) : const Color(0xFF241410));
       }
     }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _LosArt extends CustomPainter {
+  _LosArt(this.pull);
+  final bool pull;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final card = Rect.fromCenter(center: size.center(Offset.zero).translate(0, 6), width: size.width * 0.62, height: size.height * 0.7);
+    canvas.save();
+    canvas.translate(card.center.dx, card.center.dy);
+    canvas.rotate(-0.08);
+    canvas.translate(-card.center.dx, -card.center.dy);
+    canvas.drawRRect(RRect.fromRectAndRadius(card, const Radius.circular(8)), Paint()..color = pull ? const Color(0xFFC62828) : const Color(0xFF2E7D32));
+    final inner = card.deflate(card.width * 0.08);
+    if (pull) {
+      for (var i = 0; i < 3; i++) {
+        final row = Rect.fromLTWH(inner.left, inner.top + i * inner.height / 3, inner.width, inner.height / 3).deflate(2);
+        canvas.drawRect(row, Paint()..color = const Color(0xFFFFF8E7));
+        if (i == 1) {
+          for (var k = 0; k < 3; k++) {
+            paintLosSymbol(canvas, Rect.fromLTWH(row.left + k * row.width / 3, row.top, row.width / 3, row.height), 'Sieben');
+          }
+        } else {
+          canvas.drawRect(row, Paint()..color = const Color(0xFFFF8A80));
+        }
+      }
+    } else {
+      canvas.drawRect(inner, Paint()..color = const Color(0xFFFFF8E7));
+      for (var i = 0; i < 3; i++) {
+        paintLosSymbol(canvas, Rect.fromLTWH(inner.left + i * inner.width / 3, inner.top, inner.width / 3, inner.height / 2), 'Diamant');
+      }
+      // halb freigerubbelt
+      final cover = Path()
+        ..moveTo(inner.left, inner.top + inner.height * 0.45)
+        ..quadraticBezierTo(inner.center.dx, inner.top + inner.height * 0.6, inner.right, inner.top + inner.height * 0.4)
+        ..lineTo(inner.right, inner.bottom)
+        ..lineTo(inner.left, inner.bottom)
+        ..close();
+      canvas.drawPath(cover, Paint()..color = const Color(0xFFBDBDBD));
+    }
+    canvas.restore();
   }
 
   @override
