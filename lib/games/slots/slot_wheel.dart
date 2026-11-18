@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
+import '../../core/theme.dart';
 import '../../ui/widgets.dart';
 import 'slot_engine.dart';
 import 'slot_games.dart';
@@ -169,6 +170,7 @@ class _WheelPainter extends CustomPainter {
         text: TextSpan(
           text: label,
           style: TextStyle(
+            fontFamily: bodyFont,
             color: Colors.white,
             fontWeight: FontWeight.w900,
             fontSize: r * 0.1,

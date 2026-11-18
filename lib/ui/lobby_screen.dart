@@ -161,6 +161,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         () => _open(const HoldemScreen(omaha: true)),
       ),
       _Game(
+        'Five Card Draw',
+        'Fünf Karten, einmal tauschen, dann wird gesetzt',
+        const Color(0xFF233A6B),
+        () => _PokerArt('draw'),
+        () => _open(const HoldemScreen(draw: true)),
+      ),
+      _Game(
         'Baccarat',
         'Spieler oder Bank: wer kommt näher an die 9?',
         const Color(0xFF14504A),
@@ -1633,6 +1640,14 @@ class _PokerArt extends CustomPainter {
           _miniCard(canvas, c + Offset((i - 1.5) * w * 0.62, 10 + (i - 1.5).abs() * 4), w, (i - 1.5) * 0.22, cards[i].$1, cards[i].$2);
         }
         _chips(canvas, Offset(inner.right - w * 0.9, inner.bottom - w * 0.55), w * 0.42, 5, const Color(0xFF2B5BD7));
+      case 'draw':
+        // Fächer aus fünf Karten, zwei davon hochgeschoben zum Tauschen
+        const cards = [('7', Suit.clubs), ('K', Suit.spades), ('K', Suit.hearts), ('2', Suit.diamonds), ('9', Suit.hearts)];
+        for (var i = 0; i < 5; i++) {
+          final up = i == 0 || i == 3 ? -12.0 : 0.0;
+          _miniCard(canvas, c + Offset((i - 2) * w * 0.66, 14 + up + (i - 2).abs() * 5.0), w * 0.92, (i - 2) * 0.16, cards[i].$1, cards[i].$2);
+        }
+        _chips(canvas, Offset(inner.right - w * 0.8, inner.bottom - w * 0.5), w * 0.4, 4, const Color(0xFFD7392B));
       case 'caribbean':
         const cards = [('10', Suit.hearts), ('J', Suit.hearts), ('Q', Suit.hearts), ('K', Suit.hearts), ('A', Suit.hearts)];
         for (var i = 0; i < 5; i++) {

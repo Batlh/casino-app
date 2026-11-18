@@ -3,7 +3,8 @@ import 'dart:math';
 import '../cards/hand_eval.dart';
 import '../cards/playing_card.dart';
 
-enum HoldemStreet { preflop, flop, turn, river, finished }
+/// Bei Five Card Draw: preflop ist die erste Setzrunde, draw das Tauschen, river die zweite Setzrunde.
+enum HoldemStreet { preflop, flop, turn, river, draw, finished }
 
 enum HoldemActionKind { fold, check, call, raise }
 
@@ -38,6 +39,9 @@ class HoldemPlayer {
   String lastAction = '';
   HandValue? shownValue;
 
+  /// Five Card Draw: wie viele Karten getauscht wurden, null vor dem Tauschen.
+  int? drew;
+
   bool get live => inHand && !folded;
   bool get canAct => live && !allIn;
 }
@@ -60,12 +64,19 @@ class HoldemEngine {
     Random? rng,
     this.stackedDeck,
     this.omaha = false,
+    this.draw = false,
   }) : _rng = rng ?? Random.secure();
 
   /// Omaha: vier Karten auf der Hand, davon genau zwei mit genau drei vom Tisch.
   final bool omaha;
 
-  HandValue valueOf(List<PlayingCard> hole) => omaha ? bestOmaha(hole, board) : bestHand([...hole, ...board]);
+  /// Five Card Draw: fünf verdeckte Karten, eine Setzrunde, einmal tauschen, zweite Setzrunde. Kein Tisch.
+  final bool draw;
+
+  int get holeCount => draw ? 5 : (omaha ? 4 : 2);
+
+  HandValue valueOf(List<PlayingCard> hole) =>
+      draw ? evaluateFive(hole) : (omaha ? bestOmaha(hole, board) : bestHand([...hole, ...board]));
 
   final List<HoldemPlayer> players;
   final int smallBlind;
@@ -76,6 +87,7 @@ class HoldemEngine {
   final List<PlayingCard>? stackedDeck;
 
   List<PlayingCard> _deck = [];
+  List<PlayingCard> _discards = [];
   List<PlayingCard> board = [];
   HoldemStreet street = HoldemStreet.finished;
   int dealer = -1;
@@ -86,6 +98,7 @@ class HoldemEngine {
   List<PotResult> results = [];
 
   bool get handOver => street == HoldemStreet.finished;
+  bool get drawing => street == HoldemStreet.draw;
   HoldemPlayer get actor => players[toAct];
   int get pot => players.fold(0, (s, p) => s + p.totalBet);
   int get toCall => max(0, currentBet - actor.streetBet);
@@ -98,7 +111,14 @@ class HoldemEngine {
     return -1;
   }
 
-  PlayingCard _draw() => _deck.removeLast();
+  PlayingCard _draw() {
+    if (_deck.isEmpty) {
+      // Stapel leer: die abgelegten Karten werden gemischt und weiter ausgegeben
+      _deck = _discards..shuffle(_rng);
+      _discards = [];
+    }
+    return _deck.removeLast();
+  }
 
   void _putIn(HoldemPlayer p, int amount) {
     final a = min(amount, p.stack);
@@ -114,9 +134,11 @@ class HoldemEngine {
     if (seated < 2) throw StateError('Zu wenige Spieler');
     _deck = stackedDeck?.toList() ?? shuffledDeck(_rng);
     board = [];
+    _discards = [];
     results = [];
     for (final p in players) {
       p.hole = [];
+      p.drew = null;
       p.streetBet = 0;
       p.totalBet = 0;
       p.folded = false;
@@ -127,7 +149,7 @@ class HoldemEngine {
     }
     dealer = _next(dealer < 0 ? players.length - 1 : dealer, (p) => p.inHand);
     final first = _next(dealer, (p) => p.inHand);
-    for (var round = 0; round < (omaha ? 4 : 2); round++) {
+    for (var round = 0; round < holeCount; round++) {
       var i = first;
       for (var n = 0; n < seated; n++) {
         players[i].hole.add(_draw());
@@ -157,6 +179,7 @@ class HoldemEngine {
   bool get canRaise => actor.stack > toCall;
 
   void apply(HoldemAction action) {
+    if (drawing) throw StateError('Jetzt wird getauscht');
     final p = actor;
     switch (action.kind) {
       case HoldemActionKind.fold:
@@ -212,6 +235,15 @@ class HoldemEngine {
       _finish();
       return;
     }
+    if (draw) {
+      // Nach der ersten Setzrunde tauschen alle, die noch dabei sind, auch wer all-in ist
+      street = HoldemStreet.draw;
+      for (final p in players) {
+        if (p.live && !p.allIn) p.lastAction = '';
+      }
+      toAct = _next(dealer, (p) => p.live && p.drew == null);
+      return;
+    }
     if (able <= 1) {
       while (board.length < 5) {
         board.add(_draw());
@@ -237,6 +269,37 @@ class HoldemEngine {
     };
     toAct = dealer;
     toAct = _next(toAct, (p) => _pending.contains(players.indexOf(p)));
+  }
+
+  /// Five Card Draw: der Spieler am Zug legt die Karten an diesen Stellen ab und bekommt neue.
+  void discard(Iterable<int> positions) {
+    if (!drawing) throw StateError('Gerade wird nicht getauscht');
+    final p = actor;
+    final drop = positions.toSet().where((i) => i >= 0 && i < p.hole.length).toList()..sort();
+    // Erst nachziehen, dann ablegen: die eigenen Karten kommen nicht gleich zurück
+    final old = [for (final i in drop) p.hole[i]];
+    for (final i in drop) {
+      p.hole[i] = _draw();
+    }
+    _discards.addAll(old);
+    p.drew = drop.length;
+    p.lastAction = drop.isEmpty ? 'Behält alle' : 'Tauscht ${drop.length}';
+    final next = _next(toAct, (q) => q.live && q.drew == null);
+    if (next >= 0) {
+      toAct = next;
+      return;
+    }
+    // Alle haben getauscht: zweite Setzrunde, falls noch zwei setzen können
+    street = HoldemStreet.river;
+    _pending = {
+      for (var i = 0; i < players.length; i++)
+        if (players[i].canAct) i,
+    };
+    if (_pending.length < 2) {
+      _finish();
+      return;
+    }
+    toAct = _next(dealer, (q) => _pending.contains(players.indexOf(q)));
   }
 
   void _finish() {
@@ -397,7 +460,9 @@ HoldemAction botDecide(HoldemEngine e, Random rng) {
   final p = e.actor;
   final style = p.style ?? BotStyle.hai;
   final opponents = max(1, e.players.where((x) => x.live).length - 1);
-  final equity = estimateEquity(p.hole, e.board, min(opponents, 4), rng, omaha: e.omaha, iterations: e.omaha ? 80 : 120) +
+  final equity = (e.draw
+          ? estimateDrawEquity(p.hole, min(opponents, 4), rng, drawn: p.drew != null)
+          : estimateEquity(p.hole, e.board, min(opponents, 4), rng, omaha: e.omaha, iterations: e.omaha ? 80 : 120)) +
       (rng.nextDouble() - 0.5) * 0.08;
   final toCall = e.toCall;
   final pot = e.pot;
@@ -452,4 +517,71 @@ HandValue bestOmaha(List<PlayingCard> hole, List<PlayingCard> board) {
     }
   }
   return best ?? bestHand([...hole, ...board]);
+}
+
+/// Five Card Draw: welche Karten ein Computer-Gegner ablegt (Stellen in der Hand).
+/// Gemachte Hände bleiben stehen, Paare und Drillinge werden behalten, vier zu Flush oder Straße
+/// tauschen eine Karte, sonst bleibt die höchste Karte.
+List<int> drawDiscards(List<PlayingCard> hand) {
+  final v = evaluateFive(hand);
+  final all = [for (var i = 0; i < hand.length; i++) i];
+  if (v.category.index >= HandCategory.straight.index) return const [];
+  final counts = <int, int>{};
+  for (final c in hand) {
+    counts[c.rank] = (counts[c.rank] ?? 0) + 1;
+  }
+  if (v.category != HandCategory.highCard) {
+    // Paar, zwei Paare, Drilling, Vierling: alles behalten, was mehrfach vorkommt
+    return [for (final i in all) if (counts[hand[i].rank] == 1) i];
+  }
+  // Vier zu einem Flush
+  for (final suit in Suit.values) {
+    final same = [for (final i in all) if (hand[i].suit == suit) i];
+    if (same.length == 4) return [for (final i in all) if (!same.contains(i)) i];
+  }
+  // Vier zu einer offenen Straße (vier aufeinanderfolgende Werte)
+  for (final skip in all) {
+    final ranks = [for (final i in all) if (i != skip) hand[i].rank]..sort();
+    if (ranks.last - ranks.first == 3) return [skip];
+  }
+  // Sonst die höchste Karte behalten, ab Dame zusätzlich die zweithöchste
+  final order = [...all]..sort((a, b) => hand[b].rank.compareTo(hand[a].rank));
+  final keep = {order[0], if (hand[order[1]].rank >= 12) order[1]};
+  return [for (final i in all) if (!keep.contains(i)) i];
+}
+
+/// Gewinnchance beim Five Card Draw. Vor dem Tauschen wird der eigene Tausch mitsimuliert,
+/// die Gegner tauschen in der Simulation nach derselben Regel.
+double estimateDrawEquity(List<PlayingCard> hand, int opponents, Random rng, {required bool drawn, int iterations = 100}) {
+  final rest = freshDeck().where((c) => !hand.contains(c)).toList();
+  var score = 0.0;
+  for (var it = 0; it < iterations; it++) {
+    rest.shuffle(rng);
+    var next = 0;
+    PlayingCard take() => rest[next++ % rest.length];
+    var mine = hand;
+    if (!drawn) {
+      mine = [...hand];
+      for (final i in drawDiscards(hand)) {
+        mine[i] = take();
+      }
+    }
+    final value = evaluateFive(mine);
+    var best = true;
+    var ties = 0;
+    for (var o = 0; o < opponents; o++) {
+      final theirs = [for (var k = 0; k < 5; k++) take()];
+      for (final i in drawDiscards(theirs)) {
+        theirs[i] = take();
+      }
+      final c = value.compareTo(evaluateFive(theirs));
+      if (c < 0) {
+        best = false;
+        break;
+      }
+      if (c == 0) ties++;
+    }
+    if (best) score += 1 / (ties + 1);
+  }
+  return score / iterations;
 }

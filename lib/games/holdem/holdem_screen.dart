@@ -38,10 +38,13 @@ const _botNames = [
 ];
 
 class HoldemScreen extends StatefulWidget {
-  const HoldemScreen({super.key, this.omaha = false});
+  const HoldemScreen({super.key, this.omaha = false, this.draw = false});
 
   /// Omaha statt Texas Hold'em.
   final bool omaha;
+
+  /// Five Card Draw: fünf Karten, einmal tauschen, kein Tisch.
+  final bool draw;
 
   @override
   State<HoldemScreen> createState() => _HoldemScreenState();
@@ -59,6 +62,9 @@ class _HoldemScreenState extends State<HoldemScreen> {
   String _message = '';
   bool _big = false;
   int _botNameCursor = 0;
+
+  /// Five Card Draw: Stellen der Karten, die du ablegen willst.
+  final Set<int> _discard = {};
 
   AppScope get _app => AppScope.of(context);
   HoldemPlayer? get _me => _engine?.human;
@@ -100,6 +106,7 @@ class _HoldemScreenState extends State<HoldemScreen> {
         smallBlind: _table.smallBlind,
         bigBlind: _table.bigBlind,
         omaha: widget.omaha,
+        draw: widget.draw,
       );
     });
     _nextHand();
@@ -122,6 +129,7 @@ class _HoldemScreenState extends State<HoldemScreen> {
     _app.sfx.play(Sound.card);
     setState(() {
       _handNumber++;
+      _discard.clear();
       _message = '';
       _big = false;
       _prepareRaise();
@@ -131,7 +139,7 @@ class _HoldemScreenState extends State<HoldemScreen> {
 
   void _prepareRaise() {
     final e = _engine!;
-    if (e.handOver) return;
+    if (e.handOver || e.drawing) return;
     if (e.actor.isHuman) _raiseTo = e.minRaiseTo;
   }
 
@@ -144,9 +152,14 @@ class _HoldemScreenState extends State<HoldemScreen> {
       await Future<void>.delayed(_app.settings.botDelay(750));
       if (!mounted) break;
       final street = e.street;
-      e.apply(botDecide(e, _rng));
-      _app.sfx.play(Sound.chip);
-      if (e.street != street) _app.sfx.play(Sound.card);
+      if (e.drawing) {
+        e.discard(drawDiscards(e.actor.hole));
+        _app.sfx.play(Sound.card);
+      } else {
+        e.apply(botDecide(e, _rng));
+        _app.sfx.play(Sound.chip);
+        if (e.street != street) _app.sfx.play(Sound.card);
+      }
       setState(_prepareRaise);
     }
     _botRunning = false;
@@ -166,6 +179,29 @@ class _HoldemScreenState extends State<HoldemScreen> {
     } else {
       _pump();
     }
+  }
+
+  /// Five Card Draw: deine markierten Karten ablegen und neue ziehen.
+  void _swap() {
+    final e = _engine!;
+    if (!e.drawing || !e.actor.isHuman) return;
+    e.discard(_discard);
+    _app.sfx.play(Sound.card);
+    setState(() {
+      _discard.clear();
+      _prepareRaise();
+    });
+    if (e.handOver) {
+      _finishHand();
+    } else {
+      _pump();
+    }
+  }
+
+  void _toggleDiscard(int i) {
+    final e = _engine!;
+    if (!e.drawing || !e.actor.isHuman) return;
+    setState(() => _discard.contains(i) ? _discard.remove(i) : _discard.add(i));
   }
 
   void _finishHand() {
@@ -212,8 +248,8 @@ class _HoldemScreenState extends State<HoldemScreen> {
   Widget build(BuildContext context) {
     final e = _engine;
     return GameFrame(
-      guide: widget.omaha ? omahaGuide : holdemGuide,
-      title: widget.omaha ? 'Omaha' : "Texas Hold'em",
+      guide: widget.draw ? fiveCardDrawGuide : (widget.omaha ? omahaGuide : holdemGuide),
+      title: widget.draw ? 'Five Card Draw' : (widget.omaha ? 'Omaha' : "Texas Hold'em"),
       child: e == null ? _lobby() : _tableView(e),
     );
   }
@@ -290,7 +326,7 @@ class _HoldemScreenState extends State<HoldemScreen> {
       builder: (context, box) {
         final wide = box.maxWidth > box.maxHeight * 1.2;
         final controls = _controls(e);
-        final table = _Felt(engine: e, handNumber: _handNumber);
+        final table = _Felt(engine: e, handNumber: _handNumber, discard: _discard, onTapCard: _toggleDiscard);
         if (wide) {
           return Row(
             children: [
@@ -343,7 +379,12 @@ class _HoldemScreenState extends State<HoldemScreen> {
               ),
             ),
           ),
-        if (e.handOver) ..._betweenHands(e, me) else ..._turnButtons(e, myTurn),
+        if (e.handOver)
+          ..._betweenHands(e, me)
+        else if (e.drawing)
+          ..._drawButtons(e, myTurn)
+        else
+          ..._turnButtons(e, myTurn),
       ],
     );
   }
@@ -366,6 +407,32 @@ class _HoldemScreenState extends State<HoldemScreen> {
             ),
           ActionButton(label: 'Tisch verlassen', onPressed: _leave),
         ],
+      ),
+    ];
+  }
+
+  List<Widget> _drawButtons(HoldemEngine e, bool myTurn) {
+    final p = Palette.of(context);
+    final n = _discard.length;
+    return [
+      Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Text(
+          myTurn
+              ? 'Tippe die Karten an, die du ablegen willst.'
+              : (e.human!.drew == null ? 'Die anderen tauschen …' : 'Du hast getauscht, die anderen sind dran.'),
+          textAlign: TextAlign.center,
+          style: TextStyle(color: p.onFelt, fontSize: 15),
+        ),
+      ),
+      ActionButton(
+        primary: true,
+        label: !myTurn
+            ? 'Warten'
+            : n == 0
+                ? 'Alle behalten'
+                : 'Tauschen: $n ${n == 1 ? 'Karte' : 'Karten'}',
+        onPressed: myTurn ? _swap : null,
       ),
     ];
   }
@@ -500,9 +567,47 @@ class _TableChoice extends StatelessWidget {
 
 /// Ovaler Tisch mit Sitzen, Gemeinschaftskarten und Pot.
 class _Felt extends StatelessWidget {
-  const _Felt({required this.engine, required this.handNumber});
+  const _Felt({required this.engine, required this.handNumber, required this.discard, required this.onTapCard});
   final HoldemEngine engine;
   final int handNumber;
+  final Set<int> discard;
+  final void Function(int) onTapCard;
+
+  String _phase(HoldemEngine e) => switch (e.street) {
+        HoldemStreet.preflop => 'Erste Setzrunde',
+        HoldemStreet.draw => 'Tauschen',
+        HoldemStreet.river => 'Zweite Setzrunde',
+        _ => '',
+      };
+
+  /// Five Card Draw: deine Hand groß in der Tischmitte, antippen markiert zum Ablegen.
+  Widget _myHand(HoldemEngine e, double cardW) {
+    final me = e.human!;
+    final tappable = e.drawing && e.actor.isHuman;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < me.hole.length; i++)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: GestureDetector(
+              onTap: tappable ? () => onTapCard(i) : null,
+              child: AnimatedSlide(
+                duration: const Duration(milliseconds: 150),
+                offset: Offset(0, discard.contains(i) ? -0.14 : 0),
+                child: Opacity(
+                  opacity: me.folded ? 0.5 : (discard.contains(i) ? 0.55 : 1),
+                  child: DealIn(
+                    key: ValueKey('$handNumber-m$i-${me.hole[i].rank}-${me.hole[i].suit.index}'),
+                    child: PlayingCardView(width: cardW, card: me.hole[i], highlighted: discard.contains(i)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -517,6 +622,7 @@ class _Felt extends StatelessWidget {
         final rx = (w - seatWidth) / 2;
         final ry = (h - seatHeight) / 2;
         final cardW = math.min((w * 0.52 - 16) / 5, h * 0.095).clamp(30.0, 76.0);
+        final handW = math.min((w * 0.62 - 30) / 5, h * 0.11).clamp(34.0, 90.0);
         return Stack(
           children: [
             Positioned.fill(child: CustomPaint(painter: _TablePainter())),
@@ -532,7 +638,12 @@ class _Felt extends StatelessWidget {
                       fontSize: 18,
                     ),
                   ),
+                  if (e.draw && !e.handOver)
+                    Text(_phase(e), style: const TextStyle(color: Color(0xFFCDB48C), fontSize: 14)),
                   const SizedBox(height: 6),
+                  if (e.draw && e.human!.hole.isNotEmpty)
+                    _myHand(e, handW)
+                  else
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -573,6 +684,7 @@ class _Felt extends StatelessWidget {
                   player: e.players[i],
                   acting: !e.handOver && e.toAct == i,
                   dealer: e.dealer == i,
+                  hideCards: e.draw && e.players[i].isHuman,
                   reveal: e.players[i].isHuman ||
                       (e.handOver && e.players[i].shownValue != null),
                   width: seatWidth,
@@ -665,8 +777,11 @@ class _Seat extends StatelessWidget {
     required this.width,
     required this.handNumber,
     required this.seat,
+    this.hideCards = false,
   });
 
+  /// Five Card Draw: deine Karten liegen groß in der Mitte, nicht am Platz.
+  final bool hideCards;
   final HoldemPlayer player;
   final bool acting;
   final bool dealer;
@@ -691,7 +806,7 @@ class _Seat extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (p.inHand && p.hole.isNotEmpty)
+          if (p.inHand && p.hole.isNotEmpty && !hideCards)
             SizedBox(
               height: cardW / cardAspect * shown,
               child: ClipRect(
@@ -703,11 +818,11 @@ class _Seat extends StatelessWidget {
                     children: [
                       for (var i = 0; i < p.hole.length; i++)
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 1),
+                          padding: EdgeInsets.symmetric(horizontal: p.hole.length > 4 ? 0.5 : 1),
                           child: DealIn(
                             key: ValueKey('$handNumber-s$seat-$i-$reveal'),
                             child: PlayingCardView(
-                              width: p.hole.length > 2 ? cardW * 0.62 : cardW,
+                              width: p.hole.length > 4 ? cardW * 0.46 : (p.hole.length > 2 ? cardW * 0.62 : cardW),
                               card: reveal && !p.folded ? p.hole[i] : null,
                             ),
                           ),

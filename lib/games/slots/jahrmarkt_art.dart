@@ -139,7 +139,8 @@ void paintJahrmarktSymbol(Canvas canvas, Rect rect, int symbol) {
       shaded(canvas, starPath(c.translate(0, -w * 0.04), w * 0.4), const Color(0xFFFFF59D), const Color(0xFFF9A825), width: 2.5);
       caption(canvas, r, 'JOKER', const Color(0xFFB71C1C), size: 0.17, y: 0.92, shadow: Colors.white);
     case 8: // Münze
-      goldCoin(canvas, r, mark: '★');
+      goldCoin(canvas, r);
+      canvas.drawPath(starPath(c, w * 0.2), fillOf(const Color(0xFF7A5200)));
     case 9: // Glücksrad, Bonus
       glow(canvas, c, w * 0.5, const Color(0x88FF4081));
       final wr = w * 0.38;

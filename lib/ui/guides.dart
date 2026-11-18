@@ -73,6 +73,31 @@ const omahaGuide = GameGuide('Omaha', [
   ),
 ]);
 
+const fiveCardDrawGuide = GameGuide('Five Card Draw', [
+  GuideSection(
+    'Ziel',
+    'Die klassische Poker-Variante ohne Karten in der Mitte: Jeder bekommt fünf verdeckte Karten und spielt nur mit diesen. '
+        'Die beste Fünf-Karten-Hand gewinnt den Pot, oder du bringst alle anderen dazu auszusteigen.',
+  ),
+  GuideSection(
+    'Ablauf',
+    'Zwei Spieler links vom Dealer setzen die Blinds. Dann folgt die erste Setzrunde. Danach tauscht jeder, der noch dabei ist, '
+        'einmal: Tippe die Karten an, die du ablegen willst, und tippe auf „Tauschen“. Du darfst auch alle behalten. '
+        'Nach dem Tauschen folgt die zweite Setzrunde, dann werden die Karten aufgedeckt.',
+  ),
+  GuideSection(
+    'Was tauschen?',
+    'Paare, Drillinge und Vierlinge behalten, den Rest tauschen. Straße, Flush und Full House bleiben stehen. Mit vier Karten '
+        'zu einem Flush oder einer Straße lohnt sich der Tausch einer Karte. Wie viele Karten die Gegner tauschen, siehst du an '
+        'ihren Plätzen: Wer keine tauscht, hat meist schon eine fertige Hand.',
+  ),
+  GuideSection(
+    'Rangfolge',
+    'Von hoch nach niedrig: Royal Flush, Straight Flush, Vierling, Full House, Flush, Straße, Drilling, Zwei Paare, Ein Paar, '
+        'höchste Karte. Gesetzt wird No-Limit wie beim Hold\'em.',
+  ),
+]);
+
 const pachinkoGuide = GameGuide('Pachinko', [
   GuideSection(
     'Ziel',

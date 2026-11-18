@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/theme.dart';
+
 /// Gemeinsame Zeichenhilfen für die neuen Slots.
 
 Paint fillOf(Color c) => Paint()..color = c;
@@ -70,6 +72,7 @@ void caption(Canvas canvas, Rect rect, String text, Color color, {double size = 
     text: TextSpan(
       text: text,
       style: TextStyle(
+        fontFamily: bodyFont,
         color: color,
         fontSize: rect.height * size,
         fontWeight: FontWeight.w900,

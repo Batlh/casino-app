@@ -16,7 +16,7 @@ void main() {
     for (final g in allSlots) {
       final r = g.rules;
       for (final strip in r.strips) {
-        expect(strip.every((x) => x >= 0 && x <= symScatter), isTrue, reason: g.name);
+        expect(strip.every((x) => x >= 0 && x <= symBonus), isTrue, reason: g.name);
       }
       for (final line in r.lines) {
         expect(line.length, r.reels, reason: g.name);

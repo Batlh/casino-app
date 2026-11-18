@@ -514,6 +514,7 @@ void _paintLabel(Canvas canvas, Rect box, String text, {double scale = 0.24}) {
     text: TextSpan(
       text: text,
       style: TextStyle(
+        fontFamily: bodyFont,
         color: Colors.white,
         fontSize: box.height * scale,
         fontWeight: FontWeight.w900,
@@ -613,11 +614,15 @@ class _ReelPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..color = const Color(0xFFFFE9A8);
+    // Streu- und Bonussymbole nur umranden, wenn genug für die Funktion liegen
+    final flat = s.grid.expand((c) => c);
+    final ringScatter = flat.where((x) => x == symScatter).length >= 3;
+    final ringBonus = flat.where((x) => x == symBonus).length >= (game.rules.wheel?.trigger ?? 3);
     for (var r = 0; r < reels; r++) {
       final ch = size.height / s.grid[r].length;
       for (var row = 0; row < s.grid[r].length; row++) {
         final sym = s.grid[r][row];
-        if (sym == symScatter || sym == symBonus) {
+        if ((sym == symScatter && ringScatter) || (sym == symBonus && ringBonus)) {
           canvas.drawRRect(
             RRect.fromRectAndRadius(Rect.fromLTWH(r * cw, row * ch, cw, ch).deflate(3), const Radius.circular(10)),
             ringPaint,
@@ -655,14 +660,7 @@ class _ReelPainter extends CustomPainter {
         _paintLabel(canvas, box, coinLabel(rules, v, stake));
       }
     }
-    final tp = TextPainter(
-      text: TextSpan(
-        text: 'Respins ${h.respins}',
-        style: TextStyle(color: _gold, fontSize: ch * 0.22, fontWeight: FontWeight.w900, shadows: const [Shadow(blurRadius: 4, color: Colors.black)]),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, Offset(size.width - tp.width - 8, 4));
+    // Die Respins stehen in der Meldung unter dem Walzenfenster.
   }
 
   void _paintWin(Canvas canvas, _Shown s, LineWin win, double cw, double height) {
