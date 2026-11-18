@@ -10,9 +10,15 @@ List<PlayingCard> skatDeck() => [
 
 class MauPlayer {
   MauPlayer(this.name, {this.human = false});
-  final String name;
+  String name;
   final bool human;
   List<PlayingCard> hand = [];
+
+  /// Mitspieler im Netz: zieht selbst, nicht der Computer.
+  bool remote = false;
+
+  /// Mitspieler im Netz ist gegangen; der Computer spielt für ihn weiter.
+  bool left = false;
 }
 
 /// Mau Mau. Sieben: Der Nächste zieht zwei, jede weitere Sieben erhöht um zwei.
@@ -31,6 +37,10 @@ class MauMauEngine {
 
   /// Ein Bube darf auf einen Buben gelegt werden.
   bool jackOnJack;
+
+  /// Im Netz: Meldungen immer mit Namen statt „Du“, weil jeder sie liest.
+  bool neutralText = false;
+  bool _you(MauPlayer p) => p.human && !neutralText;
 
   final List<MauPlayer> players;
   final int handSize;
@@ -104,7 +114,7 @@ class MauMauEngine {
       steps = 2;
       lastEvent = '${p.name}: Acht, ${players[(current + 1) % players.length].name} setzt aus';
     } else if (c.rank == 11) {
-      lastEvent = p.human
+      lastEvent = _you(p)
           ? 'Du wünschst dir ${suitName(wish!)}'
           : '${p.name} wünscht sich ${suitName(wish!)}';
     } else {
@@ -112,7 +122,7 @@ class MauMauEngine {
     }
     if (p.hand.isEmpty) {
       winner = p;
-      lastEvent = p.human ? 'Du hast keine Karten mehr' : '${p.name} hat keine Karten mehr';
+      lastEvent = _you(p) ? 'Du hast keine Karten mehr' : '${p.name} hat keine Karten mehr';
       return;
     }
     _advance(steps);
@@ -132,14 +142,14 @@ class MauMauEngine {
         p.hand.add(c);
         got++;
       }
-      lastEvent = p.human ? 'Du ziehst $got' : '${p.name} zieht $got';
+      lastEvent = _you(p) ? 'Du ziehst $got' : '${p.name} zieht $got';
       if (penaltyEndsTurn) _advance(1);
       return;
     }
     if (drewThisTurn) return;
     final c = _take();
     if (c == null) {
-      lastEvent = p.human ? 'Du kannst nicht ziehen' : '${p.name} kann nicht ziehen';
+      lastEvent = _you(p) ? 'Du kannst nicht ziehen' : '${p.name} kann nicht ziehen';
       _advance(1);
       return;
     }
@@ -147,7 +157,7 @@ class MauMauEngine {
     drewThisTurn = true;
     drawnCard = c;
     if (!canPlay(c)) {
-      lastEvent = p.human ? 'Du ziehst' : '${p.name} zieht';
+      lastEvent = _you(p) ? 'Du ziehst' : '${p.name} zieht';
       _advance(1);
     }
   }
@@ -155,7 +165,7 @@ class MauMauEngine {
   /// Nach dem Ziehen die passende Karte doch behalten.
   void pass() {
     if (drewThisTurn) {
-      lastEvent = actor.human ? 'Du ziehst' : '${actor.name} zieht';
+      lastEvent = _you(actor) ? 'Du ziehst' : '${actor.name} zieht';
       _advance(1);
     }
   }
