@@ -7,9 +7,9 @@ import 'package:flutter/material.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
-import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
 import 'slot_engine.dart';
+import 'slot_explain.dart';
 import 'slot_games.dart';
 import 'slot_log.dart';
 import 'slot_wheel.dart';
@@ -28,8 +28,19 @@ class SlotScreen extends StatefulWidget {
 
 /// Was das Walzenfenster gerade zeigt, wenn die Walzen stehen.
 class _Shown {
-  const _Shown({required this.grid, required this.wins, this.falls, this.coins = const {}, this.multiplier = 1, this.sticky = const {}});
+  const _Shown({
+    required this.grid,
+    required this.wins,
+    required this.stake,
+    this.falls,
+    this.coins = const {},
+    this.multiplier = 1,
+    this.sticky = const {},
+  });
   final List<List<int>> grid;
+
+  /// Einsatz der Drehung, für die Aufschlüsselung der Gewinne.
+  final int stake;
 
   /// Liegenbleibende Joker der laufenden Freispiele.
   final Set<(int, int)> sticky;
@@ -195,6 +206,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
           _shown = _Shown(
             grid: s.grid,
             wins: s.wins,
+            stake: stake,
             falls: s.falls,
             coins: i == 0 ? out.coins : const {},
             multiplier: s.multiplier,
@@ -809,12 +821,25 @@ class _LineCaption extends StatelessWidget {
           if (s == null || s.wins.isEmpty) return const SizedBox.shrink();
           // Gleiche Auswahl wie der aufleuchtende Gewinn im Walzenfenster
           final index = winIndex.value % s.wins.length;
-          return FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              '${winText(game, s.wins[index], multiplier: s.multiplier)}'
-              '${s.wins.length > 1 ? '   (${index + 1}/${s.wins.length})' : ''}',
-              style: TextStyle(color: p.ink, fontSize: 15, fontWeight: FontWeight.w600),
+          final win = s.wins[index];
+          // Antippen zeigt, wie der Betrag zustande kommt
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => showWinBreakdown(context, game, s.grid, win, stake: s.stake, multiplier: s.multiplier),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${winText(game, win, multiplier: s.multiplier)}'
+                    '${s.wins.length > 1 ? '   (${index + 1}/${s.wins.length})' : ''}',
+                    style: TextStyle(color: p.ink, fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(Icons.info_outline, size: 18, color: p.inkSoft),
+                ],
+              ),
             ),
           );
         },
@@ -901,10 +926,7 @@ class _PayTableSheet extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               ways
-                  ? 'Einsatz ${formatCoins(stake)}. Beträge gelten je Weg: gleiche Symbole auf mindestens drei '
-                      'nebeneinanderliegenden Walzen, egal in welcher Reihe'
-                      '${rules.waysAnywhere ? ' und ab welcher Walze' : ', ab der ersten Walze'}. '
-                      'Liegen auf einer Walze zwei passende Symbole, gibt es doppelt so viele Wege.'
+                  ? 'Einsatz ${formatCoins(stake)}. Die Beträge gelten je Weg. Wie die Wege gezählt werden, steht unter der Tabelle.'
                   : 'Einsatz ${formatCoins(stake)} auf ${rules.lineCount} Linien. Gewertet wird von links nach rechts.',
               style: TextStyle(color: p.inkSoft, fontSize: 15),
             ),
@@ -926,6 +948,21 @@ class _PayTableSheet extends StatelessWidget {
                   ],
                 ),
               ),
+            if (ways) ...[
+              const SizedBox(height: 14),
+              Text('So werden Wege gezählt', style: style.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text(waysText(rules), style: soft),
+              const SizedBox(height: 8),
+              Center(child: WaysExample(game: game)),
+              const SizedBox(height: 6),
+              Text(waysExampleText(rules), style: soft),
+            ],
+            if (rules.heights != null) ...[
+              const SizedBox(height: 12),
+              Text('Wechselnde Walzen', style: style.copyWith(fontWeight: FontWeight.w700)),
+              Text(heightsText(rules), style: soft),
+            ],
             const SizedBox(height: 10),
             if (rules.hasScatter)
               symbolRow(symScatter, Text(game.featureText, style: style))
@@ -936,12 +973,7 @@ class _PayTableSheet extends StatelessWidget {
             if (rules.cascades) ...[
               const SizedBox(height: 12),
               Text('Kaskaden', style: style.copyWith(fontWeight: FontWeight.w700)),
-              Text(
-                'Gewinnsymbole verschwinden, neue fallen von oben nach. Jeder weitere Gewinn derselben Drehung zählt mehr: '
-                '${rules.cascade.map((m) => '×$m').join(', ')}'
-                '${rules.freeCascade.isNotEmpty ? ', in Freispielen ${rules.freeCascade.map((m) => '×$m').join(', ')}' : ''}.',
-                style: soft,
-              ),
+              Text(cascadeText(rules), style: soft),
             ],
             if (hold != null) ...[
               const SizedBox(height: 12),
@@ -951,13 +983,7 @@ class _PayTableSheet extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Hold & Spin', style: style.copyWith(fontWeight: FontWeight.w700)),
-                    Text(
-                      '${hold.trigger} oder mehr ${game.symbolNames[symCoin]} starten die Runde. Münzen bleiben liegen, '
-                      'es gibt ${hold.respins} Respins, jede neue Münze setzt sie zurück. Am Ende zählen alle Münzwerte. '
-                      'Jackpots: ${[for (final e in hold.jackpots.entries) '${e.value} ${formatCoins(e.key * stake ~/ 10)}'].join(', ')}, '
-                      'alle Felder voll: Grand ${formatCoins(hold.grand * stake ~/ 10)}.',
-                      style: soft,
-                    ),
+                    Text(holdText(game, stake: stake), style: soft),
                   ],
                 ),
               ),
@@ -970,18 +996,7 @@ class _PayTableSheet extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Glücksrad', style: style.copyWith(fontWeight: FontWeight.w700)),
-                    Text(
-                      '${wheel.trigger} ${game.symbolNames[symBonus]} drehen das Glücksrad. Felder: '
-                      '${[
-                        for (final s in wheel.segments)
-                          switch (s.kind) {
-                            WheelKind.coins => formatCoins(s.amount * stake),
-                            WheelKind.freeSpins => '${s.amount} Freispiele',
-                            WheelKind.holdSpin => 'Hold & Spin mit ${s.amount} Münzen',
-                          },
-                      ].toSet().join(', ')}.',
-                      style: soft,
-                    ),
+                    Text(wheelText(game, stake: stake), style: soft),
                   ],
                 ),
               ),

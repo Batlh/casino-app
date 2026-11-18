@@ -8,9 +8,11 @@ import 'package:gluckspfennig/core/settings.dart';
 import 'package:gluckspfennig/core/sfx.dart';
 import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/slots/slot_engine.dart';
+import 'package:gluckspfennig/games/slots/slot_explain.dart';
 import 'package:gluckspfennig/games/slots/slot_games.dart';
 import 'package:gluckspfennig/games/slots/slot_screen.dart';
 import 'package:gluckspfennig/main.dart';
+import 'package:gluckspfennig/ui/guide.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens_test.dart' show loadFonts;
@@ -200,6 +202,36 @@ void main() {
     await snap('gluecksrad_dreht');
     await tester.pump(const Duration(milliseconds: 3200));
     await snap('gluecksrad_ergebnis');
+    await finish(tester);
+  });
+
+  testWidgets('Erklärungen', (tester) async {
+    await tester.runAsync(loadFonts);
+    for (final (id, g) in [('sakura', sakura), ('mine', edelsteinmine), ('jade', jadetempel), ('kosmos', kosmos78)]) {
+      await start(tester, GuideScreen(guide: slotGuide(g)));
+      await snap('erklaerung_${id}_1');
+      await tester.drag(find.byType(Scrollable).last, const Offset(0, -600));
+      await tester.pump(const Duration(milliseconds: 300));
+      await snap('erklaerung_${id}_2');
+      await tester.drag(find.byType(Scrollable).last, const Offset(0, -700));
+      await tester.pump(const Duration(milliseconds: 300));
+      await snap('erklaerung_${id}_3');
+    }
+    // Aufschlüsselung des Sakura-Gewinns vom Nutzer
+    const t = 0, f = 1, k = 2, l = 3;
+    final grid = [
+      [f, t, k, t],
+      [symWild, l, t, k],
+      [f, k, t, symScatter],
+      [t, k, t, f],
+      [t, k, l, t],
+    ];
+    final o = SlotEngine(sakura.rules).playGrid(grid, 300);
+    await start(tester, SlotScreen(game: sakura));
+    showWinBreakdown(tester.element(find.byType(Navigator).first), sakura, o.steps.single.grid,
+        o.steps.single.wins.firstWhere((w) => w.symbol == t), stake: 300, multiplier: 1);
+    await tester.pump(const Duration(milliseconds: 600));
+    await snap('aufschluesselung_sakura');
     await finish(tester);
   });
 

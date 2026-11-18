@@ -8,7 +8,6 @@ import '../games/mahjong/tiles.dart';
 import '../games/shogi/shogi_board.dart';
 import '../games/shogi/shogi_engine.dart';
 import '../games/shogi/shogi_tutorial.dart';
-import '../games/slots/slot_games.dart';
 import 'guide.dart';
 
 /// Kleines Brett als Bild in der Erklärung.
@@ -16,25 +15,6 @@ Widget _chessPicture(String fen, {Set<int> marks = const {}}) => SizedBox(
       width: 240,
       child: ChessBoardView(game: ChessGame.fromFen(fen), marks: marks),
     );
-
-GameGuide slotGuide(SlotGame g) => GameGuide(g.name, [
-      const GuideSection(
-        'Ziel',
-        'Dreh die Walzen und hoffe auf gleiche Symbole auf den Gewinnlinien. Die Linien laufen von links nach rechts; '
-            'gezählt wird ab der ersten Walze ohne Lücke.',
-      ),
-      const GuideSection(
-        'Einsatz',
-        'Wähl unten den Einsatz pro Dreh. Gewinne sind ein Vielfaches davon. Die Gewinntabelle zeigt, was jedes Symbol zahlt.',
-      ),
-      GuideSection('Joker', g.wildText),
-      GuideSection('Besonderheit', g.featureText),
-      const GuideSection(
-        'Tipp',
-        'Automaten sind reines Glück. Gespielt wird nur mit Spielmünzen, die keinen Geldwert haben. Geht dir das Geld aus, '
-            'gibt es neue Münzen, dazu einmal am Tag den Tagesbonus in der Lobby.',
-      ),
-    ]);
 
 const holdemGuide = GameGuide("Texas Hold'em", [
   GuideSection(
