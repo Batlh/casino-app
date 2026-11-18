@@ -8,7 +8,6 @@ import '../core/net/lan_table.dart';
 import '../core/scope.dart';
 import '../core/theme.dart';
 import 'net_panels.dart';
-import 'widgets.dart';
 
 /// Casino-Tische im lokalen Netz: Alle setzen mit ihren eigenen Münzen, nur der Gastgeber dreht oder würfelt.
 /// Sein Ergebnis geht an alle; jedes Gerät rechnet seine Einsätze selbst ab. Einsätze der anderen werden angezeigt.

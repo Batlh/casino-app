@@ -7,6 +7,7 @@ import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_shared_mixin.dart';
 import '../../ui/widgets.dart';
 
 /// Geldrad wie im Casino („Big Six“): 54 Felder. Setzen auf einen Wert; bleibt das Rad dort stehen,
@@ -48,7 +49,7 @@ class GluecksradScreen extends StatefulWidget {
   State<GluecksradScreen> createState() => _GluecksradScreenState();
 }
 
-class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerProviderStateMixin {
+class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerProviderStateMixin, NetSharedTable {
   late final math.Random _rng = widget.seed == null ? math.Random.secure() : math.Random(widget.seed);
   late final AnimationController _turn = AnimationController(vsync: this, duration: const Duration(milliseconds: 4500));
   final Map<int, int> _bets = {};
@@ -67,7 +68,27 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
   @override
   void dispose() {
     _turn.dispose();
+    sharedDispose();
     super.dispose();
+  }
+
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get sharedGame => 'gluecksrad';
+  @override
+  String get sharedTitle => 'Glücksrad';
+  int? _pending;
+
+  @override
+  void sharedResult(Object? outcome) {
+    final i = (outcome as num?)?.toInt();
+    if (i == null || i < 0 || i >= radReihe.length) return;
+    if (_turn.isAnimating) {
+      _pending = i;
+      return;
+    }
+    _spinTo(i);
   }
 
   void _bet(int v) {
@@ -79,17 +100,26 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
       _result = -1;
       _message = 'Einsatz ${formatCoins(_total)}';
     });
+    sharedStake(_total);
   }
 
   Future<void> _spin() async {
-    if (_turn.isAnimating) return;
+    if (_turn.isAnimating || sharedGuest) return;
     if (_bets.isEmpty && _lastBets.isNotEmpty && _app.wallet.canAfford(_lastBets.values.fold(0, (a, b) => a + b))) {
       _bets.addAll(_lastBets);
     }
-    if (_bets.isEmpty || !_app.wallet.spend(_total)) return;
+    // Am Netztisch dreht der Gastgeber auch ohne eigenen Einsatz
+    if (_bets.isEmpty && !sharedHost) return;
+    if (!_app.wallet.canAfford(_total)) return;
+    final index = _rng.nextInt(radReihe.length);
+    sharedSend(index);
+    await _spinTo(index);
+  }
+
+  Future<void> _spinTo(int index) async {
+    if (_bets.isNotEmpty && !_app.wallet.spend(_total)) _bets.clear();
     final n = radReihe.length;
     final seg = 2 * math.pi / n;
-    final index = _rng.nextInt(n);
     // Feld index unter den Zeiger oben drehen, mindestens vier volle Umdrehungen
     final base = _angle % (2 * math.pi);
     var target = -(index + 0.5) * seg;
@@ -110,16 +140,22 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
     final win = stake == 0 ? 0 : stake * (v + 1);
     _app.wallet.credit(win);
     debugLog.info('gluecksrad', 'Einsatz $_total auf ${_bets.keys.join('/')}, Feld $v, Auszahlung $win');
-    _app.sfx.play(win > 0 ? (v >= 10 ? Sound.bigWin : Sound.win) : Sound.lose);
+    final played = _bets.isNotEmpty;
+    if (played || win > 0) _app.sfx.play(win > 0 ? (v >= 10 ? Sound.bigWin : Sound.win) : Sound.lose);
     setState(() {
       _result = v;
       _from = _to;
-      _lastBets = Map.of(_bets);
+      if (played) _lastBets = Map.of(_bets);
       _bets.clear();
-      _message = win > 0 ? '${v == 40 ? 'Joker' : v}! +${formatCoins(win)}' : '${v == 40 ? 'Joker' : v} – nichts gewonnen';
+      final name = v == 40 ? 'Joker' : '$v';
+      _message = win > 0 ? '$name! +${formatCoins(win)}' : (played ? '$name – nichts gewonnen' : name);
       _big = win > 0;
     });
     _app.wallet.refillIfBroke();
+    sharedStake(0);
+    final next = _pending;
+    _pending = null;
+    if (next != null && mounted) _spinTo(next);
   }
 
   @override
@@ -128,7 +164,8 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
     return GameFrame(
       title: 'Glücksrad',
       guide: gluecksradGuide,
-      child: SafeArea(
+      actions: sharedActions(context),
+      child: sharedScreen() ?? SafeArea(
         child: Column(
           children: [
             Expanded(
@@ -141,6 +178,7 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
               ),
             ),
             ResultBanner(text: _message, highlight: _big),
+            sharedStakesBar(),
             const SizedBox(height: 6),
             Wrap(
               spacing: 6,
@@ -178,10 +216,19 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
             Wrap(spacing: 8, alignment: WrapAlignment.center, children: [
               ActionButton(
                 primary: true,
-                label: _bets.isEmpty && _lastBets.isNotEmpty ? 'Wiederholen und drehen' : 'Drehen',
-                onPressed: _turn.isAnimating ? null : _spin,
+                label: sharedGuest ? 'Der Gastgeber dreht' : (_bets.isEmpty && _lastBets.isNotEmpty ? 'Wiederholen und drehen' : 'Drehen'),
+                onPressed: _turn.isAnimating || sharedGuest ? null : _spin,
               ),
-              ActionButton(label: 'Einsätze weg', onPressed: _bets.isEmpty || _turn.isAnimating ? null : () => setState(_bets.clear)),
+              ActionButton(
+                label: 'Einsätze weg',
+                onPressed: _bets.isEmpty || _turn.isAnimating
+                    ? null
+                    : () {
+                        setState(_bets.clear);
+                        sharedStake(0);
+                      },
+              ),
+              if (!sharedActive && MediaQuery.sizeOf(context).width < 420) ActionButton(label: 'Im Netzwerk', onPressed: sharedOpenPanel),
             ]),
             const SizedBox(height: 12),
             Text('Einsatz ${formatCoins(_total)}', style: TextStyle(color: p.onFelt)),
