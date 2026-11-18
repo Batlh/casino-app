@@ -25,7 +25,7 @@ mixin NetReplayScreen<T extends StatefulWidget> on State<T> {
   /// Plätze am Tisch.
   int get replaySeats;
 
-  /// Namen für Computerplätze.
+  /// Namen für Computerplätze (leer: nur Menschen am Tisch).
   List<String> get replayBotNames;
 
   /// Aktionsprotokoll der laufenden Engine.
@@ -249,12 +249,12 @@ mixin NetReplayScreen<T extends StatefulWidget> on State<T> {
     }
     final h = _host;
     if (h != null && !_playing) {
-      final free = replaySeats - 1 - h.seats.length;
+      final free = replayBotNames.isEmpty ? 0 : (replaySeats - 1 - h.seats.length).clamp(0, replayBotNames.length);
       return NetHostLobby(
         host: h,
         addresses: _addresses,
-        bots: free.clamp(0, replaySeats),
-        maxBots: free.clamp(0, replaySeats),
+        bots: free,
+        maxBots: free,
         onBots: (_) {},
         onStart: replayHostStart,
         onClose: replayClose,

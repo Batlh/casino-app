@@ -8,6 +8,7 @@ import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_replay_mixin.dart';
 import '../../ui/tap_catcher.dart';
 import '../../ui/widgets.dart';
 import '../board/seats.dart';
@@ -48,7 +49,7 @@ class KniffelScreen extends StatefulWidget {
   State<KniffelScreen> createState() => _KniffelScreenState();
 }
 
-class _KniffelScreenState extends State<KniffelScreen> {
+class _KniffelScreenState extends State<KniffelScreen> with NetReplayScreen {
   static const _saveId = 'kniffel';
   late final Settings _store;
   KniffelGame? _g;
@@ -83,16 +84,108 @@ class _KniffelScreenState extends State<KniffelScreen> {
   void setState(VoidCallback fn) {
     super.setState(fn);
     _persist();
+    replayBroadcast();
   }
 
   @override
   void dispose() {
     _token++;
     _persist();
+    replayDispose();
     super.dispose();
   }
 
+  // ---------------------------------------------------------------- Netzwerk
+
+  /// Züge dieser Partie: ['r', Halten je Würfel] würfeln, ['t', i] Würfel halten, ['s', Zeile] eintragen.
+  final List<List<Object?>> _log = [];
+
+  @override
+  String get replayGame => 'kniffel';
+  @override
+  String get replayTitle => 'Kniffel';
+  @override
+  int get replaySeats => 4;
+  @override
+  List<String> get replayBotNames => const [];
+  @override
+  List<List<Object?>> get replayLog => _log;
+
+  @override
+  void replayNewGame(int seed, List<String> names, int me, Map<String, Object?> options) {
+    _token++;
+    _log.clear();
+    _seats = [for (final (i, n) in names.indexed) Seat(n, human: replayHumans.contains(i))];
+    _g = KniffelGame(names.length, rng: math.Random(seed));
+    _paid = false;
+    _busy = false;
+    _msg = '${names[0]} würfelt zuerst';
+  }
+
+  @override
+  void replayApply(List<dynamic> a) => _apply(a);
+
+  @override
+  bool replayAllowed(int seat, List<dynamic> a) {
+    final g = _g;
+    if (g == null || g.over || g.current != seat || a.isEmpty) return false;
+    return switch (a[0]) {
+      'r' => g.rollsLeft > 0 && a.length == 2 && (a[1] as List).length == 5,
+      't' => g.rolled && g.rollsLeft > 0 && a.length == 2 && a[1] is int && (a[1] as int) >= 0 && (a[1] as int) < 5,
+      's' => g.rolled && a.length == 2 && a[1] is int && (a[1] as int) >= 0 && (a[1] as int) < 13 && g.scores[seat][a[1] as int] == null,
+      _ => false,
+    };
+  }
+
+  @override
+  void replayAfterRemote(List<List<dynamic>> acts) {
+    final g = _g;
+    if (g == null || acts.isEmpty) {
+      setState(() {});
+      _bot();
+      return;
+    }
+    final last = acts.last;
+    if (last.first == 'r') {
+      AppScope.of(context).sfx.play(Sound.tick);
+      _msg = g.rollsLeft == 0 ? '${_seats[g.current].name}: Zeile wählen' : '${_seats[g.current].name} würfelt';
+    } else if (last.first == 's') {
+      final who = (g.current - 1 + g.players) % g.players;
+      final cat = last[1] as int;
+      final pts = g.scores[who][cat] ?? 0;
+      AppScope.of(context).sfx.play(pts > 0 ? Sound.chip : Sound.lose);
+      _msg = g.over ? _finish(g) : '${_seats[who].name}: ${kniffelCategories[cat]} für $pts. ${_seats[g.current].name} ist dran';
+    }
+    setState(() {});
+    _bot();
+  }
+
+  @override
+  void replayClosed() => _newGame();
+
+  void _apply(List<dynamic> a) {
+    final g = _g!;
+    switch (a[0]) {
+      case 'r':
+        if (g.rolled) g.held = [for (final h in a[1] as List) h == true];
+        g.roll();
+      case 't':
+        g.toggle(a[1] as int);
+      case 's':
+        g.score(a[1] as int);
+    }
+    _log.add(a);
+  }
+
+  /// Allein oder als Gastgeber ausführen, als Mitspieler an den Gastgeber schicken. true, wenn hier ausgeführt.
+  bool _act(List<Object?> a) {
+    if (replaySend(a)) return false;
+    _apply(a);
+    return true;
+  }
+
   void _persist() {
+    if (replayActive) return;
     final g = _g;
     if (g == null || g.over) {
       _store.clearGame(_saveId);
@@ -124,12 +217,14 @@ class _KniffelScreenState extends State<KniffelScreen> {
 
   bool get _humanTurn {
     final g = _g;
-    return g != null && !g.over && _seats[g.current].human && !_busy;
+    if (g == null || g.over || _busy) return false;
+    return replayActive ? g.current == replayMe : _seats[g.current].human;
   }
 
   void _roll() {
     final g = _g;
-    if (g == null || !g.roll()) return;
+    if (g == null || g.rollsLeft == 0 || g.over) return;
+    if (!_act(['r', g.held.toList()])) return;
     AppScope.of(context).sfx.play(Sound.tick);
     setState(() => _msg = g.rollsLeft == 0
         ? '${_seats[g.current].name}: Zeile wählen'
@@ -141,7 +236,8 @@ class _KniffelScreenState extends State<KniffelScreen> {
     if (g == null) return;
     final who = g.current;
     final pts = kniffelScore(cat, g.dice);
-    if (!g.score(cat)) return;
+    if (!g.rolled || g.scores[who][cat] != null) return;
+    if (!_act(['s', cat])) return;
     AppScope.of(context).sfx.play(pts > 0 ? Sound.chip : Sound.lose);
     var text = '${_seats[who].name}: ${kniffelCategories[cat]} für $pts. ${_seats[g.current].name} ist dran';
     if (g.over) text = _finish(g);
@@ -166,7 +262,7 @@ class _KniffelScreenState extends State<KniffelScreen> {
     final winners = [for (var p = 0; p < g.players; p++) if (totals[p] == best) p];
     if (winners.length > 1) return 'Gleichstand mit $best Punkten';
     final w = winners.first;
-    final reward = seatReward(_seats, w, kniffelWinReward);
+    final reward = replayActive && w != replayMe ? 0 : seatReward(_seats, w, kniffelWinReward);
     if (reward > 0 && !_paid) {
       _paid = true;
       wallet.credit(reward);
@@ -177,7 +273,8 @@ class _KniffelScreenState extends State<KniffelScreen> {
 
   Future<void> _bot() async {
     final g = _g;
-    if (g == null || g.over || _seats[g.current].human) return;
+    if (replayIsGuest) return;
+    if (g == null || g.over || (_seats[g.current].human && !(replayActive && replayIsBot(g.current)))) return;
     final token = ++_token;
     setState(() => _busy = true);
     while (true) {
@@ -200,7 +297,8 @@ class _KniffelScreenState extends State<KniffelScreen> {
     return GameFrame(
       title: 'Kniffel',
       guide: kniffelGuide,
-      child: g == null
+      actions: replayActions(context),
+      child: replayScreen() ?? (g == null
           ? const SizedBox.shrink()
           : LayoutBuilder(builder: (context, box) {
               final wide = box.maxWidth > 760;
@@ -215,7 +313,7 @@ class _KniffelScreenState extends State<KniffelScreen> {
                       Expanded(child: SingleChildScrollView(padding: const EdgeInsets.all(8), child: table)),
                       dice,
                     ]);
-            }),
+            })),
     );
   }
 
@@ -233,8 +331,9 @@ class _KniffelScreenState extends State<KniffelScreen> {
                 TapCatcher(
                   area: 'kniffel',
                   onTap: (_) {
-                    if (!_humanTurn) return;
-                    setState(() => g.toggle(i));
+                    if (!_humanTurn || !g.rolled || g.rollsLeft == 0) return;
+                    if (!_act(['t', i])) return;
+                    setState(() {});
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
@@ -259,12 +358,17 @@ class _KniffelScreenState extends State<KniffelScreen> {
                 primary: true,
                 label: g.over
                     ? 'Fertig'
-                    : _seats[g.current].human
+                    : _humanTurn || (!replayActive && _seats[g.current].human)
                         ? (g.rollsLeft == 0 ? 'Zeile wählen' : 'Würfeln (${g.rollsLeft})')
                         : '${_seats[g.current].name} ist dran',
                 onPressed: _humanTurn && g.rollsLeft > 0 ? _roll : null,
               ),
-              ActionButton(label: 'Neues Spiel', onPressed: _newGame),
+              if (replayActive)
+                ...replayButtons(label: 'Neues Spiel', next: replayHostStart)
+              else ...[
+                ActionButton(label: 'Neues Spiel', onPressed: _newGame),
+                if (g.over || MediaQuery.sizeOf(context).width < 420) ActionButton(label: 'Im Netzwerk', onPressed: replayOpenPanel),
+              ],
             ],
           ),
         ],

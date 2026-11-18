@@ -8,6 +8,7 @@ import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_replay_mixin.dart';
 import '../../ui/settings_sheet.dart';
 import '../../ui/tap_catcher.dart';
 import '../../ui/widgets.dart';
@@ -51,7 +52,7 @@ class MadnScreen extends StatefulWidget {
   State<MadnScreen> createState() => _MadnScreenState();
 }
 
-class _MadnScreenState extends State<MadnScreen> {
+class _MadnScreenState extends State<MadnScreen> with NetReplayScreen {
   static const _saveId = 'madn';
   late final Settings _store;
   MadnGame? _g;
@@ -88,16 +89,103 @@ class _MadnScreenState extends State<MadnScreen> {
   void setState(VoidCallback fn) {
     super.setState(fn);
     _persist();
+    replayBroadcast();
   }
 
   @override
   void dispose() {
     _token++;
     _persist();
+    replayDispose();
     super.dispose();
   }
 
+  // ---------------------------------------------------------------- Netzwerk
+
+  /// Züge dieser Partie: ['r'] würfeln, ['m', Figur] ziehen.
+  final List<List<Object?>> _log = [];
+
+  @override
+  String get replayGame => 'madn';
+  @override
+  String get replayTitle => 'Mensch ärgere dich nicht';
+  @override
+  int get replaySeats => 4;
+  @override
+  List<String> get replayBotNames => const ['Rot', 'Blau', 'Grün'];
+  @override
+  List<List<Object?>> get replayLog => _log;
+  @override
+  Map<String, Object?> get replayOptions => _rules.toJson();
+
+  @override
+  void replayNewGame(int seed, List<String> names, int me, Map<String, Object?> options) {
+    _token++;
+    _log.clear();
+    _seats = [for (final (i, n) in names.indexed) Seat(n, human: replayHumans.contains(i))];
+    _g = MadnGame(names.length, rules: MadnRules.fromJson(options.isEmpty ? null : options), rng: math.Random(seed));
+    _paid = false;
+    _busy = false;
+    _msg = '${names[0]} beginnt';
+    if (replayIsHost) WidgetsBinding.instance.addPostFrameCallback((_) => _bot());
+  }
+
+  @override
+  void replayApply(List<dynamic> a) {
+    final g = _g!;
+    if (a[0] == 'r') {
+      _rollEngine();
+    } else {
+      g.move(a[1] as int);
+      _log.add(a);
+    }
+  }
+
+  int _rollEngine() {
+    final d = _g!.roll();
+    _log.add(['r']);
+    return d;
+  }
+
+  @override
+  bool replayAllowed(int seat, List<dynamic> a) {
+    final g = _g;
+    if (g == null || g.phase == MadnPhase.over || g.current != seat || a.isEmpty) return false;
+    return switch (a[0]) {
+      'r' => g.phase == MadnPhase.roll,
+      'm' => g.phase == MadnPhase.move && a.length == 2 && g.movable.contains(a[1]),
+      _ => false,
+    };
+  }
+
+  @override
+  void replayAfterRemote(List<List<dynamic>> acts) {
+    final g = _g;
+    if (g != null && acts.isNotEmpty) {
+      AppScope.of(context).sfx.play(acts.last.first == 'r' ? Sound.tick : Sound.chip);
+      if (g.phase == MadnPhase.over) {
+        final w = g.winner!;
+        final reward = w == replayMe ? seatReward(_seats, w, madnWinReward) : 0;
+        if (reward > 0 && !_paid) {
+          _paid = true;
+          AppScope.of(context).wallet.credit(reward);
+        }
+        _msg = '${_seats[w].name} hat alle Figuren im Ziel und gewinnt!${reward > 0 ? ' +$reward Münzen' : ''}';
+      } else {
+        _msg = acts.last.first == 'r' && g.dice != null
+            ? '${_seats[g.current].name}: ${g.phase == MadnPhase.move ? 'Figur wählen' : 'würfeln'}'
+            : '${_seats[g.current].name} ist dran';
+      }
+    }
+    setState(() {});
+    _bot();
+  }
+
+  @override
+  void replayClosed() => _newGame();
+
   void _persist() {
+    if (replayActive) return;
     final g = _g;
     if (g == null || g.phase == MadnPhase.over) {
       _store.clearGame(_saveId);
@@ -112,6 +200,11 @@ class _MadnScreenState extends State<MadnScreen> {
 
   void _setRules(MadnRules r) {
     _store.saveGame('rules.madn', r.toJson());
+    // Im Netz gelten die Regeln vom Spielstart, sonst laufen die Geräte auseinander
+    if (replayActive) {
+      setState(() => _rules = r);
+      return;
+    }
     setState(() {
       _rules = r;
       _g?.rules = r;
@@ -139,14 +232,16 @@ class _MadnScreenState extends State<MadnScreen> {
 
   bool get _humanTurn {
     final g = _g;
-    return g != null && g.phase != MadnPhase.over && _seats[g.current].human && !_busy;
+    if (g == null || g.phase == MadnPhase.over || _busy) return false;
+    return replayActive ? g.current == replayMe : _seats[g.current].human;
   }
 
   void _roll() {
     final g = _g;
     if (g == null || g.phase != MadnPhase.roll) return;
+    if (replaySend(['r'])) return;
     final who = g.current;
-    final d = g.roll();
+    final d = _rollEngine();
     AppScope.of(context).sfx.play(Sound.tick);
     final name = _seats[who].name;
     String text;
@@ -165,7 +260,9 @@ class _MadnScreenState extends State<MadnScreen> {
   void _move(int k) {
     final g = _g!;
     final who = g.current;
+    if (replaySend(['m', k])) return;
     final m = g.move(k);
+    _log.add(['m', k]);
     final sfx = AppScope.of(context).sfx;
     final name = _seats[who].name;
     var text = '$name zieht';
@@ -176,7 +273,7 @@ class _MadnScreenState extends State<MadnScreen> {
       sfx.play(Sound.chip);
     }
     if (g.phase == MadnPhase.over) {
-      final reward = seatReward(_seats, who, madnWinReward);
+      final reward = replayActive && who != replayMe ? 0 : seatReward(_seats, who, madnWinReward);
       if (reward > 0 && !_paid) {
         _paid = true;
         AppScope.of(context).wallet.credit(reward);
@@ -195,7 +292,8 @@ class _MadnScreenState extends State<MadnScreen> {
 
   Future<void> _bot() async {
     final g = _g;
-    if (g == null || g.phase == MadnPhase.over || _seats[g.current].human) return;
+    if (replayIsGuest) return;
+    if (g == null || g.phase == MadnPhase.over || (_seats[g.current].human && !(replayActive && replayIsBot(g.current)))) return;
     final token = ++_token;
     setState(() => _busy = true);
     await Future<void>.delayed(_store.botDelay(g.phase == MadnPhase.roll ? 600 : 500));
@@ -236,7 +334,8 @@ class _MadnScreenState extends State<MadnScreen> {
       title: 'Mensch ärgere dich nicht',
       guide: madnGuide,
       settings: GameSettings('Mensch ärgere dich nicht', (context) => _RulesPanel(rules: _rules, onChanged: _setRules)),
-      child: g == null
+      actions: replayActions(context),
+      child: replayScreen() ?? (g == null
           ? const SizedBox.shrink()
           : LayoutBuilder(builder: (context, box) {
               final landscape = box.maxWidth > box.maxHeight * 1.1;
@@ -279,12 +378,18 @@ class _MadnScreenState extends State<MadnScreen> {
                         primary: true,
                         label: g.phase == MadnPhase.over
                             ? 'Fertig'
-                            : _seats[g.current].human
+                            : _humanTurn || (!replayActive && _seats[g.current].human)
                                 ? (g.phase == MadnPhase.roll ? '${_seats[g.current].name}: Würfeln' : 'Figur antippen')
                                 : '${_seats[g.current].name} ist dran',
                         onPressed: _humanTurn && g.phase == MadnPhase.roll ? _roll : null,
                       ),
-                      ActionButton(label: 'Neues Spiel', onPressed: _newGame),
+                      if (replayActive)
+                        ...replayButtons(label: 'Neues Spiel', next: replayHostStart)
+                      else ...[
+                        ActionButton(label: 'Neues Spiel', onPressed: _newGame),
+                        if (g.phase == MadnPhase.over || MediaQuery.sizeOf(context).width < 420)
+                          ActionButton(label: 'Im Netzwerk', onPressed: replayOpenPanel),
+                      ],
                     ],
                   ),
                 ],
@@ -310,7 +415,7 @@ class _MadnScreenState extends State<MadnScreen> {
                       Expanded(child: Center(child: board)),
                       Padding(padding: const EdgeInsets.all(8), child: side),
                     ]);
-            }),
+            })),
     );
   }
 }
