@@ -43,6 +43,8 @@ void main() {
       await tester.runAsync(loadFonts);
       await start(tester, size, const HoldemScreen(draw: true));
       await snap('draw_lobby_$name');
+      await tester.ensureVisible(find.textContaining('Hinsetzen'));
+      await tester.pump();
       await tester.tap(find.textContaining('Hinsetzen'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));

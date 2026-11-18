@@ -327,7 +327,8 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
           }
           return Column(
             children: [
-              Expanded(child: Center(child: reels)),
+              // Auf sehr kleinen Bildschirmen lieber etwas verkleinern als abschneiden
+              Expanded(child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: reels))),
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                 child: _controls(),
