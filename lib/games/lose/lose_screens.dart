@@ -193,7 +193,15 @@ class _RubbelScreenState extends State<RubbelScreen> {
       title: 'Rubbellose',
       guide: rubbelGuide(),
       child: _LosFrame(
-        chooser: _chips<RubbelSorte>(rubbelSorten, _sorte, (s) => '${s.name} · ${losAmount(s.price)}', _active ? null : (s) => setState(() => _sorte = s)),
+        chooser: _chips<RubbelSorte>(rubbelSorten, _sorte, (s) => '${s.name} · ${losAmount(s.price)}', _active ? null : (s) => setState(() {
+              _sorte = s;
+              _los = null;
+              _scratch.clear();
+              _cells.clear();
+              _revealed = false;
+              _big = false;
+              _message = 'Sorte wählen und Los kaufen';
+            })),
         ticket: SizedBox(
           width: 340,
           child: DecoratedBox(
@@ -425,7 +433,14 @@ class _PullTabScreenState extends State<PullTabScreen> {
       title: 'Pull-Tabs',
       guide: pullGuide(),
       child: _LosFrame(
-        chooser: _chips<PullSorte>(pullSorten, _sorte, (s) => '${s.name} · ${losAmount(s.price)}', _active ? null : (s) => setState(() => _sorte = s)),
+        chooser: _chips<PullSorte>(pullSorten, _sorte, (s) => '${s.name} · ${losAmount(s.price)}', _active ? null : (s) => setState(() {
+              _sorte = s;
+              _tab = null;
+              _open.clear();
+              _paid = false;
+              _big = false;
+              _message = 'Sorte wählen und Los kaufen';
+            })),
         ticket: Container(
           width: 340,
           padding: const EdgeInsets.all(12),
@@ -483,7 +498,7 @@ class _PullTabScreenState extends State<PullTabScreen> {
                                   width: t != null && _paid && t.winRow == i ? 3 : 1,
                                 ),
                               ),
-                              child: t == null
+                              child: t == null || !_open.contains(i)
                                   ? null
                                   : Row(
                                       children: [
@@ -495,14 +510,15 @@ class _PullTabScreenState extends State<PullTabScreen> {
                           ),
                           // Lasche, die beim Aufreißen zur Seite gleitet
                           AnimatedPositioned(
-                            duration: const Duration(milliseconds: 280),
+                            // nur das Aufreißen ist animiert, beim neuen Los sitzt die Lasche sofort wieder
+                            duration: Duration(milliseconds: t != null && _open.contains(i) ? 280 : 0),
                             curve: Curves.easeIn,
                             top: 0,
                             bottom: 0,
                             left: t != null && _open.contains(i) ? 320 : 0,
                             width: 316,
                             child: AnimatedOpacity(
-                              duration: const Duration(milliseconds: 280),
+                              duration: Duration(milliseconds: t != null && _open.contains(i) ? 280 : 0),
                               opacity: t != null && _open.contains(i) ? 0 : 1,
                               child: Container(
                                 decoration: BoxDecoration(
