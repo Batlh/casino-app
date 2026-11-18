@@ -458,7 +458,9 @@ class SkatGame with ActionLog {
     if (phase == SkatPhase.dealOver) newDeal();
   }
 
-  String _who(int p) => p == 0 ? 'Du' : players[p].name;
+  /// Wer vor diesem Bildschirm sitzt (im Netz je Gerät verschieden); nur für die Texte.
+  int me = 0;
+  String _who(int p) => p == me ? 'Du' : players[p].name;
 
   List<int> ranking() => [0, 1, 2]..sort((a, b) => players[b].score - players[a].score);
 }
