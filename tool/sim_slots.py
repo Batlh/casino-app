@@ -173,14 +173,15 @@ def play(g, rng, stake, free=False):
                 # Wie SlotEngine: Streu- und Bonussymbole fallen nicht nach
                 while True:
                     above[r] = (above[r] - 1) % len(strips[r])
-                    if strips[r][above[r]] not in (SCATTER, BONUS):
+                    if g.get("scatter_drop") or strips[r][above[r]] not in (SCATTER, BONUS):
                         break
                 fresh.insert(0, strips[r][above[r]])
             nxt.append(fresh + kept)
         shown = expand(g, nxt, free)
     info["steps"] = steps
     # Wie SlotEngine: im Raster vor dem Ausfüllen der Joker zählen (fallen in Kaskaden nicht nach)
-    flat = [x for c in grid for x in c]
+    flat = [x for c in (shown if g.get("scatter_drop") else grid) for x in c]
+    info["cascade_scatter"] = flat.count(SCATTER) >= 3 and sum(c.count(SCATTER) for c in grid) < 3
     scatters = flat.count(SCATTER)
     bonus = flat.count(BONUS)
     freewon = 0
