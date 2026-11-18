@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import '../../core/net/lan.dart';
-import 'eins_card.dart';
 import 'eins_engine.dart';
 
 /// Eins im lokalen Netz durch Nachspielen.

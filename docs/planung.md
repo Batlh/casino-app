@@ -55,8 +55,10 @@ Nachbauten echter Automaten (keine Namen, Figuren oder Spielelemente bekannter G
 Reihenfolge: Bauteile zuerst in der Physik (pinball_table.dart) mit Tests, dann die Tische.
 
 ## Mehrspieler im lokalen Netzwerk
-- Grundgerüst steht (core/net/lan.dart), Bingo und Poker (Hold'em, Omaha, Five Card Draw) laufen schon.
-- Nächste Kandidaten: Skat, Mau-Mau, Eins,
+- Grundgerüst steht (core/net/lan.dart), Bingo, Poker (Hold'em, Omaha, Five Card Draw), Mau-Mau und Eins laufen schon.
+  Für neue Spiele: core/net/lan_table.dart (Tisch, Warteraum) und ui/net_panels.dart (Bildschirme).
+- Zwei Wege: Sicht schicken (Poker, Mau-Mau) oder Startwert plus Aktionen nachspielen (Eins, für komplexe Spiele).
+- Nächste Kandidaten: Skat,
   Brettspiele (Schach, Dame, Mühle, Viererkette …), Mahjong, Casino-Tische.
 - Pro Spiel: Züge als Nachrichten, jeder sieht nur seine eigenen Karten, Computer füllen freie Plätze.
 
