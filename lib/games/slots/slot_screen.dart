@@ -10,18 +10,40 @@ import '../../ui/widgets.dart';
 import 'slot_engine.dart';
 import 'slot_games.dart';
 import 'slot_log.dart';
+import 'slot_wheel.dart';
 
 class SlotScreen extends StatefulWidget {
-  const SlotScreen({super.key, required this.game});
+  const SlotScreen({super.key, required this.game, this.seed});
 
   final SlotGame game;
+
+  /// Fester Startwert für den Zufall (Tests und Vorschaubilder), sonst sicherer Zufall.
+  final int? seed;
 
   @override
   State<SlotScreen> createState() => _SlotScreenState();
 }
 
+/// Was das Walzenfenster gerade zeigt, wenn die Walzen stehen.
+class _Shown {
+  const _Shown({required this.grid, required this.wins, this.falls, this.coins = const {}, this.multiplier = 1});
+  final List<List<int>> grid;
+  final List<LineWin> wins;
+  final List<List<int>>? falls;
+  final Map<int, int> coins;
+  final int multiplier;
+}
+
+/// Stand einer Hold-&-Spin-Runde im Walzenfenster.
+class _HoldView {
+  const _HoldView(this.coins, this.respins, this.fresh);
+  final Map<int, int> coins;
+  final int respins;
+  final Set<int> fresh;
+}
+
 class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
-  late final SlotEngine _engine = SlotEngine(_rules);
+  late final SlotEngine _engine = SlotEngine(_rules, rng: widget.seed == null ? null : math.Random(widget.seed));
   final _rng = math.Random();
   late final AnimationController _spin = AnimationController(
     vsync: this,
@@ -31,6 +53,11 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
     vsync: this,
     duration: const Duration(milliseconds: 1600),
   )..repeat();
+  late final AnimationController _drop = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 380),
+    value: 1,
+  );
 
   late int _stake = widget.game.stakes[2];
   int _freeSpins = 0;
@@ -39,14 +66,17 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
   bool _auto = false;
   String _message = 'Einsatz wählen und drehen';
   bool _big = false;
-  SpinResult? _result;
+  _Shown? _shown;
+  _HoldView? _hold;
   late int _reelsStopped = _rules.reels;
 
   /// Sichtbare Symbole vor dem Dreh und die Bänder, die durchlaufen.
   late List<List<int>> _tapes = [
-    for (var r = 0; r < _rules.reels; r++)
-      _rules.strips[r].take(_rules.rows).toList(),
+    for (var r = 0; r < _rules.reels; r++) _rules.strips[r].take(_rules.rows).toList(),
   ];
+
+  /// Reihen je Walze im Ergebnis (bei wechselnder Höhe verschieden).
+  late List<int> _heights = List.filled(_rules.reels, _rules.rows);
 
   SlotRules get _rules => widget.game.rules;
   List<int> get _stakes => widget.game.stakes;
@@ -64,6 +94,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
     _auto = false;
     _spin.dispose();
     _pulse.dispose();
+    _drop.dispose();
     super.dispose();
   }
 
@@ -85,9 +116,11 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
     return [
       ...finalSymbols,
       for (var i = 0; i < filler; i++) strip[(start + i) % strip.length],
-      ..._tapes[reel].take(_rules.rows),
+      ..._tapes[reel].take(_heights[reel]),
     ];
   }
+
+  Future<void> _pause(int ms) => Future<void>.delayed(Duration(milliseconds: ms));
 
   Future<void> _go() async {
     if (_spinning) return;
@@ -97,41 +130,123 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
       return;
     }
     final wallet = _app.wallet;
-    final result = _engine.spin(_stake, free: free);
+    final stake = _stake;
+    final out = _engine.play(stake, free: free);
+    final first = out.steps.first;
+    var credited = false;
+    void credit() {
+      if (credited) return;
+      credited = true;
+      wallet.credit(out.total);
+      logSlotOutcome(widget.game, out, stake: stake, free: free, balance: wallet.balance);
+    }
+
     setState(() {
       if (free) _freeSpins--;
       _spinning = true;
-      _result = null;
+      _shown = null;
+      _hold = null;
       _big = false;
       _message = free ? widget.game.freeSpinLine : '';
       _reelsStopped = 0;
-      _tapes = [
-        for (var r = 0; r < _rules.reels; r++) _buildTape(result.grid[r], r),
-      ];
+      _tapes = [for (var r = 0; r < _rules.reels; r++) _buildTape(first.grid[r], r)];
+      _heights = out.heights;
     });
     _app.sfx.play(Sound.tick);
     try {
       await _spin.forward(from: 0).orCancel;
+
+      // Kaskaden Stufe für Stufe
+      var running = 0;
+      for (var i = 0; i < out.steps.length; i++) {
+        final s = out.steps[i];
+        if (!mounted) break;
+        setState(() {
+          _shown = _Shown(
+            grid: s.grid,
+            wins: s.wins,
+            falls: s.falls,
+            coins: i == 0 ? out.coins : const {},
+            multiplier: s.multiplier,
+          );
+        });
+        if (i > 0) {
+          await _drop.forward(from: 0).orCancel;
+          _app.sfx.play(Sound.reelStop);
+        }
+        running += s.win;
+        if (s.win > 0) {
+          setState(() {
+            _message = out.steps.length > 1
+                ? 'Kaskade ${i + 1}${s.multiplier > 1 ? ' ×${s.multiplier}' : ''}: +${formatCoins(running)}'
+                : 'Gewonnen: +${formatCoins(running)}';
+            _big = true;
+          });
+          _app.sfx.play(Sound.win);
+          if (i < out.steps.length - 1) await _pause(1100);
+        }
+      }
+
+      // Glücksrad
+      final wheel = out.wheel;
+      if (wheel != null && mounted) {
+        setState(() => _message = 'Glücksrad!');
+        _app.sfx.play(Sound.bigWin);
+        await _pause(700);
+        if (mounted) {
+          await Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => BonusWheelScreen(game: widget.game, wheel: _rules.wheel!, spin: wheel, stake: stake),
+            ),
+          );
+        }
+      }
+
+      // Hold & Spin
+      final hold = out.holdSpin;
+      if (hold != null && mounted) {
+        setState(() => _message = 'Hold & Spin!');
+        _app.sfx.play(Sound.bigWin);
+        Map<int, int> prev = const {};
+        for (var i = 0; i < hold.boards.length; i++) {
+          if (!mounted) break;
+          final board = hold.boards[i];
+          setState(() {
+            _hold = _HoldView(board, hold.respinsLeft[i], {for (final c in board.keys) if (!prev.containsKey(c)) c});
+            final sum = board.values.fold(0, (a, b) => a + b) * stake ~/ 10;
+            _message = 'Hold & Spin: ${formatCoins(sum)}  ·  Respins ${hold.respinsLeft[i]}';
+          });
+          if (i > 0 && board.length > prev.length) _app.sfx.play(Sound.win);
+          prev = board;
+          await _pause(i == 0 ? 1200 : 750);
+        }
+        if (mounted) {
+          setState(() => _message = hold.full
+              ? 'GRAND! Hold & Spin: +${formatCoins(hold.total)}'
+              : 'Hold & Spin: +${formatCoins(hold.total)}');
+          await _pause(1500);
+        }
+      }
     } on TickerCanceled {
       // Bildschirm wurde verlassen, der Gewinn zählt trotzdem.
+    } finally {
+      credit();
     }
-    wallet.credit(result.total);
-    logSlotSpin(widget.game, result, stake: _stake, free: free, balance: wallet.balance);
     if (!mounted) {
       wallet.refillIfBroke();
       return;
     }
     setState(() {
       _spinning = false;
-      _result = result;
-      _freeSpins += result.freeSpinsWon;
-      if (free || result.freeSpinsWon > 0) _freeTotal += result.total;
-      _message = _describe(result);
-      _big = result.total > 0 || result.freeSpinsWon > 0;
+      _hold = null;
+      _freeSpins += out.freeSpinsWon;
+      if (free || out.freeSpinsWon > 0) _freeTotal += out.total;
+      _message = _describe(out);
+      _big = out.total > 0 || out.freeSpinsWon > 0;
     });
-    if (result.freeSpinsWon > 0 || result.total >= _stake * 10) {
+    if (out.freeSpinsWon > 0 || out.total >= stake * 10) {
       _app.sfx.play(Sound.bigWin);
-    } else if (result.total > 0) {
+    } else if (out.total > 0 && out.steps.length == 1) {
       _app.sfx.play(Sound.win);
     }
     if (_freeSpins == 0 && free) {
@@ -142,17 +257,15 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
     }
     wallet.refillIfBroke();
     if (_stake > wallet.balance && _freeSpins == 0) {
-      setState(() => _stake = 10);
+      setState(() => _stake = _stakes.first);
     }
     if (_freeSpins > 0 || _auto) {
-      await Future<void>.delayed(
-        Duration(milliseconds: result.total > 0 ? 1600 : 700),
-      );
+      await _pause(out.total > 0 ? 1600 : 700);
       if (mounted && (_freeSpins > 0 || _auto)) _go();
     }
   }
 
-  String _describe(SpinResult r) {
+  String _describe(SpinOutcome r) {
     if (r.freeSpinsWon > 0) {
       return '${r.freeSpinsWon} Freispiele! +${formatCoins(r.total)}';
     }
@@ -175,14 +288,17 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
           final maxW = box.maxWidth - (wide ? math.min(300.0, box.maxWidth * 0.32) : 0) - 24;
           // Platz für die Zeile mit der gerade gezeigten Gewinnlinie
           final maxH = box.maxHeight - controlsHeight - 24 - 30;
-          // Fünf Walzen zu drei Reihen plus Rahmen
           final cell = math.min(maxW / _rules.reels, maxH / _rules.rows);
           final reelWindow = _ReelWindow(
             cell: cell,
             spin: _spin,
             pulse: _pulse,
+            drop: _drop,
             tapes: _tapes,
-            result: _result,
+            heights: _heights,
+            shown: _shown,
+            hold: _hold,
+            stake: _stake,
             game: widget.game,
           );
           final reels = Column(
@@ -190,7 +306,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
             children: [
               reelWindow,
               const SizedBox(height: 6),
-              _LineCaption(pulse: _pulse, result: _result, game: widget.game),
+              _LineCaption(pulse: _pulse, shown: _hold == null ? _shown : null, game: widget.game),
             ],
           );
           if (wide) {
@@ -329,8 +445,12 @@ class _ReelWindow extends StatelessWidget {
     required this.cell,
     required this.spin,
     required this.pulse,
+    required this.drop,
     required this.tapes,
-    required this.result,
+    required this.heights,
+    required this.shown,
+    required this.hold,
+    required this.stake,
     required this.game,
   });
 
@@ -338,8 +458,12 @@ class _ReelWindow extends StatelessWidget {
   final double cell;
   final Animation<double> spin;
   final Animation<double> pulse;
+  final Animation<double> drop;
   final List<List<int>> tapes;
-  final SpinResult? result;
+  final List<int> heights;
+  final _Shown? shown;
+  final _HoldView? hold;
+  final int stake;
 
   @override
   Widget build(BuildContext context) {
@@ -364,8 +488,12 @@ class _ReelWindow extends StatelessWidget {
             painter: _ReelPainter(
               spin: spin,
               pulse: pulse,
+              drop: drop,
               tapes: tapes,
-              result: result,
+              heights: heights,
+              shown: shown,
+              hold: hold,
+              stake: stake,
               game: game,
             ),
           ),
@@ -375,51 +503,100 @@ class _ReelWindow extends StatelessWidget {
   }
 }
 
+const _gold = Color(0xFFFFC95C);
+
+/// Wert einer Münze als Text: Jackpot-Name oder Betrag.
+String coinLabel(SlotRules rules, int tenths, int stake) =>
+    rules.holdSpin?.jackpots[tenths]?.toUpperCase() ?? formatCoins(tenths * stake ~/ 10);
+
+void _paintLabel(Canvas canvas, Rect box, String text, {double scale = 0.24}) {
+  final tp = TextPainter(
+    text: TextSpan(
+      text: text,
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: box.height * scale,
+        fontWeight: FontWeight.w900,
+        shadows: const [Shadow(blurRadius: 3, color: Colors.black)],
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+    maxLines: 1,
+  )..layout(maxWidth: box.width * 1.1);
+  tp.paint(canvas, Offset(box.center.dx - tp.width / 2, box.bottom - tp.height - box.height * 0.04));
+}
+
 class _ReelPainter extends CustomPainter {
   _ReelPainter({
     required this.spin,
     required this.pulse,
+    required this.drop,
     required this.tapes,
-    required this.result,
+    required this.heights,
+    required this.shown,
+    required this.hold,
+    required this.stake,
     required this.game,
-  }) : super(repaint: Listenable.merge([spin, pulse]));
+  }) : super(repaint: Listenable.merge([spin, pulse, drop]));
 
   final SlotGame game;
-
   final Animation<double> spin;
   final Animation<double> pulse;
+  final Animation<double> drop;
   final List<List<int>> tapes;
-  final SpinResult? result;
+  final List<int> heights;
+  final _Shown? shown;
+  final _HoldView? hold;
+  final int stake;
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
     final rules = game.rules;
     final reels = rules.reels;
-    final rows = rules.rows;
     game.paintBackdrop(canvas, rect, pulse.value);
-    final cell = size.width / reels;
+    final cw = size.width / reels;
 
+    final h = hold;
+    if (h != null) {
+      _paintHold(canvas, size, h);
+      return;
+    }
+
+    final s = shown;
     for (var r = 0; r < reels; r++) {
+      final rows = s?.grid[r].length ?? heights[r];
+      final ch = size.height / rows;
       canvas.save();
-      canvas.clipRect(Rect.fromLTWH(r * cell, 0, cell, size.height));
-      final tape = tapes[r];
-      final travel = (tape.length - rows).toDouble();
-      final p = reelProgress(spin.value, r, reels);
-      // Band läuft vom alten Bild am Ende zum neuen Bild am Anfang
-      final eased = p >= 1 ? 1.0 : Curves.easeOutCubic.transform(p);
-      final offset = travel * (1 - eased);
-      final first = offset.floor();
-      for (var i = math.max(0, first - 1); i < tape.length && i <= first + rows; i++) {
-        final y = (i - offset) * cell;
-        final box = Rect.fromLTWH(r * cell, y, cell, cell).deflate(cell * 0.07);
-        game.paintSymbol(canvas, box, tape[i]);
+      canvas.clipRect(Rect.fromLTWH(r * cw, 0, cw, size.height));
+      if (s == null) {
+        final tape = tapes[r];
+        final travel = (tape.length - rows).toDouble();
+        final p = reelProgress(spin.value, r, reels);
+        // Band läuft vom alten Bild am Ende zum neuen Bild am Anfang
+        final eased = p >= 1 ? 1.0 : Curves.easeOutCubic.transform(p);
+        final offset = travel * (1 - eased);
+        final first = offset.floor();
+        for (var i = math.max(0, first - 1); i < tape.length && i <= first + rows; i++) {
+          final y = (i - offset) * ch;
+          game.paintSymbol(canvas, _cell(r * cw, y, cw, ch), tape[i]);
+        }
+      } else {
+        final t = Curves.easeIn.transform(drop.value);
+        for (var row = 0; row < rows; row++) {
+          final fall = s.falls?[r][row] ?? 0;
+          final y = (row - fall * (1 - t)) * ch;
+          final box = _cell(r * cw, y, cw, ch);
+          game.paintSymbol(canvas, box, s.grid[r][row]);
+          final coin = s.coins[r * rules.rows + row];
+          if (coin != null) _paintLabel(canvas, box, coinLabel(rules, coin, stake));
+        }
       }
       canvas.restore();
       if (r > 0) {
         canvas.drawLine(
-          Offset(r * cell, 0),
-          Offset(r * cell, size.height),
+          Offset(r * cw, 0),
+          Offset(r * cw, size.height),
           Paint()
             ..color = const Color(0x44FFE9A8)
             ..strokeWidth = 1,
@@ -427,69 +604,105 @@ class _ReelPainter extends CustomPainter {
       }
     }
 
-    final res = result;
-    if (res != null && res.lineWins.isNotEmpty) {
-      final index = (pulse.value * res.lineWins.length).floor() % res.lineWins.length;
-      final win = res.lineWins[index];
-      _paintLine(canvas, win, cell, rules);
+    if (s == null || drop.value < 1) return;
+    if (s.wins.isNotEmpty) {
+      final index = (pulse.value * s.wins.length).floor() % s.wins.length;
+      _paintWin(canvas, s, s.wins[index], cw, size.height);
     }
-    if (res != null && res.scatterCount >= 3) {
-      final ringPaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..color = const Color(0xFFFFE9A8);
-      for (var r = 0; r < reels; r++) {
-        for (var row = 0; row < rows; row++) {
-          if (res.grid[r][row] == symScatter) {
-            canvas.drawRRect(
-              RRect.fromRectAndRadius(
-                Rect.fromLTWH(r * cell, row * cell, cell, cell).deflate(3),
-                const Radius.circular(10),
-              ),
-              ringPaint,
-            );
-          }
+    final ringPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..color = const Color(0xFFFFE9A8);
+    for (var r = 0; r < reels; r++) {
+      final ch = size.height / s.grid[r].length;
+      for (var row = 0; row < s.grid[r].length; row++) {
+        final sym = s.grid[r][row];
+        if (sym == symScatter || sym == symBonus) {
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(Rect.fromLTWH(r * cw, row * ch, cw, ch).deflate(3), const Radius.circular(10)),
+            ringPaint,
+          );
         }
       }
     }
   }
 
-  void _paintLine(Canvas canvas, LineWin win, double cell, SlotRules rules) {
-    final rows = rules.lines[win.line];
-    final path = Path();
+  /// Feld für ein Symbol: quadratisch in der Mitte der Zelle.
+  Rect _cell(double x, double y, double cw, double ch) {
+    final side = math.min(cw, ch);
+    return Rect.fromCenter(center: Offset(x + cw / 2, y + ch / 2), width: side, height: side).deflate(side * 0.07);
+  }
+
+  void _paintHold(Canvas canvas, Size size, _HoldView h) {
+    final rules = game.rules;
+    final cw = size.width / rules.reels;
+    final ch = size.height / rules.rows;
+    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0x99000000));
+    final empty = Paint()..color = const Color(0x22FFFFFF);
+    final pop = Curves.elasticOut.transform((pulse.value * 3).clamp(0.0, 1.0));
     for (var r = 0; r < rules.reels; r++) {
-      final c = Offset((r + 0.5) * cell, (rows[r] + 0.5) * cell);
-      r == 0 ? path.moveTo(c.dx, c.dy) : path.lineTo(c.dx, c.dy);
+      for (var row = 0; row < rules.rows; row++) {
+        final cell = Rect.fromLTWH(r * cw, row * ch, cw, ch).deflate(5);
+        final v = h.coins[r * rules.rows + row];
+        if (v == null) {
+          canvas.drawRRect(RRect.fromRectAndRadius(cell, const Radius.circular(10)), empty);
+          continue;
+        }
+        final box = h.fresh.contains(r * rules.rows + row)
+            ? Rect.fromCenter(center: cell.center, width: cell.width * (0.7 + 0.3 * pop), height: cell.height * (0.7 + 0.3 * pop))
+            : cell;
+        game.paintSymbol(canvas, _cell(box.left, box.top, box.width, box.height), symCoin);
+        _paintLabel(canvas, box, coinLabel(rules, v, stake));
+      }
     }
-    canvas.drawPath(
-      path,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 7
-        ..strokeJoin = StrokeJoin.round
-        ..strokeCap = StrokeCap.round
-        ..color = const Color(0x77FFC95C)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
-    );
-    canvas.drawPath(
-      path,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..strokeJoin = StrokeJoin.round
-        ..strokeCap = StrokeCap.round
-        ..color = const Color(0xFFFFF4C2),
-    );
+    final tp = TextPainter(
+      text: TextSpan(
+        text: 'Respins ${h.respins}',
+        style: TextStyle(color: _gold, fontSize: ch * 0.22, fontWeight: FontWeight.w900, shadows: const [Shadow(blurRadius: 4, color: Colors.black)]),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset(size.width - tp.width - 8, 4));
+  }
+
+  void _paintWin(Canvas canvas, _Shown s, LineWin win, double cw, double height) {
+    final rules = game.rules;
+    if (win.line >= 0) {
+      final rows = rules.lines[win.line];
+      final ch = height / rules.rows;
+      final path = Path();
+      for (var r = 0; r < rules.reels; r++) {
+        final c = Offset((r + 0.5) * cw, (rows[r] + 0.5) * ch);
+        r == 0 ? path.moveTo(c.dx, c.dy) : path.lineTo(c.dx, c.dy);
+      }
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 7
+          ..strokeJoin = StrokeJoin.round
+          ..strokeCap = StrokeCap.round
+          ..color = const Color(0x77FFC95C)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+      );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..strokeJoin = StrokeJoin.round
+          ..strokeCap = StrokeCap.round
+          ..color = const Color(0xFFFFF4C2),
+      );
+    }
     final frame = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
-      ..color = const Color(0xFFFFC95C);
-    for (var r = 0; r < win.count; r++) {
+      ..color = _gold;
+    for (final (r, row) in win.cells) {
+      final ch = height / s.grid[r].length;
       canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(r * cell, rows[r] * cell, cell, cell).deflate(3),
-          const Radius.circular(10),
-        ),
+        RRect.fromRectAndRadius(Rect.fromLTWH(r * cw, row * ch, cw, ch).deflate(3), const Radius.circular(10)),
         frame,
       );
     }
@@ -497,7 +710,7 @@ class _ReelPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ReelPainter old) =>
-      old.tapes != tapes || old.result != result;
+      old.tapes != tapes || old.shown != shown || old.hold != hold || old.heights != heights;
 }
 
 class _SymbolPainter extends CustomPainter {
@@ -506,19 +719,27 @@ class _SymbolPainter extends CustomPainter {
   final int symbol;
 
   @override
-  void paint(Canvas canvas, Size size) =>
-      game.paintSymbol(canvas, Offset.zero & size, symbol);
+  void paint(Canvas canvas, Size size) => game.paintSymbol(canvas, Offset.zero & size, symbol);
 
   @override
   bool shouldRepaint(_SymbolPainter old) => old.symbol != symbol;
 }
 
-/// Text zur Gewinnlinie, die gerade aufleuchtet, z. B. „Linie 16: 3 × Seepferdchen = 40“.
+/// Ein Gewinn als Text, z. B. „Linie 16: 3 × Seepferdchen = 40“ oder „3 × Seestern, 4 Wege = 12“.
+String winText(SlotGame game, LineWin w, {int multiplier = 1}) {
+  final head = w.line >= 0 ? 'Linie ${w.line + 1}: ' : '';
+  final ways = w.line < 0 ? ', ${w.ways} ${w.ways == 1 ? 'Weg' : 'Wege'}' : '';
+  final from = w.line < 0 && w.start > 0 ? ' ab Walze ${w.start + 1}' : '';
+  final mult = multiplier > 1 ? ' ×$multiplier' : '';
+  return '$head${w.count} × ${game.symbolNames[w.symbol]}$from$ways$mult = ${formatCoins(w.payout)}';
+}
+
+/// Text zum Gewinn, der gerade aufleuchtet.
 class _LineCaption extends StatelessWidget {
-  const _LineCaption({required this.pulse, required this.result, required this.game});
+  const _LineCaption({required this.pulse, required this.shown, required this.game});
 
   final Animation<double> pulse;
-  final SpinResult? result;
+  final _Shown? shown;
   final SlotGame game;
 
   @override
@@ -529,15 +750,17 @@ class _LineCaption extends StatelessWidget {
       child: AnimatedBuilder(
         animation: pulse,
         builder: (context, _) {
-          final res = result;
-          if (res == null || res.lineWins.isEmpty) return const SizedBox.shrink();
-          // Gleiche Auswahl wie die aufleuchtende Linie im Walzenfenster
-          final index = (pulse.value * res.lineWins.length).floor() % res.lineWins.length;
-          final w = res.lineWins[index];
-          return Text(
-            'Linie ${w.line + 1}: ${w.count} × ${game.symbolNames[w.symbol]} = ${formatCoins(w.payout)}'
-            '${res.lineWins.length > 1 ? '   (${index + 1}/${res.lineWins.length})' : ''}',
-            style: TextStyle(color: p.ink, fontSize: 15, fontWeight: FontWeight.w600),
+          final s = shown;
+          if (s == null || s.wins.isEmpty) return const SizedBox.shrink();
+          // Gleiche Auswahl wie der aufleuchtende Gewinn im Walzenfenster
+          final index = (pulse.value * s.wins.length).floor() % s.wins.length;
+          return FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '${winText(game, s.wins[index], multiplier: s.multiplier)}'
+              '${s.wins.length > 1 ? '   (${index + 1}/${s.wins.length})' : ''}',
+              style: TextStyle(color: p.ink, fontSize: 15, fontWeight: FontWeight.w600),
+            ),
           );
         },
       ),
@@ -582,8 +805,33 @@ class _PayTableSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = Palette.of(context);
     final rules = game.rules;
-    final lineBet = stake ~/ rules.lineCount;
+    final ways = rules.mode == PayMode.ways;
     final style = TextStyle(color: p.ink, fontSize: 16);
+    final soft = style.copyWith(fontSize: 14, color: p.inkSoft);
+    String amount(int pay) {
+      final v = pay * stake / rules.betDivisor;
+      return v == v.roundToDouble() ? formatCoins(v.round()) : v.toStringAsFixed(1).replaceAll('.', ',');
+    }
+
+    Widget symbolRow(int sym, Widget text) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(
+            children: [
+              SizedBox.square(dimension: 46, child: CustomPaint(painter: _SymbolPainter(game, sym))),
+              const SizedBox(width: 10),
+              Expanded(child: text),
+            ],
+          ),
+        );
+
+    final paySymbols = [
+      if (!ways && rules.linePays.containsKey(symWild)) symWild,
+      for (var s = 5; s >= 0; s--)
+        if (rules.linePays.containsKey(s)) s,
+    ];
+    final hold = rules.holdSpin;
+    final wheel = rules.wheel;
+    final hasWild = rules.strips.any((s) => s.contains(symWild));
     return SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -597,87 +845,123 @@ class _PayTableSheet extends StatelessWidget {
             Text('Gewinnplan', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 4),
             Text(
-              'Einsatz ${formatCoins(stake)} auf ${rules.lineCount} Linien. Gewertet wird von links nach rechts.',
+              ways
+                  ? 'Einsatz ${formatCoins(stake)}. Beträge gelten je Weg: gleiche Symbole auf mindestens drei '
+                      'nebeneinanderliegenden Walzen, egal in welcher Reihe'
+                      '${rules.waysAnywhere ? ' und ab welcher Walze' : ', ab der ersten Walze'}. '
+                      'Liegen auf einer Walze zwei passende Symbole, gibt es doppelt so viele Wege.'
+                  : 'Einsatz ${formatCoins(stake)} auf ${rules.lineCount} Linien. Gewertet wird von links nach rechts.',
               style: TextStyle(color: p.inkSoft, fontSize: 15),
             ),
             const SizedBox(height: 10),
-            for (final sym in [symWild, 5, 4, 3, 2, 1, 0])
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(
+            for (final sym in paySymbols)
+              symbolRow(
+                sym,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox.square(
-                      dimension: 46,
-                      child: CustomPaint(painter: _SymbolPainter(game, sym)),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            game.symbolNames[sym],
-                            style: style.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          Text(
-                            [
-                              for (var i = 0; i < rules.linePays[sym]!.length; i++)
-                                '${i + 3} gleiche: ${formatCoins(rules.linePays[sym]![i] * lineBet)}',
-                            ].join(', '),
-                            style: style.copyWith(fontSize: 14, color: p.inkSoft),
-                          ),
-                        ],
-                      ),
+                    Text(game.symbolNames[sym], style: style.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      [
+                        for (var i = 0; i < rules.linePays[sym]!.length; i++)
+                          '${i + 3} gleiche: ${amount(rules.linePays[sym]![i])}',
+                      ].join(', '),
+                      style: soft,
                     ),
                   ],
                 ),
               ),
             const SizedBox(height: 10),
             if (rules.hasScatter)
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox.square(
-                    dimension: 46,
-                    child: CustomPaint(painter: _SymbolPainter(game, symScatter)),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(game.featureText, style: style)),
-                ],
-              )
+              symbolRow(symScatter, Text(game.featureText, style: style))
             else
               Text(game.featureText, style: style),
             const SizedBox(height: 8),
-            Text(game.wildText, style: style),
-            const SizedBox(height: 16),
-            Text('Gewinnlinien', style: style.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(
-              'Nur diese ${rules.lineCount} Linien zahlen. Die gleichen Symbole müssen auf der ersten Walze links beginnen '
-              'und ohne Lücke nebeneinander liegen. Gleiche Symbole nur in der Mitte oder auf anderen Wegen zählen nicht.',
-              style: style.copyWith(fontSize: 14, color: p.inkSoft),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                for (var l = 0; l < rules.lines.length; l++)
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 64,
-                        height: 64 * rules.rows / rules.reels,
-                        child: CustomPaint(
-                          painter: _LineDiagramPainter(rules.lines[l], rules.rows, p.ink, p.accent),
+            if (hasWild) symbolRow(symWild, Text(game.wildText, style: style)),
+            if (rules.cascades) ...[
+              const SizedBox(height: 12),
+              Text('Kaskaden', style: style.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Gewinnsymbole verschwinden, neue fallen von oben nach. Jeder weitere Gewinn derselben Drehung zählt mehr: '
+                '${rules.cascade.map((m) => '×$m').join(', ')}'
+                '${rules.freeCascade.isNotEmpty ? ', in Freispielen ${rules.freeCascade.map((m) => '×$m').join(', ')}' : ''}.',
+                style: soft,
+              ),
+            ],
+            if (hold != null) ...[
+              const SizedBox(height: 12),
+              symbolRow(
+                symCoin,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Hold & Spin', style: style.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      '${hold.trigger} oder mehr ${game.symbolNames[symCoin]} starten die Runde. Münzen bleiben liegen, '
+                      'es gibt ${hold.respins} Respins, jede neue Münze setzt sie zurück. Am Ende zählen alle Münzwerte. '
+                      'Jackpots: ${[for (final e in hold.jackpots.entries) '${e.value} ${formatCoins(e.key * stake ~/ 10)}'].join(', ')}, '
+                      'alle Felder voll: Grand ${formatCoins(hold.grand * stake ~/ 10)}.',
+                      style: soft,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (wheel != null) ...[
+              const SizedBox(height: 12),
+              symbolRow(
+                symBonus,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Glücksrad', style: style.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      '${wheel.trigger} ${game.symbolNames[symBonus]} drehen das Glücksrad. Felder: '
+                      '${[
+                        for (final s in wheel.segments)
+                          switch (s.kind) {
+                            WheelKind.coins => formatCoins(s.amount * stake),
+                            WheelKind.freeSpins => '${s.amount} Freispiele',
+                            WheelKind.holdSpin => 'Hold & Spin mit ${s.amount} Münzen',
+                          },
+                      ].toSet().join(', ')}.',
+                      style: soft,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (!ways) ...[
+              const SizedBox(height: 16),
+              Text('Gewinnlinien', style: style.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text(
+                'Nur diese ${rules.lineCount} Linien zahlen. Die gleichen Symbole müssen auf der ersten Walze links beginnen '
+                'und ohne Lücke nebeneinander liegen.',
+                style: soft,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  for (var l = 0; l < rules.lines.length; l++)
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 64,
+                          height: 64 * rules.rows / rules.reels,
+                          child: CustomPaint(
+                            painter: _LineDiagramPainter(rules.lines[l], rules.rows, p.ink, p.accent),
+                          ),
                         ),
-                      ),
-                      Text('${l + 1}', style: style.copyWith(fontSize: 13, color: p.inkSoft)),
-                    ],
-                  ),
-              ],
-            ),
+                        Text('${l + 1}', style: soft.copyWith(fontSize: 13)),
+                      ],
+                    ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

@@ -37,7 +37,7 @@ GAMES = {
                  [10, 9, 8, 7, 4, 3, 2, 2], [10, 9, 8, 7, 4, 3, 0, 1]],
         pays={0: [5, 10, 25], 1: [5, 15, 40], 2: [8, 20, 60], 3: [10, 30, 100], 4: [15, 60, 200],
               5: [25, 100, 500], 6: [30, 150, 750]},
-        scatter=[2, 6, 25], free=10, mult=1, expand=True, wildmult=False, seed=3000),
+        scatter=[2, 6, 25], free=10, mult=1, expand=True, wildmult=False, seed=3000, ways=True),
     "garten": dict(
         rows=3, lines=GARTEN_LINES,
         weights=[[12, 10, 8, 6, 4, 2, 1, 0], [12, 10, 8, 6, 4, 2, 2, 0], [12, 10, 8, 6, 4, 2, 1, 0]],
@@ -149,7 +149,10 @@ def main():
     out = ["// Erzeugt von tool/tune_slots.py. Nicht von Hand aendern."]
     for name, g in GAMES.items():
         strips = build_strips(g)
-        report(name, strips, g)
+        if g.get("ways"):
+            print(f"{name}: zahlt auf Wegen, RTP siehe tool/sim_slots.py")
+        else:
+            report(name, strips, g)
         body = ",\n".join(f"  [{', '.join(map(str, s))}]" for s in strips)
         out.append(f"\nconst List<List<int>> {name}Strips = [\n{body},\n];")
     if len(sys.argv) > 1:

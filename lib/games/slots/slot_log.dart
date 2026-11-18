@@ -5,35 +5,71 @@ import 'slot_games.dart';
 /// Kurzform eines Symbols fürs Protokoll, z. B. „Muschel“ oder „Qualle*“ für den Joker.
 String _sym(SlotGame g, int s) => s == symWild ? '${g.symbolNames[s]}*' : g.symbolNames[s];
 
-/// Eine Drehung als Text: Kopfzeile, Raster Reihe für Reihe, dann jede Gewinnlinie.
-String describeSlotSpin(SlotGame game, SpinResult r, {required int stake, required bool free, int? balance}) {
-  final rules = game.rules;
-  final b = StringBuffer()
-    ..write('${game.name} ${free ? 'Freispiel' : 'Einsatz $stake'}')
-    ..write(' · ${rules.lineCount} Linien à ${stake ~/ rules.lineCount}');
-  if (r.stops.isNotEmpty) b.write(' · Stopps ${r.stops.join('/')}');
-  b.write(' · Gewinn ${r.total}');
-  if (balance != null) b.write(' · Stand $balance');
-  for (var row = 0; row < rules.rows; row++) {
-    b.write('\n  R${row + 1}: ${[for (var reel = 0; reel < rules.reels; reel++) _sym(game, r.grid[reel][row])].join(' | ')}');
-  }
-  for (final w in r.lineWins) {
-    final path = rules.lines[w.line].map((row) => row + 1).join('-');
-    final wilds = [
-      for (var reel = 0; reel < w.count; reel++)
-        if (r.grid[reel][rules.lines[w.line][reel]] == symWild) reel,
-    ].length;
-    b.write('\n  Linie ${w.line + 1} ($path): ${w.count} × ${game.symbolNames[w.symbol]}');
-    if (wilds > 0 && w.symbol != symWild) b.write(' mit $wilds Joker');
-    b.write(' = ${w.payout}');
-  }
-  if (r.scatterCount >= 3) {
-    b.write('\n  ${r.scatterCount} × ${game.symbolNames[symScatter]} = ${r.scatterWin}');
-    if (r.freeSpinsWon > 0) b.write(', ${r.freeSpinsWon} Freispiele');
+String _gridText(SlotGame game, List<List<int>> grid) {
+  final rows = grid.fold(0, (a, c) => c.length > a ? c.length : a);
+  final b = StringBuffer();
+  for (var row = 0; row < rows; row++) {
+    b.write('\n  R${row + 1}: ${[for (final c in grid) row < c.length ? _sym(game, c[row]) : '–'].join(' | ')}');
   }
   return b.toString();
 }
 
-/// Schreibt die Drehung ins Fehlerprotokoll (Bereich „slots“).
-void logSlotSpin(SlotGame game, SpinResult r, {required int stake, required bool free, int? balance}) =>
-    debugLog.info('slots', describeSlotSpin(game, r, stake: stake, free: free, balance: balance));
+String _winText(SlotGame game, SlotRules rules, List<List<int>> grid, LineWin w) {
+  final wilds = [for (final (r, row) in w.cells) if (grid[r][row] == symWild) 1].length;
+  final head = w.line >= 0
+      ? 'Linie ${w.line + 1} (${rules.lines[w.line].map((row) => row + 1).join('-')})'
+      : 'Wege ab Walze ${w.start + 1}';
+  final b = StringBuffer('\n  $head: ${w.count} × ${game.symbolNames[w.symbol]}');
+  if (w.line < 0) b.write(', ${w.ways} ${w.ways == 1 ? 'Weg' : 'Wege'}');
+  if (wilds > 0 && w.symbol != symWild) b.write(' mit $wilds Joker');
+  b.write(' = ${w.payout}');
+  return b.toString();
+}
+
+/// Eine vollständige Drehung (mit Kaskaden, Hold & Spin, Glücksrad) als Text.
+String describeSlotOutcome(SlotGame game, SpinOutcome o, {required int stake, required bool free, int? balance}) {
+  final rules = game.rules;
+  final b = StringBuffer('${game.name} ${free ? 'Freispiel' : 'Einsatz $stake'}');
+  if (rules.mode == PayMode.lines) {
+    b.write(' · ${rules.lineCount} Linien à ${stake ~/ rules.lineCount}');
+  } else {
+    b.write(' · Wege${rules.waysAnywhere ? ' überall' : ''}');
+  }
+  if (rules.heights != null) b.write(' · Höhen ${o.heights.join('/')}');
+  if (o.stops.isNotEmpty) b.write(' · Stopps ${o.stops.join('/')}');
+  b.write(' · Gewinn ${o.total}');
+  if (balance != null) b.write(' · Stand $balance');
+  for (var i = 0; i < o.steps.length; i++) {
+    final s = o.steps[i];
+    if (i > 0) b.write('\n  Kaskade ${i + 1} ×${s.multiplier}:');
+    b.write(_gridText(game, s.grid));
+    if (i == 0 && o.coins.isNotEmpty) {
+      b.write('\n  Münzen: ${[for (final v in o.coins.values) coinText(rules, v, stake)].join(', ')}');
+    }
+    for (final w in s.wins) {
+      b.write(_winText(game, rules, s.grid, w));
+    }
+  }
+  if (o.scatterCount >= 3) {
+    b.write('\n  ${o.scatterCount} × ${game.symbolNames[symScatter]} = ${o.scatterWin}');
+  }
+  final wheel = o.wheel;
+  if (wheel != null) b.write('\n  Glücksrad: ${wheel.segment.label}${wheel.win > 0 ? ' = ${wheel.win}' : ''}');
+  if (o.freeSpinsWon > 0) b.write('\n  ${o.freeSpinsWon} Freispiele');
+  final h = o.holdSpin;
+  if (h != null) {
+    b.write('\n  Hold & Spin: ${h.boards.first.length} Startmünzen, ${h.boards.length - 1} Respins, '
+        '${h.boards.last.length} Münzen${h.full ? ', GRAND' : ''} = ${h.total}');
+  }
+  return b.toString();
+}
+
+/// Münzwert als Text: Jackpot-Name oder Betrag.
+String coinText(SlotRules rules, int tenths, int stake) {
+  final j = rules.holdSpin?.jackpots[tenths];
+  final v = tenths * stake ~/ 10;
+  return j == null ? '$v' : '$j $v';
+}
+
+void logSlotOutcome(SlotGame game, SpinOutcome o, {required int stake, required bool free, int? balance}) =>
+    debugLog.info('slots', describeSlotOutcome(game, o, stake: stake, free: free, balance: balance));

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'drachen_art.dart';
 import 'garten_art.dart';
+import 'jahrmarkt_art.dart';
 import 'kosmos_art.dart';
+import 'mine_art.dart';
 import 'slot_data.dart';
+import 'slot_data_neu.dart';
 import 'slot_engine.dart';
 import 'tiefsee_art.dart';
 
@@ -50,29 +54,6 @@ const _lines10 = <List<int>>[
   [1, 0, 0, 0, 1],
   [1, 2, 2, 2, 1],
   [1, 0, 1, 2, 1],
-];
-
-const _lines20 = <List<int>>[
-  [1, 1, 1, 1, 1],
-  [2, 2, 2, 2, 2],
-  [0, 0, 0, 0, 0],
-  [3, 3, 3, 3, 3],
-  [0, 1, 2, 1, 0],
-  [3, 2, 1, 2, 3],
-  [1, 2, 3, 2, 1],
-  [2, 1, 0, 1, 2],
-  [0, 1, 0, 1, 0],
-  [3, 2, 3, 2, 3],
-  [1, 0, 1, 0, 1],
-  [2, 3, 2, 3, 2],
-  [0, 0, 1, 2, 3],
-  [3, 3, 2, 1, 0],
-  [1, 1, 2, 3, 3],
-  [2, 2, 1, 0, 0],
-  [0, 1, 1, 1, 0],
-  [3, 2, 2, 2, 3],
-  [1, 2, 2, 2, 1],
-  [2, 1, 1, 1, 2],
 ];
 
 const _lines5 = <List<int>>[
@@ -133,25 +114,27 @@ const kosmos78 = SlotGame(
 
 const tiefsee = SlotGame(
   name: 'Tiefsee',
-  blurb: 'Vier Reihen und leuchtende Quallen',
+  blurb: 'Vier Reihen, 1024 Wege, Gewinne überall',
   rules: SlotRules(
     rows: 4,
-    lines: _lines20,
+    mode: PayMode.ways,
+    waysAnywhere: true,
+    waysDivisor: 100,
     strips: tiefseeStrips,
+    // Abgestimmt mit tool/sim_slots.py auf rund 95 % Auszahlung
     linePays: {
-      0: [5, 10, 25],
-      1: [5, 15, 40],
-      2: [8, 20, 60],
-      3: [10, 30, 100],
-      4: [15, 60, 200],
-      5: [25, 100, 500],
-      6: [30, 150, 750],
+      0: [1, 3, 8],
+      1: [1, 4, 12],
+      2: [2, 6, 17],
+      3: [3, 10, 30],
+      4: [5, 17, 60],
+      5: [8, 30, 150],
     },
     scatterPays: [2, 6, 25],
     freeSpins: 10,
     expandWildInFree: true,
   ),
-  stakes: [20, 40, 100, 200, 400, 1000],
+  stakes: [100, 200, 300, 500, 1000, 2000],
   symbolNames: [
     'Seestern',
     'Muschel',
@@ -224,4 +207,156 @@ const schrebergarten = SlotGame(
       'Der Gartenzwerg ersetzt jedes Symbol. Jeder Zwerg in einer Gewinnlinie verdoppelt ihren Gewinn.',
 );
 
-const allSlots = [kosmos78, tiefsee, schrebergarten];
+const _holdCoins = HoldSpinRules(
+  trigger: 6,
+  respins: 3,
+  landChance: 0.03,
+  values: [5, 10, 15, 20, 25, 50, 100, 200, 500, 2000],
+  weights: [300, 250, 180, 120, 80, 40, 15, 8, 3, 1],
+  jackpots: {200: 'Mini', 500: 'Minor', 2000: 'Major'},
+  grand: 10000,
+);
+
+// Die Beträge der drei folgenden Slots sind mit tool/tune_new_slots.py auf rund 95 % abgestimmt.
+
+const edelsteinmine = SlotGame(
+  name: 'Edelsteinmine',
+  blurb: '243 Wege, Kaskaden bis ×10',
+  rules: SlotRules(
+    rows: 3,
+    mode: PayMode.ways,
+    waysDivisor: 100,
+    strips: mineStrips,
+    linePays: {
+      0: [3, 5, 14],
+      1: [3, 8, 16],
+      2: [5, 11, 22],
+      3: [5, 14, 27],
+      4: [8, 22, 54],
+      5: [14, 32, 108],
+    },
+    cascade: [1, 2, 3, 5],
+    freeCascade: [2, 4, 6, 10],
+    scatterPays: [2, 5, 20],
+    freeSpins: 10,
+  ),
+  stakes: [100, 200, 300, 500, 1000, 2000],
+  symbolNames: ['Quarz', 'Amethyst', 'Topas', 'Smaragd', 'Saphir', 'Rubin', 'Diamant', 'Grubenlampe', '', ''],
+  paintSymbol: paintMineSymbol,
+  paintBackdrop: paintMineBackdrop,
+  background: BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF4E342E), Color(0xFF2B1B14), Color(0xFF120C09)],
+    ),
+  ),
+  frame: [Color(0xFFFFD180), Color(0xFF8D6E63), Color(0xFF3E2723)],
+  lobbyColor: Color(0xFF3E2723),
+  featureText:
+      'Drei oder mehr Grubenlampen zahlen das 2-, 5- oder 20-Fache des Einsatzes und starten 10 Freispiele. In Freispielen steigen die Kaskaden bis ×10.',
+  wildText: 'Der Diamant ersetzt jeden Edelstein, aber nicht die Grubenlampe.',
+  freeSpinLine: 'Freispiel, Kaskaden ab ×2',
+);
+
+const drachenhort = SlotGame(
+  name: 'Drachenhort',
+  blurb: 'Hold & Spin mit vier Jackpots',
+  rules: SlotRules(
+    rows: 3,
+    mode: PayMode.ways,
+    waysAnywhere: true,
+    waysDivisor: 50,
+    strips: drachenStrips,
+    linePays: {
+      0: [6, 16, 40],
+      1: [8, 20, 50],
+      2: [10, 25, 65],
+      3: [14, 33, 85],
+      4: [20, 50, 170],
+      5: [33, 85, 340],
+    },
+    holdSpin: _holdCoins,
+  ),
+  stakes: [50, 100, 200, 500, 1000, 2000],
+  symbolNames: ['Schriftrolle', 'Kelch', 'Schwert', 'Schild', 'Krone', 'Drache', 'Drachenei', '', 'Goldmünzen', ''],
+  paintSymbol: paintDrachenSymbol,
+  paintBackdrop: paintDrachenBackdrop,
+  background: BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF4A148C), Color(0xFF2A0F2E), Color(0xFF12040F)],
+    ),
+  ),
+  frame: [Color(0xFFFFE082), Color(0xFFB8860B), Color(0xFF4A148C)],
+  lobbyColor: Color(0xFF2A0F2E),
+  featureText:
+      'Sechs oder mehr Goldmünzen starten Hold & Spin. Gewinne zählen überall: drei oder mehr nebeneinanderliegende Walzen, egal in welcher Reihe.',
+  wildText: 'Das Drachenei ersetzt jedes Symbol außer der Goldmünze.',
+);
+
+const jahrmarkt = SlotGame(
+  name: 'Jahrmarkt',
+  blurb: 'Glücksrad mit Freispielen und Münzregen',
+  rules: SlotRules(
+    rows: 3,
+    mode: PayMode.ways,
+    waysAnywhere: true,
+    waysDivisor: 50,
+    strips: jahrmarktStrips,
+    linePays: {
+      0: [3, 9, 22],
+      1: [4, 11, 27],
+      2: [5, 13, 32],
+      3: [7, 16, 43],
+      4: [11, 27, 86],
+      5: [16, 43, 160],
+    },
+    expandWildInFree: true,
+    holdSpin: _holdCoins,
+    wheel: WheelRules(
+      segments: [
+        WheelSegment(WheelKind.coins, 5, 6),
+        WheelSegment(WheelKind.coins, 10, 5),
+        WheelSegment(WheelKind.coins, 15, 4),
+        WheelSegment(WheelKind.freeSpins, 8, 4),
+        WheelSegment(WheelKind.coins, 25, 3),
+        WheelSegment(WheelKind.holdSpin, 6, 3),
+        WheelSegment(WheelKind.coins, 50, 1),
+        WheelSegment(WheelKind.freeSpins, 12, 2),
+      ],
+    ),
+  ),
+  stakes: [50, 100, 200, 500, 1000, 2000],
+  symbolNames: [
+    'Popcorn',
+    'Lebkuchenherz',
+    'Zuckerwatte',
+    'Luftballon',
+    'Karussellpferd',
+    'Riesenrad',
+    'Glücksstern',
+    '',
+    'Münzen',
+    'Glücksräder',
+  ],
+  paintSymbol: paintJahrmarktSymbol,
+  paintBackdrop: paintJahrmarktBackdrop,
+  background: BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF311B92), Color(0xFF4A148C), Color(0xFF1A0B2E)],
+    ),
+  ),
+  frame: [Color(0xFFFF80AB), Color(0xFFFFD54F), Color(0xFF7C4DFF)],
+  lobbyColor: Color(0xFF3B1E5E),
+  featureText:
+      'Drei Glücksräder auf den Walzen 1, 3 und 5 drehen das Glücksrad: Münzgewinne, Freispiele oder Hold & Spin. '
+      'In Freispielen füllt ein Glücksstern auf den drei mittleren Walzen die ganze Walze.',
+  wildText: 'Der Glücksstern ersetzt jedes Symbol außer dem Glücksrad.',
+  freeSpinLine: 'Freispiel, Sterne füllen die Walze',
+);
+
+const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt];

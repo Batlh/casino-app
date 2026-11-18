@@ -41,6 +41,7 @@ import '../games/roulette/roulette_screen.dart';
 import '../games/sicbo/sicbo_screen.dart';
 import '../games/skat/skat_screen.dart';
 import '../games/slots/kosmos_art.dart';
+import '../games/slots/slot_engine.dart';
 import '../games/slots/slot_games.dart';
 import '../games/slots/slot_screen.dart';
 import '../games/slots/tiefsee_art.dart';
@@ -123,6 +124,27 @@ class _LobbyScreenState extends State<LobbyScreen> {
         schrebergarten.lobbyColor,
         _GartenArt.new,
         () => _open(const SlotScreen(game: schrebergarten)),
+      ),
+      _Game(
+        edelsteinmine.name,
+        edelsteinmine.blurb,
+        edelsteinmine.lobbyColor,
+        () => _SlotArt(edelsteinmine, 5, 6),
+        () => _open(const SlotScreen(game: edelsteinmine)),
+      ),
+      _Game(
+        drachenhort.name,
+        drachenhort.blurb,
+        drachenhort.lobbyColor,
+        () => _SlotArt(drachenhort, 5, symCoin),
+        () => _open(const SlotScreen(game: drachenhort)),
+      ),
+      _Game(
+        jahrmarkt.name,
+        jahrmarkt.blurb,
+        jahrmarkt.lobbyColor,
+        () => _SlotArt(jahrmarkt, 5, symBonus),
+        () => _open(const SlotScreen(game: jahrmarkt)),
       ),
       _Game(
         "Texas Hold'em",
@@ -1535,6 +1557,26 @@ class _TiefseeArt extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Lobbybild eines Slots: Hintergrund und zwei Symbole.
+class _SlotArt extends CustomPainter {
+  _SlotArt(this.game, this.big, this.small);
+  final SlotGame game;
+  final int big;
+  final int small;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    game.paintBackdrop(canvas, Offset.zero & size, 0.3);
+    final s = math.min(size.width, size.height) * 0.7;
+    final c = size.center(Offset.zero);
+    game.paintSymbol(canvas, Rect.fromCenter(center: c.translate(s * 0.34, s * 0.08), width: s, height: s), big);
+    game.paintSymbol(canvas, Rect.fromCenter(center: c.translate(-s * 0.38, -s * 0.08), width: s * 0.8, height: s * 0.8), small);
+  }
+
+  @override
+  bool shouldRepaint(_SlotArt old) => false;
 }
 
 class _GartenArt extends CustomPainter {

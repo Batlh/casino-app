@@ -23,11 +23,13 @@ void main() {
         expect(line.every((row) => row >= 0 && row < r.rows), isTrue, reason: g.name);
       }
       for (final stake in g.stakes) {
-        expect(stake % r.lineCount, 0, reason: '${g.name} Einsatz $stake');
+        expect(stake % r.betDivisor, 0, reason: '${g.name} Einsatz $stake');
+        if (r.holdSpin != null) expect(stake % 10, 0, reason: '${g.name} Münzen in Zehnteln');
       }
+      expect(g.symbolNames.length, greaterThanOrEqualTo(8), reason: g.name);
       for (final strip in r.strips) {
         for (final sym in strip) {
-          expect(sym == symScatter || r.linePays.containsKey(sym), isTrue);
+          expect(sym == symScatter || sym == symCoin || sym == symBonus || r.linePays.containsKey(sym) || sym == symWild, isTrue);
         }
       }
     }
@@ -88,12 +90,12 @@ void main() {
       var paid = 0;
       var free = 0;
       for (var i = 0; i < spins; i++) {
-        var r = engine.spin(stake);
+        var r = engine.play(stake);
         paid += r.total;
         free += r.freeSpinsWon;
         while (free > 0) {
           free--;
-          r = engine.spin(stake, free: true);
+          r = engine.play(stake, free: true);
           paid += r.total;
           free += r.freeSpinsWon;
         }
@@ -104,4 +106,99 @@ void main() {
       expect(rtp, inInclusiveRange(0.90, 1.0), reason: 'RTP war $rtp');
     });
   }
+
+  test('Alte Slots: play() zahlt genau wie spin()', () {
+    for (final g in [kosmos78, schrebergarten]) {
+      final a = SlotEngine(g.rules, rng: Random(9));
+      final b = SlotEngine(g.rules, rng: Random(9));
+      for (var i = 0; i < 2000; i++) {
+        final free = i % 7 == 0;
+        expect(a.play(g.stakes[2], free: free).total, b.spin(g.stakes[2], free: free).total, reason: '${g.name} Dreh $i');
+      }
+    }
+  });
+
+  test('Wege überall: Mitte zählt, Zickzack zählt, Joker ersetzt', () {
+    final e = SlotEngine(tiefsee.rules);
+    // Walze 1 ohne Seestern, Walzen 2–4 je ein Seestern in verschiedenen Reihen
+    final grid = [
+      [1, 2, 3, 4],
+      [0, 2, 3, 4],
+      [3, 0, 2, 4],
+      [2, 3, 0, 4],
+      [1, 2, 3, 5],
+    ];
+    final wins = e.winsOf(grid, 100, 1);
+    final star = wins.where((w) => w.symbol == 0).single;
+    expect(star.start, 1);
+    expect(star.count, 3);
+    expect(star.ways, 1);
+    expect(star.payout, tiefsee.rules.linePays[0]![0] * 100 ~/ 100);
+    // Krake auf allen vier ersten Walzen, Joker auf Walze 3 doppelt
+    final g2 = [
+      [4, 0, 1, 2],
+      [4, 1, 2, 3],
+      [w, 4, 1, 2],
+      [4, 4, 2, 3],
+      [0, 1, 2, 3],
+    ];
+    final kraken = e.winsOf(g2, 100, 1).where((x) => x.symbol == 4).single;
+    expect(kraken.count, 4);
+    expect(kraken.ways, 1 * 1 * 2 * 2);
+  });
+
+  test('Kaskaden: Gewinn verschwindet, Neues fällt nach, Multiplikator steigt', () {
+    final e = SlotEngine(edelsteinmine.rules, rng: Random(3));
+    var seen = false;
+    for (var i = 0; i < 3000 && !seen; i++) {
+      final o = e.play(100);
+      if (o.steps.length < 3) continue;
+      seen = true;
+      expect(o.steps[1].multiplier, 2);
+      expect(o.steps[2].multiplier, 3);
+      expect(o.steps[1].falls, isNotNull);
+      // Jede Walze behält ihre Höhe
+      for (final s in o.steps) {
+        expect(s.grid.every((c) => c.length == 3), isTrue);
+      }
+      expect(o.total, o.reelWin + o.scatterWin);
+    }
+    expect(seen, isTrue);
+  });
+
+  test('Hold & Spin: Münzen bleiben, Respins setzen zurück, Summe stimmt', () {
+    final e = SlotEngine(drachenhort.rules, rng: Random(5));
+    final start = {for (var c = 0; c < 6; c++) c: 10};
+    final h = e.runHoldSpin(start, 100);
+    for (var i = 1; i < h.boards.length; i++) {
+      expect(h.boards[i].keys.toSet().containsAll(h.boards[i - 1].keys), isTrue);
+      final grew = h.boards[i].length > h.boards[i - 1].length;
+      expect(h.respinsLeft[i], grew ? 3 : h.respinsLeft[i - 1] - 1);
+    }
+    expect(h.respinsLeft.last == 0 || h.full, isTrue);
+    final sum = h.boards.last.values.fold(0, (a, b) => a + b) + (h.full ? drachenhort.rules.holdSpin!.grand : 0);
+    expect(h.total, sum * 100 ~/ 10);
+  });
+
+  test('Glücksrad: drei Bonus-Symbole drehen das Rad', () {
+    final e = SlotEngine(jahrmarkt.rules, rng: Random(2));
+    final grid = [
+      [symBonus, 0, 1],
+      [1, 2, 3],
+      [2, symBonus, 4],
+      [3, 4, 5],
+      [4, 5, symBonus],
+    ];
+    final o = e.playGrid(grid, 100);
+    expect(o.bonusCount, 3);
+    final wheel = o.wheel!;
+    switch (wheel.segment.kind) {
+      case WheelKind.coins:
+        expect(wheel.win, wheel.segment.amount * 100);
+      case WheelKind.freeSpins:
+        expect(o.freeSpinsWon, wheel.segment.amount);
+      case WheelKind.holdSpin:
+        expect(o.holdSpin, isNotNull);
+    }
+  });
 }
