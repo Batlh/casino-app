@@ -143,9 +143,6 @@ def play(g, rng, stake, free=False):
             for row, x in enumerate(grid[r]):
                 if x == WILD:
                     held.add((r, row))
-    flat = [x for c in grid for x in c]
-    scatters = flat.count(SCATTER)
-    bonus = flat.count(BONUS)
     coins = {}
     if g.get("hold"):
         for r in range(reels):
@@ -178,6 +175,10 @@ def play(g, rng, stake, free=False):
             nxt.append(fresh + kept)
         shown = expand(g, nxt, free)
     info["steps"] = steps
+    # Wie SlotEngine: Streu- und Bonussymbole am Ende der Kaskaden zählen
+    flat = [x for c in shown for x in c]
+    scatters = flat.count(SCATTER)
+    bonus = flat.count(BONUS)
     freewon = 0
     if g.get("scatter") and scatters >= 3:
         i = min(scatters - 3, len(g["scatter"]) - 1)

@@ -485,9 +485,6 @@ class SlotEngine {
   SpinOutcome playGrid(List<List<int>> grid, int stake, {bool free = false, List<int> stops = const []}) {
     final reels = rules.reels;
     final heights = [for (final c in grid) c.length];
-    final flat = grid.expand((c) => c);
-    final scatters = flat.where((s) => s == symScatter).length;
-    final bonus = flat.where((s) => s == symBonus).length;
     final coins = <int, int>{};
     if (rules.holdSpin != null) {
       for (var r = 0; r < reels; r++) {
@@ -542,6 +539,11 @@ class SlotEngine {
     }
 
     var total = steps.fold(0, (a, s) => a + s.win);
+    // Streu- und Bonussymbole verschwinden in Kaskaden nie, es können nur neue nachfallen.
+    // Gezählt wird darum am Ende, was zuletzt zu sehen ist.
+    final last = steps.last.grid.expand((c) => c);
+    final scatters = last.where((s) => s == symScatter).length;
+    final bonus = last.where((s) => s == symBonus).length;
     var scatterWin = 0;
     var freeWon = 0;
     if (rules.hasScatter && scatters >= 3) {
