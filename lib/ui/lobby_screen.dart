@@ -31,6 +31,7 @@ import '../games/shogi/shogi_engine.dart';
 import '../games/shogi/shogi_screen.dart';
 import '../games/craps/craps_screen.dart';
 import '../games/eins/eins_card.dart';
+import '../games/ente/ente_screen.dart';
 import '../games/eins/eins_engine.dart';
 import '../games/eins/eins_screen.dart';
 import '../games/hearts/hearts_screen.dart';
@@ -249,6 +250,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF8E2A5A),
         _BingoArt.new,
         () => _open(const BingoScreen()),
+      ),
+      _Game(
+        'Entchen angeln',
+        'Jahrmarkt: Entchen aus dem Becken angeln',
+        const Color(0xFF0277BD),
+        _EntenArt.new,
+        () => _open(const EntenScreen()),
       ),
       _Game(
         'Rubbellose',
@@ -933,6 +941,24 @@ class _BingoArt extends CustomPainter {
       textDirection: TextDirection.ltr,
     )..layout();
     tp.paint(canvas, b - Offset(tp.width / 2, tp.height / 2));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _EntenArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pond = Rect.fromCenter(center: size.center(Offset.zero).translate(0, 8), width: size.width * 0.8, height: size.height * 0.5);
+    canvas.drawOval(pond, Paint()..color = const Color(0xFF4FC3F7));
+    final w = size.shortestSide * 0.26;
+    for (final (dx, dy) in [(-0.22, 0.02), (0.0, -0.05), (0.22, 0.03)]) {
+      final c = pond.center.translate(size.width * dx, size.height * dy);
+      canvas.drawOval(Rect.fromCenter(center: c, width: w, height: w * 0.6), Paint()..color = const Color(0xFFFBC02D));
+      canvas.drawCircle(c.translate(w * 0.28, -w * 0.3), w * 0.22, Paint()..color = const Color(0xFFFFEE58));
+      canvas.drawCircle(c.translate(w * 0.34, -w * 0.33), w * 0.04, Paint()..color = const Color(0xFF241410));
+    }
   }
 
   @override

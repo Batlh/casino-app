@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gluckspfennig/games/ente/ente_screen.dart';
 import 'package:gluckspfennig/games/lose/lose_engine.dart';
 
 void main() {
@@ -74,5 +75,10 @@ void main() {
       }
       expect(wins / n, closeTo(winChance(s.table), 0.02), reason: s.name);
     }
+  });
+
+  test('Entchen angeln: Quote rund 70 %', () {
+    final q = entenGewinne.fold(0.0, (a, p) => a + p.amount / p.oneIn);
+    expect(q, closeTo(0.695, 0.01));
   });
 }
