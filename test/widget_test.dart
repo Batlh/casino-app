@@ -70,6 +70,8 @@ void main() {
         SlotScreen(game: drachenhort),
         SlotScreen(game: jahrmarkt),
         SlotScreen(game: vulkaninsel),
+        SlotScreen(game: sakura),
+        SlotScreen(game: jadetempel),
         HoldemScreen(),
         HoldemScreen(draw: true),
         PachinkoScreen(),
