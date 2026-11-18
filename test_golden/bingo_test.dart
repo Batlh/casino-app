@@ -40,8 +40,8 @@ void main() {
       await tester.runAsync(loadFonts);
       await start(tester, size);
       await snap('bingo_einstellungen_$name');
-      await tester.ensureVisible(find.textContaining('Spielen:'));
-      await tester.tap(find.textContaining('Spielen:'));
+      await tester.ensureVisible(find.textContaining('Allein spielen:'));
+      await tester.tap(find.textContaining('Allein spielen:'));
       await tester.pump();
       await balls(tester, 25);
       await snap('bingo75_mitte_$name');
@@ -52,8 +52,8 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('90 Kugeln (UK)'));
       await tester.pump();
-      await tester.ensureVisible(find.textContaining('Spielen:'));
-      await tester.tap(find.textContaining('Spielen:'));
+      await tester.ensureVisible(find.textContaining('Allein spielen:'));
+      await tester.tap(find.textContaining('Allein spielen:'));
       await tester.pump();
       await balls(tester, 35);
       await snap('bingo90_mitte_$name');
