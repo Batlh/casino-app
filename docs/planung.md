@@ -1,6 +1,6 @@
 # Planung
 
-Ideen und offene Vorhaben, Stand 18.11.2026. Reihenfolge ist noch offen. Erledigt: Glücksrad, Entchen angeln.
+Ideen und offene Vorhaben, Stand 18.11.2026. Reihenfolge ist noch offen. Erledigt: Glücksrad, Entchen angeln, Fruchtlawine, Mega-Slot (Pharaonengold).
 
 ## Neue Spiele
 
