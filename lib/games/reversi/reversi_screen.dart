@@ -8,6 +8,7 @@ import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_duel_mixin.dart';
 import '../../ui/tap_catcher.dart';
 import '../../ui/widgets.dart';
 import '../board/seats.dart';
@@ -46,7 +47,7 @@ class ReversiScreen extends StatefulWidget {
   State<ReversiScreen> createState() => _ReversiScreenState();
 }
 
-class _ReversiScreenState extends State<ReversiScreen> {
+class _ReversiScreenState extends State<ReversiScreen> with NetDuelScreen {
   static const _saveId = 'reversi';
   late final Settings _store;
   ReversiGame? _g;
@@ -90,10 +91,44 @@ class _ReversiScreenState extends State<ReversiScreen> {
   void dispose() {
     _token++;
     _persist();
+    duelDispose();
     super.dispose();
   }
 
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get duelGame => 'reversi';
+  @override
+  String get duelTitle => 'Reversi';
+  @override
+  List<String> get duelSides => const ['Schwarz', 'Weiß'];
+
+  @override
+  void duelStart(List<String> names, int mySeat) {
+    _token++;
+    setState(() {
+      _seats = [Seat(names[0], human: mySeat == 0), Seat(names[1], human: mySeat == 1)];
+      _g = ReversiGame();
+      _paid = true;
+      _busy = false;
+      _msg = '${names[0]} (Schwarz) beginnt';
+    });
+  }
+
+  @override
+  bool duelApply(Object? move) {
+    final g = _g;
+    if (g == null || g.over || move is! int || !g.moves().contains(move)) return false;
+    _play(move, remote: true);
+    return true;
+  }
+
+  @override
+  void duelClosed() => _newGame();
+
   void _persist() {
+    if (duelActive) return;
     final g = _g;
     if (g == null || g.over) {
       _store.clearGame(_saveId);
@@ -158,10 +193,11 @@ class _ReversiScreenState extends State<ReversiScreen> {
     _play(r * 8 + c);
   }
 
-  void _play(int i) {
+  void _play(int i, {bool remote = false}) {
     final g = _g!;
     final who = g.current;
     if (!g.play(i)) return;
+    if (!remote) duelSendMove(i);
     AppScope.of(context).sfx.play(Sound.chip);
     var text = '${_seats[_seatOf(g.current)].name} ist dran';
     if (g.passed) text = '${_seats[_seatOf(3 - g.current)].name} kann nicht ziehen und passt. ${_seats[_seatOf(g.current)].name} ist nochmal dran';
@@ -178,7 +214,7 @@ class _ReversiScreenState extends State<ReversiScreen> {
     final sfx = AppScope.of(context).sfx;
     if (w == 0) return 'Unentschieden, $b zu $wh';
     final seat = _seatOf(w);
-    final reward = seatReward(_seats, seat, reversiRewards[_level]);
+    final reward = duelPlaying ? 0 : seatReward(_seats, seat, reversiRewards[_level]);
     if (reward > 0 && !_paid) {
       _paid = true;
       AppScope.of(context).wallet.credit(reward);
@@ -189,7 +225,7 @@ class _ReversiScreenState extends State<ReversiScreen> {
 
   Future<void> _botTurn() async {
     final g = _g;
-    if (g == null || g.over || _seats[_seatOf(g.current)].human) return;
+    if (g == null || g.over || _seats[_seatOf(g.current)].human || duelRemote(_seatOf(g.current))) return;
     final token = ++_token;
     setState(() => _busy = true);
     await Future<void>.delayed(_store.botDelay(600));
@@ -203,10 +239,12 @@ class _ReversiScreenState extends State<ReversiScreen> {
   Widget build(BuildContext context) {
     final g = _g;
     final p = Palette.of(context);
+    final net = duelScreen();
     return GameFrame(
       title: 'Reversi',
       guide: reversiGuide,
-      child: g == null
+      actions: duelActions(context),
+      child: net ?? (g == null
           ? const SizedBox.shrink()
           : Column(
               children: [
@@ -253,10 +291,17 @@ class _ReversiScreenState extends State<ReversiScreen> {
                 ResultBanner(text: _msg, highlight: g.over, maxLines: 2),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 2, 8, 8),
-                  child: ActionButton(primary: g.over, label: 'Neues Spiel', onPressed: _newGame),
+                  child: Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
+                    if (duelPlaying)
+                      ...duelButtons(over: g.over)
+                    else ...[
+                      ActionButton(primary: g.over, label: 'Neues Spiel', onPressed: _newGame),
+                      if (g.over || MediaQuery.sizeOf(context).width < 420) ActionButton(label: 'Im Netzwerk', onPressed: duelOpenPanel),
+                    ],
+                  ]),
                 ),
               ],
-            ),
+            )),
     );
   }
 }
