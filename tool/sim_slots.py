@@ -132,6 +132,17 @@ def play(g, rng, stake, free=False):
         s = rng.randrange(len(st))
         stops.append(s)
         grid.append([st[(s + row) % len(st)] for row in range(h)])
+    if not free:
+        g["_sticky"] = set()
+    elif g.get("sticky"):
+        held = g.setdefault("_sticky", set())
+        for r, row in held:
+            if row < len(grid[r]):
+                grid[r][row] = WILD
+        for r in range(reels):
+            for row, x in enumerate(grid[r]):
+                if x == WILD:
+                    held.add((r, row))
     flat = [x for c in grid for x in c]
     scatters = flat.count(SCATTER)
     bonus = flat.count(BONUS)

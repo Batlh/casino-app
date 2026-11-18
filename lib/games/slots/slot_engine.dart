@@ -91,7 +91,11 @@ class SlotRules {
     this.freeCascade = const [],
     this.holdSpin,
     this.wheel,
+    this.stickyWildsInFree = false,
   });
+
+  /// In Freispielen bleiben gelandete Joker bis zum Ende der Freispielserie liegen.
+  final bool stickyWildsInFree;
 
   /// Reihen; bei wechselnder Höhe (heights) die größte.
   final int rows;
@@ -308,6 +312,9 @@ class SlotEngine {
   final SlotRules rules;
   final Random _rng;
 
+  /// Felder (Walze, Reihe) mit liegenbleibenden Jokern der laufenden Freispielserie.
+  final Set<(int, int)> stickyWilds = {};
+
   /// stake: Gesamteinsatz, durch die Linienzahl teilbar.
   SpinResult spin(int stake, {bool free = false}) {
     final grid = <List<int>>[];
@@ -457,6 +464,19 @@ class SlotEngine {
       heights.add(h);
       stops.add(stop);
       grid.add([for (var row = 0; row < h; row++) strip[(stop + row) % strip.length]]);
+    }
+    if (!free) {
+      stickyWilds.clear();
+    } else if (rules.stickyWildsInFree) {
+      // Liegende Joker übernehmen, neue Joker kommen dazu
+      for (final (r, row) in stickyWilds) {
+        if (row < grid[r].length) grid[r][row] = symWild;
+      }
+      for (var r = 0; r < grid.length; r++) {
+        for (var row = 0; row < grid[r].length; row++) {
+          if (grid[r][row] == symWild) stickyWilds.add((r, row));
+        }
+      }
     }
     return playGrid(grid, stake, free: free, stops: stops);
   }

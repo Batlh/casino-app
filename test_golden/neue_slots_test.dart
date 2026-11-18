@@ -15,8 +15,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens_test.dart' show loadFonts;
 
-final _games = [tiefsee, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel];
-const _ids = ['tiefsee', 'mine', 'drachen', 'jahrmarkt', 'vulkan'];
+final _games = [tiefsee, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel];
+const _ids = ['tiefsee', 'mine', 'drachen', 'jahrmarkt', 'vulkan', 'sakura', 'jade'];
 
 class _Sheet extends CustomPainter {
   @override
@@ -77,11 +77,11 @@ void main() {
   }
 
   testWidgets('Symbole neue Slots', (tester) async {
-    tester.view.physicalSize = const Size(1600, 800);
+    tester.view.physicalSize = const Size(1600, 1120);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.runAsync(loadFonts);
-    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1600, 800), painter: _Sheet()))));
+    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1600, 1120), painter: _Sheet()))));
     await expectLater(find.byType(RepaintBoundary).first, matchesGoldenFile('goldens/symbole_neu.png'));
   });
 
@@ -127,6 +127,48 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1100));
     await tester.pump(const Duration(milliseconds: 500));
     await snap('vulkan_kaskade_2');
+    await finish(tester);
+  });
+
+  testWidgets('Sakura: Freispiele mit liegenden Kirschblüten', (tester) async {
+    await tester.runAsync(loadFonts);
+    // Erste Drehung startet Freispiele, nach zwei Freispielen liegen mindestens zwei Kirschblüten
+    final stake = sakura.stakes[2];
+    int pauseAfter(SpinOutcome o) => max(2000, min(o.steps.last.wins.length * 1500, 15000));
+    var seed = 1;
+    late int p1, p2;
+    for (;; seed++) {
+      final e = SlotEngine(sakura.rules, rng: Random(seed));
+      final o = e.play(stake);
+      if (o.freeSpinsWon == 0) continue;
+      final f1 = e.play(stake, free: true);
+      e.play(stake, free: true);
+      if (e.stickyWilds.length < 2) continue;
+      p1 = pauseAfter(o);
+      p2 = pauseAfter(f1);
+      break;
+    }
+    await start(tester, SlotScreen(game: sakura, seed: seed));
+    await spin(tester);
+    await snap('sakura_ausloeser');
+    // Pause nach dem Auslöser, dann dreht Freispiel 1
+    await tester.pump(Duration(milliseconds: p1));
+    await tester.pump(const Duration(milliseconds: 2300));
+    await snap('sakura_freispiel_1');
+    await tester.pump(Duration(milliseconds: p2 + 2100));
+    await snap('sakura_freispiel_2');
+    await finish(tester);
+  });
+
+  testWidgets('Jadetempel: Glücksmünzen', (tester) async {
+    await tester.runAsync(loadFonts);
+    final seed = _seedFor(jadetempel, (o) => o.holdSpin != null && o.holdSpin!.boards.length >= 3);
+    await start(tester, SlotScreen(game: jadetempel, seed: seed));
+    await spin(tester);
+    await snap('jade_muenzen');
+    await tester.pump(const Duration(milliseconds: 1300));
+    await tester.pump(const Duration(milliseconds: 1500));
+    await snap('jade_hold');
     await finish(tester);
   });
 

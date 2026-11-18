@@ -4,9 +4,11 @@ import 'drachen_art.dart';
 import 'garten_art.dart';
 import 'jahrmarkt_art.dart';
 import 'kosmos_art.dart';
+import 'jade_art.dart';
 import 'mine_art.dart';
 import 'slot_data.dart';
 import 'slot_data_neu.dart';
+import 'sakura_art.dart';
 import 'slot_engine.dart';
 import 'tiefsee_art.dart';
 import 'vulkan_art.dart';
@@ -404,4 +406,92 @@ const vulkaninsel = SlotGame(
   freeSpinLine: 'Freispiel, Kaskaden ab ×2',
 );
 
-const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel];
+/// 1024 Wege; in Freispielen bleiben Kirschblüten liegen.
+const sakura = SlotGame(
+  name: 'Sakura',
+  blurb: '1024 Wege, Kirschblüten bleiben liegen',
+  rules: SlotRules(
+    rows: 4,
+    mode: PayMode.ways,
+    waysDivisor: 100,
+    strips: sakuraStrips,
+    linePays: {
+      0: [3, 9, 25],
+      1: [3, 12, 31],
+      2: [6, 15, 37],
+      3: [6, 18, 46],
+      4: [12, 31, 93],
+      5: [18, 49, 185],
+    },
+    scatterPays: [2, 5, 20],
+    freeSpins: 8,
+    stickyWildsInFree: true,
+  ),
+  stakes: [100, 200, 300, 500, 1000, 2000],
+  symbolNames: ['Teeschale', 'Fächer', 'Kranich', 'Laterne', 'Koi', 'Pagode', 'Kirschblüte', 'Torii', '', ''],
+  paintSymbol: paintSakuraSymbol,
+  paintBackdrop: paintSakuraBackdrop,
+  background: BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF3A2253), Color(0xFF6E3A66), Color(0xFF241433)],
+    ),
+  ),
+  frame: [Color(0xFFFFCDD2), Color(0xFFF06292), Color(0xFF6A1B4D)],
+  lobbyColor: Color(0xFF8E3A6B),
+  featureText:
+      'Drei oder mehr Torii zahlen das 2-, 5- oder 20-Fache des Einsatzes und starten 8 Freispiele. In den Freispielen bleibt '
+      'jede Kirschblüte, die landet, bis zum Ende der Freispiele liegen.',
+  wildText: 'Die Kirschblüte ersetzt jedes Symbol außer dem Torii. Sie liegt nur auf den Walzen 2 bis 4.',
+  freeSpinLine: 'Freispiel, Kirschblüten bleiben liegen',
+);
+
+/// Sechs Walzen mit wechselnder Höhe, dazu Glücksmünzen für Hold & Spin.
+const jadetempel = SlotGame(
+  name: 'Jadetempel',
+  blurb: 'Wechselnde Walzen, Glücksmünzen, Jackpots',
+  rules: SlotRules(
+    rows: 5,
+    heights: [2, 3, 4, 5],
+    mode: PayMode.ways,
+    waysDivisor: 100,
+    strips: jadeStrips,
+    linePays: {
+      0: [4, 13, 25, 51],
+      1: [8, 17, 34, 64],
+      2: [9, 21, 38, 85],
+      3: [13, 25, 51, 114],
+      4: [21, 38, 81, 195],
+      5: [34, 64, 161, 390],
+    },
+    holdSpin: HoldSpinRules(
+      trigger: 6,
+      respins: 3,
+      landChance: 0.02,
+      values: [5, 10, 15, 20, 25, 50, 100, 200, 500, 2000],
+      weights: [300, 250, 180, 120, 80, 40, 15, 8, 3, 1],
+      jackpots: {200: 'Mini', 500: 'Minor', 2000: 'Major'},
+      grand: 10000,
+    ),
+  ),
+  stakes: [500, 1000, 1500, 2000, 3000, 5000],
+  symbolNames: ['Bambus', 'Lotus', 'Jadescheibe', 'Laterne', 'Goldbarren', 'Glücksfrosch', 'Drachenperle', '', 'Glücksmünze', ''],
+  paintSymbol: paintJadeSymbol,
+  paintBackdrop: paintJadeBackdrop,
+  background: BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF5A0F12), Color(0xFF3A0808), Color(0xFF1A0404)],
+    ),
+  ),
+  frame: [Color(0xFFFFE082), Color(0xFF2E7D32), Color(0xFF1B3A1B)],
+  lobbyColor: Color(0xFF1E5631),
+  featureText:
+      'Jede Walze zeigt bei jeder Drehung 2 bis 5 Symbole, das ergibt bis zu 4.096 Wege. Sechs oder mehr Glücksmünzen starten '
+      'Hold & Spin auf 6 × 5 Feldern.',
+  wildText: 'Die Drachenperle ersetzt jedes Symbol außer der Glücksmünze.',
+);
+
+const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel];

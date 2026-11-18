@@ -49,6 +49,22 @@ GAMES = {
               5: [8, 15, 38, 92]},
         cascade=[1, 2, 3, 4, 5], free_cascade=[2, 4, 6, 8, 10, 15],
         scatter=[2, 5, 20], free=12, seed=1815),
+    # 1024 Wege; in Freispielen bleiben Kirschblüten (Joker) bis zum Ende liegen
+    "sakura": dict(
+        mode="ways", anywhere=False, div=100, rows=4, stake=100, sticky=True,
+        weights=[[10, 9, 8, 7, 4, 3, 0, 1, 0, 0]] + [[10, 9, 8, 7, 4, 3, 1, 1, 0, 0]] * 3 + [[10, 9, 8, 7, 4, 3, 0, 1, 0, 0]],
+        pays={0: [3, 9, 25], 1: [3, 12, 31], 2: [6, 15, 37], 3: [6, 18, 46], 4: [12, 31, 93], 5: [18, 49, 185]},
+        scatter=[2, 5, 20], free=8, seed=2604),
+    # Sechs Walzen mit wechselnder Höhe und Glücksmünzen (Hold & Spin auf 6 × 5 Feldern)
+    "jade": dict(
+        mode="ways", anywhere=False, div=100, rows=5, heights=[2, 3, 4, 5], stake=500,
+        weights=[[9, 8, 7, 6, 4, 3, 0, 0, 4, 0]] + [[9, 8, 7, 6, 4, 3, 2, 0, 4, 0]] * 4 + [[9, 8, 7, 6, 4, 3, 0, 0, 4, 0]],
+        pays={0: [4, 13, 25, 51], 1: [8, 17, 34, 64], 2: [9, 21, 38, 85], 3: [13, 25, 51, 114], 4: [21, 38, 81, 195],
+              5: [34, 64, 161, 390]},
+        hold=dict(trigger=6, respins=3, chance=0.02,
+                  values=[5, 10, 15, 20, 25, 50, 100, 200, 500, 2000],
+                  weights=[300, 250, 180, 120, 80, 40, 15, 8, 3, 1], grand=10000),
+        seed=888),
 }
 
 

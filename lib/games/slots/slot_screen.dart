@@ -28,8 +28,11 @@ class SlotScreen extends StatefulWidget {
 
 /// Was das Walzenfenster gerade zeigt, wenn die Walzen stehen.
 class _Shown {
-  const _Shown({required this.grid, required this.wins, this.falls, this.coins = const {}, this.multiplier = 1});
+  const _Shown({required this.grid, required this.wins, this.falls, this.coins = const {}, this.multiplier = 1, this.sticky = const {}});
   final List<List<int>> grid;
+
+  /// Liegenbleibende Joker der laufenden Freispiele.
+  final Set<(int, int)> sticky;
   final List<LineWin> wins;
   final List<List<int>>? falls;
   final Map<int, int> coins;
@@ -192,6 +195,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
             falls: s.falls,
             coins: i == 0 ? out.coins : const {},
             multiplier: s.multiplier,
+            sticky: free && _rules.stickyWildsInFree ? {..._engine.stickyWilds} : const {},
           );
         });
         if (i > 0) {
@@ -643,6 +647,16 @@ class _ReelPainter extends CustomPainter {
     if (s.wins.isNotEmpty) {
       final index = winIndex.value % s.wins.length;
       _paintWin(canvas, s, s.wins[index], cw, size.height);
+    }
+    // Liegende Joker in Freispielen rosa umranden
+    final stickyPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..color = const Color(0xFFFF80AB);
+    for (final (r, row) in s.sticky) {
+      if (row >= s.grid[r].length) continue;
+      final ch = size.height / s.grid[r].length;
+      canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(r * cw, row * ch, cw, ch).deflate(6), const Radius.circular(12)), stickyPaint);
     }
     final ringPaint = Paint()
       ..style = PaintingStyle.stroke

@@ -128,6 +128,45 @@ void main() {
     }
   });
 
+  test('Sakura: Kirschblüten bleiben in Freispielen liegen, im Grundspiel nicht', () {
+    final engine = SlotEngine(sakura.rules, rng: Random(21));
+    var checked = 0;
+    for (var i = 0; i < 3000; i++) {
+      final before = {...engine.stickyWilds};
+      final o = engine.play(100, free: i % 10 != 0);
+      if (i % 10 == 0) {
+        // Grundspiel: nichts liegt mehr
+        expect(engine.stickyWilds, isEmpty);
+        continue;
+      }
+      for (final (r, row) in before) {
+        expect(o.firstGrid[r][row], symWild, reason: 'Joker bleibt liegen');
+        checked++;
+      }
+      expect(engine.stickyWilds.containsAll(before), isTrue);
+    }
+    expect(checked, greaterThan(50));
+  });
+
+  test('Jadetempel: Hold & Spin auf 6 × 5 Feldern mit wechselnder Höhe', () {
+    final engine = SlotEngine(jadetempel.rules, rng: Random(8));
+    var rounds = 0;
+    for (var i = 0; i < 20000 && rounds < 20; i++) {
+      final o = engine.play(500);
+      for (final cell in o.coins.keys) {
+        final r = cell ~/ 5;
+        final row = cell % 5;
+        expect(row, lessThan(o.heights[r]));
+        expect(o.firstGrid[r][row], symCoin);
+      }
+      final h = o.holdSpin;
+      if (h == null) continue;
+      rounds++;
+      expect(h.boards.last.keys.every((c) => c >= 0 && c < 30), isTrue);
+    }
+    expect(rounds, greaterThan(0));
+  });
+
   test('Alte Slots: play() zahlt genau wie spin()', () {
     for (final g in [kosmos78, schrebergarten]) {
       final a = SlotEngine(g.rules, rng: Random(9));

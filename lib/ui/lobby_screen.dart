@@ -154,6 +154,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
         () => _open(const SlotScreen(game: vulkaninsel)),
       ),
       _Game(
+        sakura.name,
+        sakura.blurb,
+        sakura.lobbyColor,
+        () => _SlotArt(sakura, 6, 7),
+        () => _open(const SlotScreen(game: sakura)),
+      ),
+      _Game(
+        jadetempel.name,
+        jadetempel.blurb,
+        jadetempel.lobbyColor,
+        () => _SlotArt(jadetempel, 5, symCoin),
+        () => _open(const SlotScreen(game: jadetempel)),
+      ),
+      _Game(
         "Texas Hold'em",
         'No-Limit gegen bis zu fünf Gegner',
         const Color(0xFF7A1F12),
