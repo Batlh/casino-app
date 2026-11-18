@@ -3,16 +3,19 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/debug_log.dart';
+import '../../core/saves.dart';
 import '../../core/scope.dart';
 import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_replay_mixin.dart';
 import '../../ui/widgets.dart';
 import '../board/seats.dart';
 import '../cards/card_widgets.dart';
 import '../cards/playing_card.dart';
 import 'ah_engine.dart';
+import 'ah_net.dart';
 
 /// Münzen je Runde nach Platz.
 const ahRoundCoins = [30, 15, 5, 0];
@@ -55,7 +58,7 @@ class ArschlochScreen extends StatefulWidget {
   State<ArschlochScreen> createState() => _ArschlochScreenState();
 }
 
-class _ArschlochScreenState extends State<ArschlochScreen> {
+class _ArschlochScreenState extends State<ArschlochScreen> with NetReplayScreen {
   late AhGame _g;
   final Set<PlayingCard> _sel = {};
   bool _running = false;
@@ -90,7 +93,73 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
 
   late int _seed;
   static const _saveId = 'arschloch';
-  bool get _saving => widget.seed == null;
+  bool get _saving => widget.seed == null && !replayActive;
+
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get replayGame => ahNetGame;
+  @override
+  String get replayTitle => 'Arschloch';
+  @override
+  int get replaySeats => 4;
+  @override
+  List<String> get replayBotNames => const ['Kalle', 'Uschi', 'Bernd'];
+  @override
+  List<List<Object?>> get replayLog => _g.actionLog;
+
+  /// Die Engine lässt Computer beim Tausch selbst zurückgeben; darum kennen alle Geräte alle Menschen-Plätze.
+  @override
+  void replayNewGame(int seed, List<String> names, int me, Map<String, Object?> options) {
+    _seed = seed;
+    _g = AhGame(rng: math.Random(seed), names: names, humans: [for (var i = 0; i < 4; i++) replayHumans.contains(i)])..start();
+    _viewer = me;
+    _covered = false;
+    _paidRound = false;
+    _paidGame = false;
+    _earned = 0;
+    _sel.clear();
+    _app.sfx.play(Sound.card);
+    if (replayIsHost) WidgetsBinding.instance.addPostFrameCallback((_) => _pump());
+  }
+
+  @override
+  void replayApply(List<dynamic> a) => ahApply(_g, a);
+
+  @override
+  bool replayAllowed(int seat, List<dynamic> a) => ahAllowed(_g, seat, a);
+
+  @override
+  void replayAfterRemote(List<List<dynamic>> acts) {
+    if (acts.any((a) => a.first == 'n')) {
+      _paidRound = false;
+      _sel.clear();
+    }
+    if (acts.isNotEmpty) _app.sfx.play(acts.last.first == 'x' ? Sound.tick : Sound.card);
+    setState(() {});
+    _pump();
+  }
+
+  @override
+  void replayClosed() {
+    _seed = math.Random.secure().nextInt(1 << 31);
+    setState(() {
+      _g = _make();
+      _viewer = _g.players.indexWhere((x) => x.human);
+      _covered = false;
+      _paidRound = false;
+      _paidGame = false;
+      _earned = 0;
+      _sel.clear();
+    });
+    _pump();
+  }
+
+  bool _send(List<Object?> a) {
+    if (!replaySend(a)) return false;
+    setState(_sel.clear);
+    return true;
+  }
 
   /// Plätze am Tisch (immer vier); mehrere Menschen geben das Gerät weiter.
   List<Seat> _seats = const [Seat('Du', human: true), Seat('Kalle'), Seat('Uschi'), Seat('Bernd')];
@@ -109,7 +178,7 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
   }
 
   int get _humans => _g.players.where((x) => x.human).length;
-  bool get _vsComputer => _g.players.any((x) => !x.human);
+  bool get _vsComputer => replayActive ? replayHumans.length < 4 : _g.players.any((x) => !x.human);
 
   /// Wer muss gerade am Gerät sein? Beim Tausch der erste Mensch, der zurückgeben muss, sonst wer dran ist.
   int? get _actor {
@@ -119,6 +188,7 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
   }
 
   void _syncViewer() {
+    if (replayActive) return;
     final a = _actor;
     if (a == null || a == _viewer) return;
     _viewer = a;
@@ -153,11 +223,13 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
   void setState(VoidCallback fn) {
     super.setState(fn);
     _persist();
+    replayBroadcast();
   }
 
   @override
   void dispose() {
     _persist();
+    replayDispose();
     super.dispose();
   }
 
@@ -182,13 +254,26 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
 
   Future<void> _pump() async {
     if (_running) return;
+    if (replayIsGuest) {
+      if (_g.phase == AhPhase.roundOver || _g.phase == AhPhase.gameOver) _pay();
+      return;
+    }
+    // Wer im Netz gegangen ist: Der Computer gibt für ihn zurück
+    if (replayActive && _g.phase == AhPhase.exchange) {
+      for (final p in _g.pendingGive.toList()) {
+        if (replayIsBot(p)) _g.giveBack(p, sortAh(_g.players[p].hand).take(_g.gives(p)).toList());
+      }
+    }
     _running = true;
-    while (mounted) {
+    final game = _g;
+    while (mounted && _g == game) {
       if (_g.phase == AhPhase.roundOver || _g.phase == AhPhase.gameOver) {
         _pay();
         break;
       }
-      if (_g.phase != AhPhase.play || _g.players[_g.current].human) break;
+      if (_g.phase != AhPhase.play) break;
+      // Menschen ziehen selbst, außer wer im Netz gegangen ist
+      if (_g.players[_g.current].human && !(replayActive && replayIsBot(_g.current))) break;
       await Future<void>.delayed(_app.settings.botDelay(700));
       if (!mounted) return;
       final p = _g.current;
@@ -208,6 +293,7 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
 
   /// Bester Platz eines Menschen; Münzen gibt es nur, wenn ein Computer mitspielt.
   int _bestHumanPlace(List<int> order) {
+    if (replayActive) return order.indexOf(_viewer);
     var best = 99;
     for (var p = 0; p < 4; p++) {
       if (_g.players[p].human) best = math.min(best, order.indexOf(p));
@@ -256,6 +342,7 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
   void _play() {
     final cards = _sel.toList();
     if (!_g.canPlay(_viewer, cards)) return;
+    if (_send(['p', _viewer, for (final c in cards) cardCode(c)])) return;
     _g.play(_viewer, cards);
     _app.sfx.play(Sound.card);
     setState(_sel.clear);
@@ -263,6 +350,7 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
   }
 
   void _pass() {
+    if (_send(['x', _viewer])) return;
     _g.pass(_viewer);
     _app.sfx.play(Sound.tick);
     setState(_sel.clear);
@@ -270,6 +358,7 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
   }
 
   void _giveBack() {
+    if (_send(['G', _viewer, for (final c in _sel) cardCode(c)])) return;
     _g.giveBack(_viewer, _sel.toList());
     _app.sfx.play(Sound.card);
     setState(() {
@@ -280,6 +369,7 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
   }
 
   void _next() {
+    if (replayIsGuest) return;
     _g.nextRound();
     setState(() {
       _paidRound = false;
@@ -307,7 +397,7 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
     _pump();
   }
 
-  String get _you => _humans > 1 ? _g.players[_viewer].name : 'Du';
+  String get _you => _humans > 1 && !replayActive ? _g.players[_viewer].name : 'Du';
 
   String get _status {
     if (_covered) return 'Gib das Gerät an ${_g.players[_viewer].name}';
@@ -345,7 +435,8 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
       background: const BoxDecoration(
         gradient: RadialGradient(radius: 1.2, colors: [Color(0xFF6B3A1F), Color(0xFF2A160B)]),
       ),
-      child: LayoutBuilder(builder: (context, box) {
+      actions: replayActions(context),
+      child: replayScreen() ?? LayoutBuilder(builder: (context, box) {
         final w = box.maxWidth;
         final badge = math.min(130.0, w / 3.3);
         final over = _g.phase == AhPhase.roundOver || _g.phase == AhPhase.gameOver;
@@ -448,11 +539,25 @@ class _ArschlochScreenState extends State<ArschlochScreen> {
                           Text('Punkte: ${[for (final p in _g.players) '${p.name} ${p.points}'].join(' · ')}', textAlign: TextAlign.center, style: TextStyle(color: pal.inkSoft)),
                           if (_earned > 0) Text('Verdient: $_earned Münzen', style: const TextStyle(color: Color(0xFFFFC95C), fontWeight: FontWeight.w700)),
                           const SizedBox(height: 10),
-                          ActionButton(
-                            primary: true,
-                            label: _g.phase == AhPhase.gameOver ? 'Neues Spiel' : 'Nächste Runde',
-                            onPressed: _g.phase == AhPhase.gameOver ? _newGame : _next,
-                          ),
+                          if (replayActive)
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              alignment: WrapAlignment.center,
+                              children: replayButtons(
+                                label: _g.phase == AhPhase.gameOver ? 'Neues Spiel' : 'Nächste Runde',
+                                next: _g.phase == AhPhase.gameOver ? replayHostStart : _next,
+                              ),
+                            )
+                          else
+                            Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
+                              ActionButton(
+                                primary: true,
+                                label: _g.phase == AhPhase.gameOver ? 'Neues Spiel' : 'Nächste Runde',
+                                onPressed: _g.phase == AhPhase.gameOver ? _newGame : _next,
+                              ),
+                              ActionButton(label: 'Im Netzwerk', onPressed: replayOpenPanel),
+                            ]),
                         ],
                       ),
                     ),
