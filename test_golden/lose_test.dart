@@ -36,7 +36,7 @@ void main() {
     for (final (i, name) in ['Glücksklee', 'Goldrausch', 'Diamantfieber'].indexed) {
       await tester.tap(find.textContaining(name).first);
       await tester.pump();
-      await tester.tap(find.textContaining('Los kaufen'));
+      await tester.tap(find.textContaining('Los kaufen:'));
       await tester.pump();
       // Ein Stück freirubbeln
       final area = tester.getCenter(find.byType(CustomPaint).last);
@@ -57,7 +57,7 @@ void main() {
     for (final (i, name) in ['Kirsch-Tabs', 'Glocken-Tabs', 'Goldbarren-Tabs'].indexed) {
       await tester.tap(find.textContaining(name).first);
       await tester.pump();
-      await tester.tap(find.textContaining('Los kaufen'));
+      await tester.tap(find.textContaining('Los kaufen:'));
       await tester.pump();
       await snap('pull_${i}_neu');
       await tester.tap(find.textContaining('AUFREISSEN').first);
