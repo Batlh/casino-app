@@ -8,6 +8,7 @@ import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_replay_mixin.dart';
 import '../../ui/widgets.dart';
 import '../board/seats.dart';
 import '../cards/card_widgets.dart';
@@ -45,7 +46,7 @@ class LadderScreen extends StatefulWidget {
   State<LadderScreen> createState() => _LadderScreenState();
 }
 
-class _LadderScreenState extends State<LadderScreen> {
+class _LadderScreenState extends State<LadderScreen> with NetReplayScreen {
   static const _saveId = 'ladder';
   late final Settings _store;
   LadderGame? _g;
@@ -80,16 +81,76 @@ class _LadderScreenState extends State<LadderScreen> {
   void setState(VoidCallback fn) {
     super.setState(fn);
     _persist();
+    replayBroadcast();
   }
 
   @override
   void dispose() {
     _token++;
     _persist();
+    replayDispose();
     super.dispose();
   }
 
+  // ---------------------------------------------------------------- Netzwerk
+
+  /// Züge: ['r'] würfeln. Mit gemeinsamem Startwert würfeln alle Geräte dasselbe.
+  final List<List<Object?>> _log = [];
+  LadderMove? _lastMove;
+
+  @override
+  String get replayGame => 'ladder';
+  @override
+  String get replayTitle => 'Leiterspiel';
+  @override
+  int get replaySeats => 4;
+  @override
+  List<String> get replayBotNames => const [];
+  @override
+  List<List<Object?>> get replayLog => _log;
+  /// Im Netz mit zufällig verteiltem Brett: Der Startwert macht es auf allen Geräten gleich.
+  @override
+  Map<String, Object?> get replayOptions => const {'random': true};
+
+  @override
+  void replayNewGame(int seed, List<String> names, int me, Map<String, Object?> options) {
+    _token++;
+    _log.clear();
+    _seats = [for (final (i, n) in names.indexed) Seat(n, human: replayHumans.contains(i))];
+    _g = LadderGame(names.length, randomBoard: options['random'] == true, rng: math.Random(seed));
+    _paid = false;
+    _busy = false;
+    _msg = '${names[0]} beginnt';
+  }
+
+  @override
+  void replayApply(List<dynamic> a) {
+    _lastMove = _g!.roll();
+    _log.add(['r']);
+  }
+
+  @override
+  bool replayAllowed(int seat, List<dynamic> a) {
+    final g = _g;
+    return g != null && !g.over && g.current == seat && a.length == 1 && a[0] == 'r';
+  }
+
+  @override
+  void replayAfterRemote(List<List<dynamic>> acts) {
+    final m = _lastMove;
+    if (acts.isNotEmpty && m != null) {
+      _show(m);
+    } else {
+      setState(() {});
+      _next();
+    }
+  }
+
+  @override
+  void replayClosed() => _newGame();
+
   void _persist() {
+    if (replayActive) return;
     final g = _g;
     if (g == null || g.over) {
       _store.clearGame(_saveId);
@@ -130,13 +191,15 @@ class _LadderScreenState extends State<LadderScreen> {
 
   bool get _humanTurn {
     final g = _g;
-    return g != null && !g.over && _seats[g.current].human;
+    if (g == null || g.over) return false;
+    return replayActive ? g.current == replayMe : _seats[g.current].human;
   }
 
   /// Computer würfeln von selbst.
   Future<void> _next() async {
     final g = _g;
-    if (g == null || g.over || _seats[g.current].human) return;
+    if (replayIsGuest) return;
+    if (g == null || g.over || (_seats[g.current].human && !(replayActive && replayIsBot(g.current)))) return;
     final token = ++_token;
     setState(() => _busy = true);
     await Future<void>.delayed(_store.botDelay(700));
@@ -147,7 +210,13 @@ class _LadderScreenState extends State<LadderScreen> {
   void _roll() {
     final g = _g;
     if (g == null || g.over) return;
-    final m = g.roll();
+    if (replaySend(['r'])) return;
+    replayApply(const ['r']);
+    _show(_lastMove!);
+  }
+
+  void _show(LadderMove m) {
+    final g = _g!;
     final name = _seats[m.player].name;
     final sfx = AppScope.of(context).sfx;
     var text = '$name würfelt ${m.roll}';
@@ -163,7 +232,7 @@ class _LadderScreenState extends State<LadderScreen> {
       sfx.play(Sound.tick);
     }
     if (g.over) {
-      final reward = seatReward(_seats, m.player, ladderWinReward);
+      final reward = replayActive && m.player != replayMe ? 0 : seatReward(_seats, m.player, ladderWinReward);
       text = '$name gewinnt!';
       if (reward > 0 && !_paid) {
         _paid = true;
@@ -185,7 +254,8 @@ class _LadderScreenState extends State<LadderScreen> {
     return GameFrame(
       title: 'Leiterspiel',
       guide: ladderGuide,
-      child: g == null
+      actions: replayActions(context),
+      child: replayScreen() ?? (g == null
           ? const SizedBox.shrink()
           : LayoutBuilder(
               builder: (context, box) {
@@ -202,7 +272,7 @@ class _LadderScreenState extends State<LadderScreen> {
                     ? Row(children: [Expanded(child: Center(child: board)), SizedBox(width: 280, child: side)])
                     : Column(children: [Expanded(child: Center(child: board)), side]);
               },
-            ),
+            )),
     );
   }
 
@@ -247,7 +317,12 @@ class _LadderScreenState extends State<LadderScreen> {
                 label: g.over ? 'Fertig' : (_humanTurn ? '${_seats[g.current].name}: Würfeln' : 'Computer ist dran'),
                 onPressed: _humanTurn && !_busy ? _roll : null,
               ),
-              ActionButton(label: 'Neues Spiel', onPressed: _newGame),
+              if (replayActive)
+                ...replayButtons(label: 'Neues Spiel', next: replayHostStart)
+              else ...[
+                ActionButton(label: 'Neues Spiel', onPressed: _newGame),
+                if (g.over || MediaQuery.sizeOf(context).width < 420) ActionButton(label: 'Im Netzwerk', onPressed: replayOpenPanel),
+              ],
             ],
           ),
         ],
