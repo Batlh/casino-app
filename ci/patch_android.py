@@ -16,6 +16,8 @@ m = manifest.read_text(encoding="utf-8")
 perms = [
     '<uses-permission android:name="android.permission.INTERNET"/>',
     '<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>',
+    # Mehrspieler im WLAN: Rundrufe empfangen
+    '<uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>',
 ]
 for p in perms:
     if p not in m:

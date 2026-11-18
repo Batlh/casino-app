@@ -23,6 +23,9 @@ fi
 if [ -f linux/runner/my_application.cc ]; then
   sed -i.bak "s/\"gluckspfennig\"/\"$NAME\"/g" linux/runner/my_application.cc
 fi
+if [ -d macos/Runner ]; then
+  python3 ci/patch_macos.py . || python ci/patch_macos.py .
+fi
 if [ -f macos/Runner/Configs/AppInfo.xcconfig ]; then
   # Ohne Umlaut: Mit ü im Dateinamen schlägt die macOS-Signatur fehl
   sed -i.bak "s/^PRODUCT_NAME = .*/PRODUCT_NAME = Glueckspfennig/" macos/Runner/Configs/AppInfo.xcconfig
