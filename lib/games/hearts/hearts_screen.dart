@@ -71,7 +71,7 @@ class _HeartsScreenState extends State<HeartsScreen> with NetReplayScreen {
   List<List<Object?>> get replayLog => _e.actionLog;
 
   @override
-  void replayNewGame(int seed, List<String> names, int me) {
+  void replayNewGame(int seed, List<String> names, int me, Map<String, Object?> options) {
     _seed = seed;
     _e = _make(names, me)..newGame();
     _selected.clear();

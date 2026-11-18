@@ -8,10 +8,12 @@ import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_replay_mixin.dart';
 import '../../ui/widgets.dart';
 import '../board/seats.dart';
 import '../cards/card_widgets.dart';
 import 'pd_engine.dart';
+import 'pd_net.dart';
 
 const pdRoundWinReward = 30;
 
@@ -116,7 +118,7 @@ class PikDameScreen extends StatefulWidget {
   State<PikDameScreen> createState() => _PikDameScreenState();
 }
 
-class _PikDameScreenState extends State<PikDameScreen> {
+class _PikDameScreenState extends State<PikDameScreen> with NetReplayScreen {
   PdGame? _g;
   late math.Random _rng;
   final Set<PdCard> _sel = {};
@@ -144,7 +146,76 @@ class _PikDameScreenState extends State<PikDameScreen> {
 
   late int _seed;
   static const _saveId = 'pikdame';
-  bool get _saving => widget.seed == null;
+  bool get _saving => widget.seed == null && !replayActive;
+
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get replayGame => pdNetGame;
+  @override
+  String get replayTitle => 'Pik Dame';
+  @override
+  int get replaySeats => _seats.length.clamp(2, 4);
+  @override
+  List<String> get replayBotNames => const ['Oma Erna', 'Opa Karl', 'Tante Gisela'];
+  @override
+  List<List<Object?>> get replayLog => _g?.actionLog ?? const [];
+  @override
+  Map<String, Object?> get replayOptions =>
+      {'target': _target, 'jokerValue': _jokerValue, 'maxJokers': _maxJokers, 'first50': _first50};
+
+  @override
+  void replayNewGame(int seed, List<String> names, int me, Map<String, Object?> options) {
+    _seed = seed;
+    final o = PdOptions(
+      players: names.length,
+      target: (options['target'] as num?)?.toInt() ?? 1000,
+      jokerValue: (options['jokerValue'] as num?)?.toInt() ?? 25,
+      maxJokers: (options['maxJokers'] as num?)?.toInt() ?? 1,
+      firstMeld50: options['first50'] as bool? ?? true,
+    );
+    _g = PdGame(o, rng: math.Random(seed), names: names, humans: [for (var i = 0; i < names.length; i++) i == me])..start();
+    _viewer = me;
+    _covered = false;
+    _sel.clear();
+    _paidRound = false;
+    _paidGame = false;
+    _earned = 0;
+    _msg = '';
+    _app.sfx.play(Sound.card);
+    if (replayIsHost) WidgetsBinding.instance.addPostFrameCallback((_) => _pump());
+  }
+
+  @override
+  void replayApply(List<dynamic> a) => pdApply(g, a);
+
+  @override
+  bool replayAllowed(int seat, List<dynamic> a) => pdAllowed(g, seat, a);
+
+  @override
+  void replayAfterRemote(List<List<dynamic>> acts) {
+    if (acts.any((a) => a.first == 'n')) {
+      _paidRound = false;
+      _sel.clear();
+      _msg = '';
+    }
+    if (acts.isNotEmpty) _app.sfx.play(acts.last.first == 'm' || acts.last.first == 'e' || acts.last.first == 'p' ? Sound.chip : Sound.card);
+    setState(() {});
+    _pump();
+  }
+
+  @override
+  void replayClosed() => setState(() => _g = null);
+
+  /// Gibt es echte Computer am Tisch (sonst gibt es keine Münzen)?
+  bool get _hasBots => replayActive ? replayHumans.length < g.n : g.players.any((x) => !x.human);
+
+  /// Als Mitspieler den Zug an den Gastgeber schicken; true, wenn verschickt.
+  bool _send(List<Object?> a) {
+    if (!replaySend(a)) return false;
+    setState(_sel.clear);
+    return true;
+  }
 
   @override
   void initState() {
@@ -206,11 +277,13 @@ class _PikDameScreenState extends State<PikDameScreen> {
   void setState(VoidCallback fn) {
     super.setState(fn);
     _persist();
+    replayBroadcast();
   }
 
   @override
   void dispose() {
     _persist();
+    replayDispose();
     super.dispose();
   }
 
@@ -284,13 +357,20 @@ class _PikDameScreenState extends State<PikDameScreen> {
 
   Future<void> _pump() async {
     if (_running || _g == null) return;
+    if (replayIsGuest) {
+      if (g.phase == PdPhase.roundOver || g.phase == PdPhase.gameOver) _pay();
+      return;
+    }
     _running = true;
-    while (mounted) {
+    final game = g;
+    while (mounted && _g == game) {
       if (g.phase == PdPhase.roundOver || g.phase == PdPhase.gameOver) {
         _pay();
         break;
       }
       if (g.players[g.current].human) break;
+      // Mitspieler im Netz ziehen selbst
+      if (replayActive && !replayIsBot(g.current)) break;
       await Future<void>.delayed(_app.settings.botDelay(900));
       if (!mounted) return;
       pdBotTurn(g, g.current, _rng);
@@ -305,7 +385,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
     final r = g.result;
     if (!_paidRound && r != null) {
       _paidRound = true;
-      if (g.players[r.winner].human && g.players.any((x) => !x.human)) {
+      if (g.players[r.winner].human && _hasBots) {
         final coins = pdRoundWinReward * (r.hand ? 2 : 1);
         _earned += coins;
         _app.wallet.credit(coins);
@@ -317,7 +397,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
       // Allein: Münzen nach Platz; mehrere Menschen: nur für einen menschlichen Sieger gegen Computer
       final order = g.ranking();
       final human = g.players.indexWhere((x) => x.human);
-      final place = _humans == 1 ? order.indexOf(human) : (g.players[order.first].human && g.players.any((x) => !x.human) ? 0 : -1);
+      final place = !_hasBots ? -1 : (_humans == 1 ? order.indexOf(human) : (g.players[order.first].human ? 0 : -1));
       final coins = place < 0 ? 0 : pdPlaceRewards(g.n)[place];
       if (coins > 0) {
         _earned += coins;
@@ -338,6 +418,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
   }
 
   void _drawStack() {
+    if (_send(['s', _viewer])) return;
     g.drawStack(_viewer);
     _app.sfx.play(Sound.card);
     setState(_sel.clear);
@@ -345,6 +426,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
   }
 
   void _takeOpen() {
+    if (_send(['o', _viewer])) return;
     g.takeOpen(_viewer);
     _app.sfx.play(Sound.card);
     setState(_sel.clear);
@@ -356,6 +438,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
       setState(() => _msg = 'Wähle Karten, die mit der obersten Ablagekarte eine Auslage bilden');
       return;
     }
+    if (_send(['p', _viewer, [for (final c in cards) c.id]])) return;
     g.takePile(_viewer, cards);
     _app.sfx.play(Sound.chip);
     setState(_sel.clear);
@@ -369,6 +452,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
           : 'Das ist weder ein Satz noch eine Folge (oder es bliebe keine Karte zum Abwerfen)');
       return;
     }
+    if (_send(['m', _viewer, [for (final c in cards) c.id]])) return;
     g.meld(_viewer, cards);
     _app.sfx.play(Sound.chip);
     setState(_sel.clear);
@@ -381,9 +465,11 @@ class _PikDameScreenState extends State<PikDameScreen> {
     }
     final c = _sel.first;
     if (g.canSwapJoker(_viewer, index, c)) {
+      if (_send(['j', _viewer, index, c.id])) return;
       g.swapJoker(_viewer, index, c);
       _msg = 'Joker zurück auf die Hand';
     } else if (g.canExtend(_viewer, index, c)) {
+      if (_send(['e', _viewer, index, c.id])) return;
       g.extend(_viewer, index, c);
       _msg = '';
     } else {
@@ -395,6 +481,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
   }
 
   void _undo() {
+    if (_send(['u'])) return;
     g.undoTurn();
     _app.sfx.play(Sound.tick);
     setState(() {
@@ -413,6 +500,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
       setState(() => _msg = block);
       return;
     }
+    if (_send(['d', _viewer, _sel.first.id])) return;
     g.discard(_viewer, _sel.first);
     _app.sfx.play(Sound.card);
     setState(_sel.clear);
@@ -420,6 +508,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
   }
 
   void _nextRound() {
+    if (replayIsGuest) return;
     g.nextRound();
     setState(() {
       _paidRound = false;
@@ -452,7 +541,8 @@ class _PikDameScreenState extends State<PikDameScreen> {
       background: const BoxDecoration(
         gradient: RadialGradient(radius: 1.2, colors: [Color(0xFF1E5631), Color(0xFF0B2414)]),
       ),
-      child: _g == null ? _setup() : LayoutBuilder(builder: (context, box) => _layout(box)),
+      actions: replayActions(context),
+      child: replayScreen() ?? (_g == null ? _setup() : LayoutBuilder(builder: (context, box) => _layout(box))),
     );
   }
 
@@ -519,6 +609,10 @@ class _PikDameScreenState extends State<PikDameScreen> {
                 label: 'Los geht’s',
                 onPressed: () => setState(() => _start(PdOptions(players: _seats.length, target: _target, jokerValue: _jokerValue, maxJokers: _maxJokers, firstMeld50: _first50))),
               ),
+              const SizedBox(height: 8),
+              ActionButton(label: 'Im Netzwerk spielen', onPressed: replayOpenPanel),
+              Text('Im Netz gelten diese Einstellungen; die Zahl der Plätze kommt von „Mitspieler“.',
+                  textAlign: TextAlign.center, style: TextStyle(color: p.inkSoft, fontSize: 13)),
             ],
           ),
         ),
@@ -673,7 +767,7 @@ class _PikDameScreenState extends State<PikDameScreen> {
           '${g.players[p].name}: ${r == null ? '' : '${r.changes[p] >= 0 ? '+' : '−'}${r.changes[p].abs()} → '}${g.players[p].score}',
           style: TextStyle(color: pal.ink, fontSize: 15, fontWeight: g.players[p].human ? FontWeight.w700 : FontWeight.w500),
         ),
-      if (r != null && g.players[r.winner].human && g.players.any((x) => !x.human)) Text('+${pdRoundWinReward * (r.hand ? 2 : 1)} Münzen', style: const TextStyle(color: Color(0xFFFFC95C), fontWeight: FontWeight.w700)),
+      if (r != null && g.players[r.winner].human && _hasBots) Text('+${pdRoundWinReward * (r.hand ? 2 : 1)} Münzen', style: const TextStyle(color: Color(0xFFFFC95C), fontWeight: FontWeight.w700)),
     ];
     if (over) {
       final order = g.ranking();
@@ -683,8 +777,13 @@ class _PikDameScreenState extends State<PikDameScreen> {
         Text(place == 0 ? 'Du hast gewonnen!' : 'Gewonnen hat ${g.players[order.first].name}', style: Theme.of(context).textTheme.titleLarge),
         if (_earned > 0) Text('Verdient: $_earned Münzen', style: TextStyle(color: pal.inkSoft)),
         const SizedBox(height: 10),
-        ActionButton(primary: true, label: 'Neues Spiel', onPressed: () => setState(() => _g = null)),
+        if (replayActive)
+          Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: replayButtons(label: 'Neues Spiel', next: replayHostStart))
+        else
+          ActionButton(primary: true, label: 'Neues Spiel', onPressed: () => setState(() => _g = null)),
       ]);
+    } else if (replayActive) {
+      c.addAll([const SizedBox(height: 10), Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: replayButtons(label: 'Nächste Runde', next: _nextRound))]);
     } else {
       c.addAll([const SizedBox(height: 10), ActionButton(primary: true, label: 'Nächste Runde', onPressed: _nextRound)]);
     }

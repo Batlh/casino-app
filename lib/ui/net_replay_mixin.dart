@@ -31,8 +31,12 @@ mixin NetReplayScreen<T extends StatefulWidget> on State<T> {
   /// Aktionsprotokoll der laufenden Engine.
   List<List<Object?>> get replayLog;
 
-  /// Neue Partie aus Startwert und Namen bauen (Engine starten, Ansicht zurücksetzen). [me] ist dein Platz.
-  void replayNewGame(int seed, List<String> names, int me);
+  /// Neue Partie aus Startwert, Namen und Einstellungen des Gastgebers bauen (Engine starten, Ansicht zurücksetzen).
+  /// [me] ist dein Platz.
+  void replayNewGame(int seed, List<String> names, int me, Map<String, Object?> options);
+
+  /// Einstellungen des Gastgebers, die alle für dieselbe Engine brauchen.
+  Map<String, Object?> get replayOptions => const {};
 
   /// Einen Protokolleintrag ausführen.
   void replayApply(List<dynamic> a);
@@ -56,6 +60,7 @@ mixin NetReplayScreen<T extends StatefulWidget> on State<T> {
   String _name = '';
   int _seed = 0;
   List<String> _names = const [];
+  Map<String, Object?> _options = const {};
   int _sent = 0;
 
   /// Dein Platz (im Netz je Gerät verschieden).
@@ -112,7 +117,8 @@ mixin NetReplayScreen<T extends StatefulWidget> on State<T> {
         ActionButton(label: 'Tisch verlassen', onPressed: replayClose),
       ];
 
-  LanMessage _gameMessage(int me) => {'t': 'game', 'seed': _seed, 'names': _names, 'humans': replayHumans.toList(), 'me': me, 'log': replayLog};
+  LanMessage _gameMessage(int me) =>
+      {'t': 'game', 'seed': _seed, 'names': _names, 'humans': replayHumans.toList(), 'me': me, 'opt': _options, 'log': replayLog};
 
   /// Gastgeber: neue Partie mit allen Mitspielern (bis die Plätze voll sind), Rest Computer.
   void replayHostStart() {
@@ -132,11 +138,12 @@ mixin NetReplayScreen<T extends StatefulWidget> on State<T> {
     }
     _seed = Random.secure().nextInt(1 << 31);
     _names = names;
+    _options = replayOptions;
     replayHumans = humans;
     replayMe = 0;
     _playing = true;
     debugLog.info('netz', '$replayTitle startet mit ${humans.length - 1} Mitspielern');
-    replayNewGame(_seed, names, 0);
+    replayNewGame(_seed, names, 0, _options);
     _sent = replayLog.length;
     for (final s in h.seats.values) {
       h.send(s, _gameMessage(s.index));
@@ -152,7 +159,13 @@ mixin NetReplayScreen<T extends StatefulWidget> on State<T> {
     }
     if (m['t'] != 'act' || seat.index < 0 || !replayHumans.contains(seat.index)) return;
     final a = m['a'] as List;
-    if (!replayAllowed(seat.index, a)) {
+    var ok = false;
+    try {
+      ok = replayAllowed(seat.index, a);
+    } catch (_) {
+      ok = false;
+    }
+    if (!ok) {
       _host?.send(seat, _gameMessage(seat.index));
       return;
     }
@@ -186,7 +199,8 @@ mixin NetReplayScreen<T extends StatefulWidget> on State<T> {
         replayHumans = {for (final h in m['humans'] as List) (h as num).toInt()};
         replayMe = me;
         _playing = true;
-        replayNewGame(_seed, _names, me);
+        _options = ((m['opt'] as Map?) ?? const {}).cast<String, Object?>();
+        replayNewGame(_seed, _names, me, _options);
         try {
           // Was die frische Engine schon protokolliert hat (z. B. den Spielstart), nicht doppelt ausführen
           final have = replayLog.length;
