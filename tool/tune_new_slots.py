@@ -59,9 +59,10 @@ GAMES = {
     "jade": dict(
         mode="ways", anywhere=False, div=100, rows=5, heights=[2, 3, 4, 5], stake=500,
         weights=[[9, 8, 7, 6, 4, 3, 0, 0, 4, 0]] + [[9, 8, 7, 6, 4, 3, 2, 0, 4, 0]] * 4 + [[9, 8, 7, 6, 4, 3, 0, 0, 4, 0]],
-        pays={0: [4, 13, 25, 51], 1: [8, 17, 34, 64], 2: [9, 21, 38, 85], 3: [13, 25, 51, 114], 4: [21, 38, 81, 195],
-              5: [34, 64, 161, 390]},
-        hold=dict(trigger=6, respins=3, chance=0.02,
+        pays={0: [4, 12, 22, 45], 1: [7, 15, 30, 57], 2: [8, 18, 33, 75], 3: [12, 22, 45, 100], 4: [19, 33, 71, 172],
+              5: [30, 57, 141, 343]},
+        # 4 % je Feld und Respin: Grand (alle 30 Felder) etwa alle 1,6 Mio. Drehungen statt praktisch nie
+        hold=dict(trigger=6, respins=3, chance=0.04,
                   values=[5, 10, 15, 20, 25, 50, 100, 200, 500, 2000],
                   weights=[300, 250, 180, 120, 80, 40, 15, 8, 3, 1], grand=10000),
         seed=888),
