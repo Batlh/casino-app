@@ -106,10 +106,14 @@ class SpinResult {
     required this.scatterWin,
     required this.freeSpinsWon,
     required this.total,
+    this.stops = const [],
   });
 
-  /// grid[Walze][Reihe]
+  /// grid[Walze][Reihe], so wie gewertet (in Freispielen schon mit ausgefüllten Joker-Walzen).
   final List<List<int>> grid;
+
+  /// Stopposition je Walze auf dem Walzenband (oberste sichtbare Reihe), leer bei vorgegebenem Raster.
+  final List<int> stops;
   final List<LineWin> lineWins;
   final int scatterCount;
   final int scatterWin;
@@ -126,20 +130,23 @@ class SlotEngine {
   /// stake: Gesamteinsatz, durch die Linienzahl teilbar.
   SpinResult spin(int stake, {bool free = false}) {
     final grid = <List<int>>[];
+    final stops = <int>[];
     for (final strip in rules.strips) {
       final stop = _rng.nextInt(strip.length);
+      stops.add(stop);
       grid.add([
         for (var row = 0; row < rules.rows; row++)
           strip[(stop + row) % strip.length],
       ]);
     }
-    return evaluateGrid(grid, stake, free: free);
+    return evaluateGrid(grid, stake, free: free, stops: stops);
   }
 
   SpinResult evaluateGrid(
     List<List<int>> grid,
     int stake, {
     bool free = false,
+    List<int> stops = const [],
   }) {
     final scatters = grid.expand((c) => c).where((s) => s == symScatter).length;
     final shown = [for (final c in grid) c.toList()];
@@ -181,6 +188,7 @@ class SlotEngine {
       scatterWin: scatterWin,
       freeSpinsWon: freeWon,
       total: total,
+      stops: stops,
     );
   }
 }

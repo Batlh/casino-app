@@ -9,6 +9,7 @@ import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
 import 'slot_engine.dart';
 import 'slot_games.dart';
+import 'slot_log.dart';
 
 class SlotScreen extends StatefulWidget {
   const SlotScreen({super.key, required this.game});
@@ -115,6 +116,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
       // Bildschirm wurde verlassen, der Gewinn zählt trotzdem.
     }
     wallet.credit(result.total);
+    logSlotSpin(widget.game, result, stake: _stake, free: free, balance: wallet.balance);
     if (!mounted) {
       wallet.refillIfBroke();
       return;
@@ -179,16 +181,25 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
           final wide = box.maxWidth > box.maxHeight * 1.3;
           final controlsHeight = wide ? 0.0 : 190.0;
           final maxW = box.maxWidth - (wide ? math.min(300.0, box.maxWidth * 0.32) : 0) - 24;
-          final maxH = box.maxHeight - controlsHeight - 24;
+          // Platz für die Zeile mit der gerade gezeigten Gewinnlinie
+          final maxH = box.maxHeight - controlsHeight - 24 - 30;
           // Fünf Walzen zu drei Reihen plus Rahmen
           final cell = math.min(maxW / _rules.reels, maxH / _rules.rows);
-          final reels = _ReelWindow(
+          final reelWindow = _ReelWindow(
             cell: cell,
             spin: _spin,
             pulse: _pulse,
             tapes: _tapes,
             result: _result,
             game: widget.game,
+          );
+          final reels = Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              reelWindow,
+              const SizedBox(height: 6),
+              _LineCaption(pulse: _pulse, result: _result, game: widget.game),
+            ],
           );
           if (wide) {
             return Row(
@@ -499,6 +510,66 @@ class _SymbolPainter extends CustomPainter {
   bool shouldRepaint(_SymbolPainter old) => old.symbol != symbol;
 }
 
+/// Text zur Gewinnlinie, die gerade aufleuchtet, z. B. „Linie 16: 3 × Seepferdchen = 40“.
+class _LineCaption extends StatelessWidget {
+  const _LineCaption({required this.pulse, required this.result, required this.game});
+
+  final Animation<double> pulse;
+  final SpinResult? result;
+  final SlotGame game;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    return SizedBox(
+      height: 24,
+      child: AnimatedBuilder(
+        animation: pulse,
+        builder: (context, _) {
+          final res = result;
+          if (res == null || res.lineWins.isEmpty) return const SizedBox.shrink();
+          // Gleiche Auswahl wie die aufleuchtende Linie im Walzenfenster
+          final index = (pulse.value * res.lineWins.length).floor() % res.lineWins.length;
+          final w = res.lineWins[index];
+          return Text(
+            'Linie ${w.line + 1}: ${w.count} × ${game.symbolNames[w.symbol]} = ${formatCoins(w.payout)}'
+            '${res.lineWins.length > 1 ? '   (${index + 1}/${res.lineWins.length})' : ''}',
+            style: TextStyle(color: p.ink, fontSize: 15, fontWeight: FontWeight.w600),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Kleines Bild einer Gewinnlinie: Raster aus Reihen und Walzen, die Linie hervorgehoben.
+class _LineDiagramPainter extends CustomPainter {
+  _LineDiagramPainter(this.line, this.rows, this.ink, this.accent);
+
+  final List<int> line;
+  final int rows;
+  final Color ink;
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final reels = line.length;
+    final cw = size.width / reels;
+    final ch = size.height / rows;
+    final dim = Paint()..color = ink.withValues(alpha: 0.18);
+    final hit = Paint()..color = accent;
+    for (var r = 0; r < reels; r++) {
+      for (var row = 0; row < rows; row++) {
+        final cell = Rect.fromLTWH(r * cw, row * ch, cw, ch).deflate(1.5);
+        canvas.drawRRect(RRect.fromRectAndRadius(cell, const Radius.circular(2)), line[r] == row ? hit : dim);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LineDiagramPainter old) => old.line != line || old.ink != ink || old.accent != accent;
+}
+
 class _PayTableSheet extends StatelessWidget {
   const _PayTableSheet({required this.game, required this.stake});
   final SlotGame game;
@@ -575,6 +646,35 @@ class _PayTableSheet extends StatelessWidget {
               Text(game.featureText, style: style),
             const SizedBox(height: 8),
             Text(game.wildText, style: style),
+            const SizedBox(height: 16),
+            Text('Gewinnlinien', style: style.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text(
+              'Nur diese ${rules.lineCount} Linien zahlen. Die gleichen Symbole müssen auf der ersten Walze links beginnen '
+              'und ohne Lücke nebeneinander liegen. Gleiche Symbole nur in der Mitte oder auf anderen Wegen zählen nicht.',
+              style: style.copyWith(fontSize: 14, color: p.inkSoft),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (var l = 0; l < rules.lines.length; l++)
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 64,
+                        height: 64 * rules.rows / rules.reels,
+                        child: CustomPaint(
+                          painter: _LineDiagramPainter(rules.lines[l], rules.rows, p.ink, p.accent),
+                        ),
+                      ),
+                      Text('${l + 1}', style: style.copyWith(fontSize: 13, color: p.inkSoft)),
+                    ],
+                  ),
+              ],
+            ),
           ],
         ),
       ),
