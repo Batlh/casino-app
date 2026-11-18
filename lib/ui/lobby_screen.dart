@@ -197,6 +197,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         () => _open(const SlotScreen(game: fruchtlawine)),
       ),
       _Game(
+        pharaonengold.name,
+        pharaonengold.blurb,
+        pharaonengold.lobbyColor,
+        () => _SlotArt(pharaonengold, 5, 6),
+        () => _open(const SlotScreen(game: pharaonengold)),
+      ),
+      _Game(
         "Texas Hold'em",
         'No-Limit gegen bis zu fünf Gegner',
         const Color(0xFF7A1F12),

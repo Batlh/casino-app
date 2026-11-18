@@ -8,6 +8,7 @@ import 'kosmos_art.dart';
 import 'lawine_art.dart';
 import 'jade_art.dart';
 import 'mine_art.dart';
+import 'pharao_art.dart';
 import 'slot_data.dart';
 import 'slot_data_neu.dart';
 import 'sakura_art.dart';
@@ -632,4 +633,74 @@ const fruchtlawine = SlotGame(
   freeSpinLine: 'Freispiel, Kaskaden ab ×2',
 );
 
-const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb, fruchtlawine];
+/// Mega-Slot mit allen Bausteinen: wechselnde Höhe, Kaskaden, Joker mit Multiplikator, liegende Joker in Freispielen,
+/// Glücksmünzen mit Hold & Spin und Bonusrad.
+const pharaonengold = SlotGame(
+  name: 'Pharaonengold',
+  blurb: 'Alles in einem: Kaskaden, Münzen, Bonusrad',
+  rules: SlotRules(
+    rows: 5,
+    heights: [2, 3, 4, 5],
+    mode: PayMode.ways,
+    waysDivisor: 500,
+    strips: pharaoStrips,
+    linePays: {
+      0: [2, 5, 13, 24],
+      1: [5, 8, 16, 32],
+      2: [5, 11, 19, 40],
+      3: [6, 13, 24, 55],
+      4: [11, 19, 40, 92],
+      5: [16, 32, 77, 187],
+    },
+    cascade: [1, 2, 3, 5],
+    freeCascade: [2, 4, 6, 10],
+    wildMultipliers: [2, 3],
+    wildMultiplierWeights: [3, 1],
+    stickyWildsInFree: true,
+    scatterPays: [2, 5, 20],
+    freeSpins: 10,
+    holdSpin: HoldSpinRules(
+      trigger: 6,
+      respins: 3,
+      landChance: 0.04,
+      values: [10, 20, 30, 40, 50, 100, 200, 400, 1000, 4000],
+      weights: [300, 250, 180, 120, 80, 40, 15, 8, 3, 1],
+      jackpots: {400: 'Mini', 1000: 'Minor', 4000: 'Major'},
+      grand: 10000,
+    ),
+    wheel: WheelRules(
+      segments: [
+        WheelSegment(WheelKind.coins, 50, 6),
+        WheelSegment(WheelKind.coins, 100, 4),
+        WheelSegment(WheelKind.freeSpins, 10, 4),
+        WheelSegment(WheelKind.holdSpin, 6, 3),
+        WheelSegment(WheelKind.coins, 200, 2),
+        WheelSegment(WheelKind.freeSpins, 15, 2),
+        WheelSegment(WheelKind.coins, 500, 1),
+      ],
+    ),
+  ),
+  stakes: [500, 1000, 1500, 2000, 3000, 5000],
+  symbolNames: ['Skarabäus', 'Krug', 'Auge', 'Henkelkreuz', 'Katze', 'Goldmaske', 'Pyramide', 'Flügelsonne', 'Goldmünze', 'Sonnenrad'],
+  paintSymbol: paintPharaoSymbol,
+  paintBackdrop: paintPharaoBackdrop,
+  background: BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF0B1033), Color(0xFF1C1236), Color(0xFF120A06)],
+    ),
+  ),
+  frame: [Color(0xFFFFE082), Color(0xFFFFB300), Color(0xFF1E4FA8)],
+  lobbyColor: Color(0xFF1E3A78),
+  featureText:
+      'Sechs Walzen mit 2 bis 5 Symbolen je Drehung, bis zu 15.625 Wege. Gewinnsymbole verschwinden, neue fallen nach, '
+      'jede Kaskade erhöht den Multiplikator: ×1, ×2, ×3, ×5. Drei oder mehr Flügelsonnen zahlen das 2-, 5- oder 20-Fache '
+      'und starten 10 Freispiele mit ×2, ×4, ×6, ×10; dort bleiben Pyramiden bis zum Ende liegen. Sechs Goldmünzen starten '
+      'Hold & Spin mit Mini, Minor, Major und Grand. Drei Sonnenräder auf den Walzen 1, 3 und 5 drehen das Bonusrad.',
+  wildText: 'Die Pyramide ersetzt jedes Symbol außer Flügelsonne, Goldmünze und Sonnenrad. Sie bekommt ×2 oder ×3 und zählt '
+      'dann als so viele Wege.',
+  freeSpinLine: 'Freispiel, Pyramiden bleiben liegen',
+);
+
+const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb, fruchtlawine, pharaonengold];

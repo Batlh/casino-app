@@ -78,6 +78,7 @@ void main() {
         SlotScreen(game: jadetempel),
         SlotScreen(game: fruechtekorb),
         SlotScreen(game: fruchtlawine),
+        SlotScreen(game: pharaonengold),
         HoldemScreen(),
         HoldemScreen(draw: true),
         BingoScreen(),

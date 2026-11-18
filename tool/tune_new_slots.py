@@ -90,6 +90,22 @@ GAMES = {
                   values=[5, 10, 15, 20, 25, 50, 100, 200, 500, 2000],
                   weights=[300, 250, 180, 120, 80, 40, 15, 8, 3, 1], grand=10000),
         seed=888),
+    # Mega-Slot „mit allem“: sechs Walzen mit wechselnder Höhe, Kaskaden, Joker ×2/×3, liegende Joker in Freispielen,
+    # Glücksmünzen mit Hold & Spin und Bonusrad. Anteile etwa: Wege 55 %, Freispiele 19 %, Hold & Spin 15 %, Rad 6 %.
+    "pharao": dict(
+        mode="ways", anywhere=False, div=500, rows=5, heights=[2, 3, 4, 5], stake=500, sticky=True,
+        weights=[[18, 16, 14, 12, 8, 6, 0, 1, 7, 2], [18, 16, 14, 12, 8, 6, 4, 1, 7, 0], [18, 16, 14, 12, 8, 6, 4, 1, 7, 2],
+                 [18, 16, 14, 12, 8, 6, 4, 1, 7, 0], [18, 16, 14, 12, 8, 6, 4, 1, 7, 2], [18, 16, 14, 12, 8, 6, 0, 1, 7, 0]],
+        pays={0: [2, 5, 13, 24], 1: [5, 8, 16, 32], 2: [5, 11, 19, 40], 3: [6, 13, 24, 55], 4: [11, 19, 40, 92],
+              5: [16, 32, 77, 187]},
+        cascade=[1, 2, 3, 5], free_cascade=[2, 4, 6, 10], wild_mults=([2, 3], [3, 1]),
+        scatter=[2, 5, 20], free=10,
+        hold=dict(trigger=6, respins=3, chance=0.04,
+                  values=[10, 20, 30, 40, 50, 100, 200, 400, 1000, 4000],
+                  weights=[300, 250, 180, 120, 80, 40, 15, 8, 3, 1], grand=10000),
+        wheel=[("coins", 50, 6), ("coins", 100, 4), ("free", 10, 4), ("holdSpin", 6, 3), ("coins", 200, 2),
+               ("free", 15, 2), ("coins", 500, 1)],
+        seed=777),
 }
 
 

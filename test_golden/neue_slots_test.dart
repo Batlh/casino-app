@@ -17,8 +17,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens_test.dart' show loadFonts;
 
-final _games = [tiefsee, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb, fruchtlawine];
-const _ids = ['tiefsee', 'mine', 'drachen', 'jahrmarkt', 'vulkan', 'sakura', 'jade', 'frucht', 'lawine'];
+final _games = [tiefsee, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb, fruchtlawine, pharaonengold];
+const _ids = ['tiefsee', 'mine', 'drachen', 'jahrmarkt', 'vulkan', 'sakura', 'jade', 'frucht', 'lawine', 'pharao'];
 
 class _Sheet extends CustomPainter {
   @override
@@ -81,11 +81,11 @@ void main() {
   }
 
   testWidgets('Symbole neue Slots', (tester) async {
-    tester.view.physicalSize = const Size(1650, 1350);
+    tester.view.physicalSize = const Size(1650, 1500);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.runAsync(loadFonts);
-    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1650, 1350), painter: _Sheet()))));
+    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1650, 1500), painter: _Sheet()))));
     await expectLater(find.byType(RepaintBoundary).first, matchesGoldenFile('goldens/symbole_neu.png'));
   });
 
@@ -183,6 +183,20 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1100));
     await tester.pump(const Duration(milliseconds: 500));
     await snap('lawine_kaskade_2');
+    await finish(tester);
+  });
+
+  testWidgets('Pharaonengold: Kaskaden, Münzen, Rad', (tester) async {
+    await tester.runAsync(loadFonts);
+    for (final (id, want) in <(String, bool Function(SpinOutcome))>[
+      ('kaskade', (o) => o.steps.length >= 3 && o.wildMults.isNotEmpty),
+      ('muenzen', (o) => o.holdSpin != null),
+      ('rad', (o) => o.wheel != null),
+    ]) {
+      await start(tester, SlotScreen(game: pharaonengold, seed: _seedFor(pharaonengold, want)));
+      await spin(tester);
+      await snap('pharao_$id');
+    }
     await finish(tester);
   });
 

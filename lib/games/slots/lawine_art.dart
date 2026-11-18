@@ -39,7 +39,7 @@ void paintLawineSymbol(Canvas canvas, Rect rect, int symbol) {
       glow(canvas, c, w * 0.5, const Color(0x99FFF176));
       final star = starPath(c.translate(0, -w * 0.04), w * 0.38);
       shaded(canvas, star, const Color(0xFFFFF59D), const Color(0xFFFFA000));
-      caption(canvas, r, 'BONUS', const Color(0xFFFFF59D), size: 0.16, y: 0.93);
+      caption(canvas, r, 'SCATTER', const Color(0xFFFFF59D), size: 0.16, y: 0.93);
     case 10: // Erdbeere
       final body = Path()
         ..moveTo(c.dx, c.dy + w * 0.36)
@@ -64,7 +64,7 @@ void paintLawineSymbol(Canvas canvas, Rect rect, int symbol) {
       final banana = Path()
         ..moveTo(c.dx - w * 0.36, c.dy - w * 0.16)
         ..quadraticBezierTo(c.dx - w * 0.1, c.dy + w * 0.42, c.dx + w * 0.36, c.dy - w * 0.08)
-        ..quadraticBezierTo(c.dx - w * 0.04, c.dy + w * 0.2, c.dx - w * 0.3, c.dy - w * 0.22)
+        ..quadraticBezierTo(c.dx - w * 0.06, c.dy + w * 0.1, c.dx - w * 0.3, c.dy - w * 0.22)
         ..close();
       shaded(canvas, banana, const Color(0xFFFFF59D), const Color(0xFFF9A825));
       canvas.drawLine(c.translate(-w * 0.33, -w * 0.19), c.translate(-w * 0.4, -w * 0.28), strokeOf(const Color(0xFF5D4037), w * 0.04));
