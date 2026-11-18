@@ -475,6 +475,12 @@ class EinsPlayer {
   final String name;
   final bool human;
   List<EinsCard> hand = [];
+
+  /// Mitspieler im Netz: zieht selbst, nicht der Computer.
+  bool remote = false;
+
+  /// Mitspieler im Netz ist gegangen; der Computer spielt für ihn weiter.
+  bool left = false;
 }
 
 class _Challenge {

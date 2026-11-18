@@ -3,10 +3,14 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/debug_log.dart';
+import '../../core/net/lan.dart';
+import '../../core/net/lan_table.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guides.dart';
+import '../../ui/net_panels.dart';
 import '../../ui/settings_sheet.dart';
 import '../../ui/widgets.dart';
 import '../board/seats.dart';
@@ -14,6 +18,7 @@ import '../cards/card_widgets.dart';
 import '../cards/rewards.dart';
 import 'eins_card.dart';
 import 'eins_engine.dart';
+import 'eins_net.dart';
 
 const _names = ['Helga', 'Otto', 'Bärbel', 'Klaus', 'Rosi', 'Horst'];
 const einsRewardPerOpponent = 50;
@@ -129,7 +134,30 @@ class _EinsScreenState extends State<EinsScreen> {
   List<Seat> _seats = const [Seat('Du', human: true), Seat('Helga'), Seat('Otto')];
   int get _opponents => _seats.length - 1;
   int get _humans => _seats.where((s) => s.human).length;
-  int get _bots => _seats.length - _humans;
+  int get _bots => _net ? (_netRound?.bots ?? 0) : _seats.length - _humans;
+
+  // Netzwerk
+  bool _netPanel = false;
+  String _name = '';
+  String _netMessage = '';
+  NetTableHost? _host;
+  NetTableGuest? _guest;
+  LanBrowser? _browser;
+  List<LanTable> _tables = [];
+  List<String> _addresses = [];
+  StreamSubscription<Object?>? _sub;
+  final _manual = TextEditingController();
+  int _netBots = 1;
+  bool _netPlaying = false;
+  List<Seat> _localSeats = const [];
+  EinsRound? _netRound;
+
+  /// Gastgeber: alle Aktionen der Runde. Mitspieler: wie viele schon angewendet sind.
+  final List<LanMessage> _log = [];
+  int _applied = 0;
+
+  bool get _net => _host != null || _guest != null;
+  String get _displayName => _name.trim().isEmpty ? 'Spieler' : _name.trim();
 
   /// Wessen Hand gezeigt wird, und ob sie gerade verdeckt ist (Gerät wird weitergegeben).
   int _viewer = 0;
@@ -155,7 +183,7 @@ class _EinsScreenState extends State<EinsScreen> {
   /// Alle Menschen sind mit 25 Karten raus.
   bool get _humanOut => [
         for (var i = 0; i < _e.count; i++)
-          if (_e.players[i].human) _e.out[i],
+          if (_net ? (_netRound?.humans.contains(i) ?? false) : _e.players[i].human) _e.out[i],
       ].every((x) => x);
   bool get _over => _e.finished || _humanOut;
 
@@ -164,7 +192,7 @@ class _EinsScreenState extends State<EinsScreen> {
 
   /// Trostpreis: je Gegner mit mehr Karten oder schon ausgeschieden.
   int get _placeReward {
-    if (_humanOut || _humans != 1) return 0;
+    if (_net || _humanOut || _humans != 1) return 0;
     final me = _seats.indexWhere((x) => x.human);
     final mine = _e.players[me].hand.length;
     var beaten = 0;
@@ -191,7 +219,43 @@ class _EinsScreenState extends State<EinsScreen> {
         // Standard behalten
       }
     }
+    final st = _app.settings;
+    _name = '${st.loadGame('netz')?['name'] ?? st.loadGame('poker')?['name'] ?? st.loadGame('bingo')?['name'] ?? ''}';
+    _localSeats = _seats;
     _setup();
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    _host?.close();
+    _guest?.close();
+    _browser?.close();
+    _manual.dispose();
+    super.dispose();
+  }
+
+  /// Führt eine Aktion aus (allein oder als Gastgeber) und schickt sie an alle Mitspieler.
+  SpinSpace? _do(LanMessage a) {
+    final space = einsApply(_e, a);
+    final host = _host;
+    if (host != null && _netPlaying) {
+      _log.add(a);
+      host.lan.broadcast({'t': 'act', 'n': _log.length, 'round': _round, 'a': a});
+    }
+    return space;
+  }
+
+  /// Als Mitspieler geht die Aktion an den Gastgeber, ausgeführt wird sie, wenn sie zurückkommt.
+  /// Liefert true, wenn sie hier sofort ausgeführt wurde.
+  bool _act(LanMessage a) {
+    final guest = _guest;
+    if (guest != null) {
+      guest.send({'t': 'act', 'round': _round, 'a': a});
+      return false;
+    }
+    _do(a);
+    return true;
   }
 
   void _setup() {
@@ -243,11 +307,18 @@ class _EinsScreenState extends State<EinsScreen> {
         ],
       );
       if (!mounted || pick == null) continue;
-      setState(() => _e.coins[i] = pick == 0 ? EinsCoin.mercy : EinsCoin.noMercy);
+      _act(einsCoinAction(i, pick == 0 ? EinsCoin.mercy : EinsCoin.noMercy));
+      setState(() {});
     }
   }
 
   void _newRound() {
+    if (_guest != null) return;
+    if (_host != null) {
+      _round++;
+      _hostRound();
+      return;
+    }
     setState(() {
       _round++;
       _setup();
@@ -260,6 +331,7 @@ class _EinsScreenState extends State<EinsScreen> {
     final seats = await showSeatSetup(context, gameId: 'eins', title: 'Eins!', minSeats: 2, maxSeats: 4);
     if (seats == null || !mounted) return;
     _seats = seats;
+    _localSeats = seats;
     _newRound();
   }
 
@@ -381,16 +453,12 @@ class _EinsScreenState extends State<EinsScreen> {
       if (chosen == null || !mounted || !_myTurn) return;
     }
     final callBonus = _called && _e.actor.hand.length == 2;
-    _e.play(
-      c,
-      chosen: chosen,
-      target: target,
-      flex: flex,
-      discardColor: discardColor,
-      coin: coin,
-      called: _called,
-    );
+    final action = einsPlayAction(c, chosen: chosen, target: target, flex: flex, discardColor: discardColor, coin: coin, called: _called);
     _called = false;
+    if (!_act(action)) {
+      _app.sfx.play(Sound.card);
+      return;
+    }
     if (callBonus && !_e.finished && _bots > 0) _app.wallet.credit(callReward);
     _app.sfx.play(Sound.card);
     setState(() {});
@@ -399,7 +467,7 @@ class _EinsScreenState extends State<EinsScreen> {
 
   void _challengeTap() {
     if (!_myTurn || !_e.canChallenge) return;
-    _e.challenge();
+    if (!_act(einsChallengeAction)) return;
     _app.sfx.play(Sound.chip);
     if (_e.lastChallengeWon && _bots > 0) _app.wallet.credit(challengeReward);
     setState(() {});
@@ -408,7 +476,9 @@ class _EinsScreenState extends State<EinsScreen> {
 
   void _mercyTap() {
     if (!_myTurn) return;
-    if (_e.useMercyCoin()) {
+    final before = _e.coins[_e.current];
+    if (!_act(einsMercyAction)) return;
+    if (_e.coins[_e.current] != before) {
       _app.sfx.play(Sound.coin);
       setState(() {});
     }
@@ -425,13 +495,13 @@ class _EinsScreenState extends State<EinsScreen> {
       return;
     }
     if (_e.extraPlay) {
-      _e.endTurn();
+      if (!_act(einsEndAction)) return;
       setState(() {});
       _after();
       return;
     }
     if (_e.drewThisTurn && _e.pendingDraw == 0 && _e.forcedColorDraw == null) return;
-    _e.draw();
+    if (!_act(einsDrawAction)) return;
     _app.sfx.play(Sound.card);
     setState(() {});
     _after();
@@ -440,25 +510,37 @@ class _EinsScreenState extends State<EinsScreen> {
   Future<void> _humanRoulette() async {
     final c = await showColorPicker(context, colors: _e.sideColors, title: 'Farbe ansagen');
     if (c == null || !mounted || !_myTurn) return;
-    _e.resolveRoulette(c);
+    if (!_act(einsRouletteAction(c))) return;
     _app.sfx.play(Sound.card);
     setState(() {});
     _after();
   }
 
   Future<void> _humanSpin() async {
-    final space = await _animateSpin();
+    // Als Mitspieler dreht der Gastgeber; das Feld kommt mit der Aktion zurück
+    if (_guest != null) {
+      _act(einsRollAction);
+      return;
+    }
+    final space = await _rollAndAnimate();
     if (!mounted || space == null) return;
     final choice = await _humanSpinChoice(space);
     if (!mounted) return;
-    _e.spin(forced: space, choice: choice);
+    _do(einsSpinAction(space, choice));
     _afterSpin();
     _after();
   }
 
-  /// Dreht das Rad sichtbar. Liefert das Feld, angewendet wird es danach.
-  Future<SpinSpace?> _animateSpin() async {
-    final space = _e.randomSpace();
+  /// Dreht das Rad (Zufall der Engine) und zeigt es. Liefert das Feld, angewendet wird es danach.
+  Future<SpinSpace?> _animateSpin() => _rollAndAnimate();
+
+  Future<SpinSpace?> _rollAndAnimate() async {
+    final space = _do(einsRollAction)!;
+    return _animateWheel(space);
+  }
+
+  /// Nur die Drehung des Rads zeigen.
+  Future<SpinSpace?> _animateWheel(SpinSpace space) async {
     setState(() {
       _spinning = true;
       _wheelVisible = true;
@@ -596,7 +678,7 @@ class _EinsScreenState extends State<EinsScreen> {
     setState(() => _race = race);
     final bots = [
       for (var i = 0; i < _e.count; i++)
-        if (!_e.out[i] && !_e.players[i].human) i,
+        if (!_e.out[i] && !_e.players[i].human && !(_e.players[i].remote && !_e.players[i].left)) i,
     ];
     var fastest = bots.isEmpty ? -1 : bots.first;
     var best = 99999;
@@ -626,7 +708,7 @@ class _EinsScreenState extends State<EinsScreen> {
       if (!mounted) return;
       if (i != null) discardId = hand[i].id;
     }
-    _e.resolveRace(w, discardId: discardId);
+    _do(einsRaceAction(w, discardId));
     _app.sfx.play(winner.human ? Sound.win : Sound.card);
     setState(() {
       _race = null;
@@ -636,13 +718,18 @@ class _EinsScreenState extends State<EinsScreen> {
   }
 
   void _raceTap(int player) {
+    final guest = _guest;
+    if (guest != null) {
+      guest.send({'t': 'tap', 'round': _round});
+      return;
+    }
     final r = _race;
     if (r != null && !r.isCompleted) r.complete(player);
   }
 
   void _keep() {
     if (!_myTurn) return;
-    _e.pass();
+    if (!_act(einsPassAction)) return;
     setState(() {});
     _after();
   }
@@ -663,37 +750,42 @@ class _EinsScreenState extends State<EinsScreen> {
   }
 
   Future<void> _botPlay(EinsChoice choice) async {
-    _e.play(
+    _do(einsPlayAction(
       choice.card!,
       chosen: choice.color,
       target: choice.target,
       flex: choice.flex,
       discardColor: choice.discardColor,
       coin: choice.coin,
-    );
+    ));
     _app.sfx.play(Sound.card);
     setState(() {});
   }
 
   Future<void> _pump() async {
-    if (_running) return;
+    // Als Mitspieler spielt nur der Gastgeber die Computer
+    if (_running || _guest != null) return;
     _running = true;
-    while (mounted && !_over) {
+    final e = _e;
+    while (mounted && _e == e && !_over) {
       if (_e.raceOpen) {
         await _runRace();
         continue;
       }
       if (_e.actor.human) break;
+      // Mitspieler im Netz ziehen selbst; wer gegangen ist, für den spielt der Computer
+      if (_e.actor.remote && !_e.actor.left) break;
       await Future<void>.delayed(_app.settings.botDelay(750));
       if (!mounted) return;
       if (_e.mustSpin) {
         final space = await _animateSpin();
         if (!mounted) return;
-        if (space != null) _e.spin(forced: space);
+        if (space != null) _do(einsSpinAction(space, const SpinChoice()));
         _afterSpin();
         continue;
       }
-      if (einsBotMercy(_e) && _e.useMercyCoin()) {
+      final coinBefore = _e.coins[_e.current];
+      if (einsBotMercy(_e) && (_do(einsMercyAction) == null) && _e.coins[_e.current] != coinBefore) {
         _app.sfx.play(Sound.coin);
         setState(() {});
         await Future<void>.delayed(_app.settings.botDelay(600));
@@ -701,7 +793,7 @@ class _EinsScreenState extends State<EinsScreen> {
       }
       if (einsBotChallenges(_e, _rng)) {
         final me = _e.current;
-        _e.challenge();
+        _do(einsChallengeAction);
         _app.sfx.play(Sound.chip);
         setState(() {});
         if (_e.current != me || _over) continue;
@@ -709,7 +801,7 @@ class _EinsScreenState extends State<EinsScreen> {
         if (!mounted) return;
       }
       if (_e.mustChooseRoulette) {
-        _e.resolveRoulette(favoriteColor(_e, _e.actor.hand));
+        _do(einsRouletteAction(favoriteColor(_e, _e.actor.hand)));
         _app.sfx.play(Sound.card);
         setState(() {});
         continue;
@@ -724,13 +816,13 @@ class _EinsScreenState extends State<EinsScreen> {
           if (second.card != null) {
             await _botPlay(second);
           } else {
-            _e.endTurn();
+            _do(einsEndAction);
             setState(() {});
           }
         }
         continue;
       }
-      _e.draw();
+      _do(einsDrawAction);
       _app.sfx.play(Sound.card);
       setState(() {});
       if (_e.drewThisTurn && !_over) {
@@ -740,11 +832,11 @@ class _EinsScreenState extends State<EinsScreen> {
         if (again.card != null) {
           await _botPlay(again);
           if (_e.extraPlay) {
-            _e.endTurn();
+            _do(einsEndAction);
             setState(() {});
           }
         } else {
-          _e.pass();
+          _do(einsPassAction);
           setState(() {});
         }
       }
@@ -771,6 +863,357 @@ class _EinsScreenState extends State<EinsScreen> {
     setState(() {});
   }
 
+  // ---------------------------------------------------------------- Netzwerk: Gastgeber
+
+  Future<void> _openTable() async {
+    final host = NetTableHost(game: einsNetGame, hostName: _displayName, info: 'Eins! ${modeName(_mode)}');
+    host.onMove = _remoteMove;
+    host.onLeave = _remoteLeft;
+    try {
+      await host.open();
+    } catch (e) {
+      debugLog.warn('netz', 'Tisch eröffnen: $e');
+      setState(() => _netMessage = 'Tisch konnte nicht eröffnet werden');
+      await host.close();
+      return;
+    }
+    _addresses = await localAddresses();
+    _sub = host.changed.listen((_) {
+      if (mounted) setState(() {});
+    });
+    setState(() {
+      _host = host;
+      _netMessage = '';
+    });
+  }
+
+  void _hostStart() {
+    final host = _host!;
+    final guests = host.seats.values.take(3).toList();
+    final names = [_displayName];
+    final humans = {0};
+    for (final g in guests) {
+      g.index = names.length;
+      humans.add(g.index);
+      names.add(g.name);
+    }
+    final offset = _rng.nextInt(_names.length);
+    for (var i = 0; i < math.min(_netBots, 3 - guests.length); i++) {
+      names.add(_names[(offset + i) % _names.length]);
+    }
+    debugLog.info('netz', 'Eins startet mit ${guests.length} Mitspielern und ${names.length - humans.length} Computern');
+    _netPlaying = true;
+    _round = 0;
+    _startNetRound(names, humans);
+  }
+
+  /// Nächste Runde am eigenen Tisch: Gegangene werden Computer, Neue übernehmen einen Computerplatz.
+  void _hostRound() {
+    final host = _host!;
+    final r = _netRound!;
+    final names = r.names.toList();
+    final humans = r.humans.toSet();
+    final offset = _rng.nextInt(_names.length);
+    for (final i in r.humans.toList()) {
+      if (i != 0 && _e.players[i].left) {
+        humans.remove(i);
+        names[i] = _names[(offset + i) % _names.length];
+      }
+    }
+    for (final s in host.seats.values.where((s) => s.index < 0)) {
+      final bot = [for (var i = 0; i < names.length; i++) if (!humans.contains(i)) i].firstOrNull;
+      if (bot != null) {
+        names[bot] = s.name;
+        humans.add(bot);
+        s.index = bot;
+      } else if (names.length < 4) {
+        s.index = names.length;
+        names.add(s.name);
+        humans.add(s.index);
+      }
+    }
+    _startNetRound(names, humans);
+  }
+
+  void _startNetRound(List<String> names, Set<int> humans) {
+    final st = _app.settings;
+    final r = EinsRound(
+      seed: _rng.nextInt(1 << 31),
+      round: _round,
+      mode: _mode,
+      names: names,
+      humans: humans,
+      startPlayer: _round % names.length,
+      stackDraws: st.einsStackDraws,
+      callRequired: st.einsCallRequired,
+      challengeRule: st.einsChallenge,
+      expansion: _mode == EinsMode.noMercy && st.einsExpansion,
+    );
+    setState(() {
+      _netRound = r;
+      _log.clear();
+      _e = r.engine(0);
+      for (final i in humans) {
+        if (i != 0) _e.players[i].remote = true;
+      }
+      _seats = [for (final (i, n) in names.indexed) Seat(n, human: i == 0)];
+      _resetRoundView(0);
+    });
+    for (final s in _host!.seats.values) {
+      _sendRound(s);
+    }
+    _app.sfx.play(Sound.card);
+    if (r.expansion) WidgetsBinding.instance.addPostFrameCallback((_) => _askCoin());
+    _pump();
+  }
+
+  void _sendRound(NetSeat s) {
+    final r = _netRound;
+    if (r == null || s.index < 0) return;
+    _host?.send(s, {'t': 'round', 'r': r.toJson(), 'me': s.index, 'acts': _log});
+  }
+
+  void _resetRoundView(int viewer) {
+    _rewarded = false;
+    _called = false;
+    _wheelVisible = false;
+    _spinning = false;
+    _race = null;
+    _viewer = viewer;
+    _covered = false;
+  }
+
+  void _remoteMove(NetSeat seat, LanMessage m) {
+    if (!_netPlaying || seat.index < 0) return;
+    switch (m['t']) {
+      case 'sync':
+        _sendRound(seat);
+        return;
+      case 'tap':
+        if ((m['round'] as num?)?.toInt() == _round && _e.raceOpen) _raceTap(seat.index);
+        return;
+      case 'act':
+        break;
+      default:
+        return;
+    }
+    if ((m['round'] as num?)?.toInt() != _round || _over) return;
+    final a = (m['a'] as Map).cast<String, Object?>();
+    if (einsTurnAction(a) && (_e.current != seat.index || _e.raceOpen)) return;
+    if (a['a'] == 'coin' && (a['player'] as num?)?.toInt() != seat.index) return;
+    if (a['a'] == 'race') return;
+    SpinSpace? space;
+    try {
+      space = _do(a);
+    } catch (err) {
+      debugLog.warn('netz', 'Ungültige Aktion von ${seat.name}: $err');
+      _sendRound(seat);
+      return;
+    }
+    _showRemote(a, space);
+  }
+
+  void _remoteLeft(NetSeat seat) {
+    if (!_netPlaying || seat.index < 0 || seat.index >= _e.count) return;
+    _e.players[seat.index].left = true;
+    if (!_over && _e.current == seat.index) _pump();
+    if (mounted) setState(() {});
+  }
+
+  /// Zeigt eine Aktion, die nicht vor diesem Bildschirm entschieden wurde (Gastgeber: von Mitspielern; Mitspieler: alle).
+  Future<void> _showRemote(LanMessage a, SpinSpace? space) async {
+    if (!mounted) return;
+    switch (a['a']) {
+      case 'roll':
+        await _animateWheel(space!);
+        if (!mounted) return;
+        // Als Mitspieler am Rad: jetzt die eigenen Entscheidungen treffen
+        if (_guest != null && _e.actor.human && _e.mustSpin) {
+          final choice = await _humanSpinChoice(space);
+          if (!mounted) return;
+          _act(einsSpinAction(space, choice));
+        }
+        return;
+      case 'spin':
+        _afterSpin();
+      case 'mercy':
+        _app.sfx.play(Sound.coin);
+      case 'race':
+        setState(() {
+          _race = null;
+          _wheelVisible = false;
+        });
+        _app.sfx.play(Sound.card);
+      case 'challenge':
+        _app.sfx.play(Sound.chip);
+      case 'coin':
+        break;
+      default:
+        _app.sfx.play(Sound.card);
+    }
+    _after();
+  }
+
+  Future<void> _closeNet() async {
+    await _sub?.cancel();
+    _sub = null;
+    await _host?.close();
+    await _guest?.close();
+    await _browser?.close();
+    if (!mounted) return;
+    setState(() {
+      _host = null;
+      _guest = null;
+      _browser = null;
+      _netPlaying = false;
+      _netPanel = false;
+      _netRound = null;
+      _netMessage = '';
+      _seats = _localSeats;
+      _mode = widget.mode ?? _app.settings.einsMode;
+      _setup();
+    });
+  }
+
+  // ---------------------------------------------------------------- Netzwerk: Mitspieler
+
+  Future<void> _browse() async {
+    final b = LanBrowser(einsNetGame);
+    await b.start();
+    _sub = b.tables.listen((t) {
+      if (mounted) setState(() => _tables = t);
+    });
+    setState(() {
+      _browser = b;
+      _tables = b.current;
+      _netMessage = '';
+    });
+  }
+
+  Future<void> _join(String address, int port) async {
+    final guest = NetTableGuest(_displayName);
+    guest.onMessage = _guestMessage;
+    try {
+      await guest.join(address, port);
+    } catch (e) {
+      debugLog.warn('netz', 'Beitreten: $e');
+      if (mounted) setState(() => _netMessage = 'Tisch nicht erreichbar');
+      await guest.close();
+      return;
+    }
+    await _sub?.cancel();
+    await _browser?.close();
+    _browser = null;
+    _sub = guest.changed.listen((_) {
+      if (!mounted) return;
+      if (!guest.lan.connected) _netMessage = 'Der Gastgeber hat den Tisch geschlossen';
+      setState(() {});
+    });
+    setState(() {
+      _guest = guest;
+      _netMessage = '';
+    });
+  }
+
+  void _guestMessage(LanMessage m) {
+    if (!mounted) return;
+    switch (m['t']) {
+      case 'round':
+        final r = EinsRound.fromJson((m['r'] as Map).cast<String, Object?>());
+        final me = (m['me'] as num).toInt();
+        final e = r.engine(me);
+        var ok = 0;
+        for (final a in m['acts'] as List) {
+          try {
+            einsApply(e, (a as Map).cast<String, Object?>());
+            ok++;
+          } catch (err) {
+            debugLog.warn('netz', 'Nachspielen fehlgeschlagen: $err');
+            break;
+          }
+        }
+        final fresh = r.round != _round || _netRound == null;
+        setState(() {
+          _netRound = r;
+          _round = r.round;
+          _mode = r.mode;
+          _e = e;
+          _applied = ok;
+          _seats = [for (final (i, n) in r.names.indexed) Seat(n, human: i == me)];
+          _resetRoundView(me);
+        });
+        if (fresh) _app.sfx.play(Sound.card);
+        if (fresh && r.expansion && e.coins[me] != null && ok == 0) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _askCoin());
+        }
+        if (_over) _finish();
+      case 'act':
+        if (_netRound == null || (m['round'] as num?)?.toInt() != _round) return;
+        final n = (m['n'] as num).toInt();
+        if (n <= _applied) return;
+        if (n != _applied + 1) {
+          _guest?.send({'t': 'sync'});
+          return;
+        }
+        final a = (m['a'] as Map).cast<String, Object?>();
+        SpinSpace? space;
+        try {
+          space = einsApply(_e, a);
+          _applied = n;
+        } catch (err) {
+          debugLog.warn('netz', 'Aktion passt nicht: $err');
+          _guest?.send({'t': 'sync'});
+          return;
+        }
+        setState(() {});
+        _showRemote(a, space);
+    }
+  }
+
+  void _saveName(String v) {
+    _name = v;
+    _app.settings.saveGame('netz', {'name': v});
+  }
+
+  /// Was statt des Tischs gezeigt wird, solange das Netzwerk eingerichtet wird.
+  Widget? _netScreen() {
+    final guest = _guest;
+    if (guest != null) {
+      if (_netRound == null || !guest.lan.connected) return NetGuestWaiting(guest: guest, onLeave: _closeNet, message: _netMessage);
+      return null;
+    }
+    if (_browser != null) {
+      return NetBrowsePanel(tables: _tables, manual: _manual, onJoin: _join, onBack: _closeNet, message: _netMessage);
+    }
+    final host = _host;
+    if (host != null && !_netPlaying) {
+      return NetHostLobby(
+        host: host,
+        addresses: _addresses,
+        bots: _netBots,
+        maxBots: math.max(0, 3 - host.seats.length),
+        onBots: (n) => setState(() => _netBots = n),
+        onStart: _hostStart,
+        onClose: _closeNet,
+        startLabel: 'Runde starten',
+      );
+    }
+    if (_netPanel) {
+      return NetStartPanel(
+        name: _name,
+        onName: _saveName,
+        onHost: _openTable,
+        onBrowse: _browse,
+        onBack: () => setState(() => _netPanel = false),
+        message: _netMessage,
+        hint: 'Alle Geräte im selben WLAN, bis zu vier Spieler. Es gilt die Spielweise des Gastgebers ($_modeLabel).',
+      );
+    }
+    return null;
+  }
+
+  String get _modeLabel => modeName(_mode);
+
   String get _status {
     final multi = _humans > 1;
     if (_humanOut) return multi ? 'Alle Spieler haben 25 Karten und sind raus' : 'Du hast 25 Karten und bist raus';
@@ -782,7 +1225,7 @@ class _EinsScreenState extends State<EinsScreen> {
           : '${_e.winner!.name} gewinnt die Runde'
               '${_placeReward > 0 ? '. Trostpreis +${formatCoins(_placeReward)} Münzen' : ''}';
     }
-    if (_race != null) return 'Wettrennen! Schnell drücken';
+    if (_race != null || (_guest != null && _e.raceOpen)) return 'Wettrennen! Schnell drücken';
     if (_spinning) return '${_e.actor.human && !multi ? 'Du drehst' : '${_e.actor.name} dreht'} am Glücksrad';
     if (_e.actor.human && _covered) return 'Gib das Gerät an ${_e.actor.name}';
     if (_e.actor.human && multi) {
@@ -832,16 +1275,29 @@ class _EinsScreenState extends State<EinsScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = _app.settings;
+    final net = _netScreen();
     return GameFrame(
       settings: einsSettings,
       guide: einsGuide,
       title: _mode == EinsMode.classic ? 'Eins!' : 'Eins! ${modeName(_mode)}',
-      child: ListenableBuilder(
+      actions: [
+        // Auf schmalen Handys ist die Leiste voll, dort gibt es den Knopf am Rundenende
+        if (!_net && !_netPanel && MediaQuery.sizeOf(context).width >= 420)
+          IconButton(
+            tooltip: 'Im Netzwerk spielen',
+            icon: const Icon(Icons.wifi),
+            onPressed: () => setState(() => _netPanel = true),
+          ),
+      ],
+      child: net ?? ListenableBuilder(
         listenable: settings,
         builder: (context, _) {
-          _e.stackDraws = settings.einsStackDraws;
-          _e.callRequired = settings.einsCallRequired;
-          _e.challengeRule = settings.einsChallenge;
+          // Im Netz gelten die Regeln vom Rundenstart, sonst laufen die Geräte auseinander
+          if (!_net) {
+            _e.stackDraws = settings.einsStackDraws;
+            _e.callRequired = settings.einsCallRequired;
+            _e.challengeRule = settings.einsChallenge;
+          }
           return LayoutBuilder(
             builder: (context, box) => _layout(box, settings.cardScale),
           );
@@ -929,12 +1385,20 @@ class _EinsScreenState extends State<EinsScreen> {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: _over
           ? [
-              ActionButton(primary: true, label: 'Neue Runde', onPressed: _newRound),
-              ActionButton(label: 'Spielweise', onPressed: _askMode),
-              ActionButton(label: 'Mitspieler wählen', onPressed: _askOpponents),
+              if (_guest != null)
+                const ActionButton(label: 'Warte auf den Gastgeber', onPressed: null)
+              else
+                ActionButton(primary: true, label: 'Neue Runde', onPressed: _newRound),
+              if (_guest == null) ActionButton(label: 'Spielweise', onPressed: _askMode),
+              if (_net)
+                ActionButton(label: 'Tisch verlassen', onPressed: _closeNet)
+              else ...[
+                ActionButton(label: 'Mitspieler wählen', onPressed: _askOpponents),
+                ActionButton(label: 'Im Netzwerk', onPressed: () => setState(() => _netPanel = true)),
+              ],
             ]
           : [
-              if (_race != null)
+              if (_race != null || (_guest != null && _e.raceOpen))
                 for (var i = 0; i < _e.count; i++)
                   if (_e.players[i].human && !_e.out[i])
                     ActionButton(
@@ -942,7 +1406,7 @@ class _EinsScreenState extends State<EinsScreen> {
                       label: _humans > 1 ? '${_e.players[i].name}!' : 'Erster!',
                       onPressed: () => _raceTap(i),
                     ),
-              if (_race == null)
+              if (_race == null && !(_guest != null && _e.raceOpen))
                 ActionButton(
                   primary: _myTurn && (special || _e.playableCards().isEmpty),
                   label: _drawLabel,
