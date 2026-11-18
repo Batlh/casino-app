@@ -3,16 +3,19 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/debug_log.dart';
+import '../../core/saves.dart';
 import '../../core/scope.dart';
 import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guides.dart';
+import '../../ui/net_replay_mixin.dart';
 import '../../ui/widgets.dart';
 import '../cards/card_widgets.dart';
 import '../cards/playing_card.dart';
 import '../cards/rewards.dart';
 import 'hearts_engine.dart';
+import 'hearts_net.dart';
 
 const heartsWinBonus = 500;
 const heartsMoonReward = 250;
@@ -26,7 +29,7 @@ class HeartsScreen extends StatefulWidget {
   State<HeartsScreen> createState() => _HeartsScreenState();
 }
 
-class _HeartsScreenState extends State<HeartsScreen> {
+class _HeartsScreenState extends State<HeartsScreen> with NetReplayScreen {
   late HeartsEngine _e;
   late int _seed;
   static const _saveId = 'hearts';
@@ -34,14 +37,9 @@ class _HeartsScreenState extends State<HeartsScreen> {
   /// Für Spielstände; auch beim Schließen noch erreichbar.
   late final Settings _store;
 
-  HeartsEngine _make() => HeartsEngine(
+  HeartsEngine _make([List<String> names = const ['Du', 'Helga', 'Otto', 'Bärbel'], int me = 0]) => HeartsEngine(
         rng: math.Random(_seed),
-        seats: [
-          HeartsSeat('Du', human: true),
-          HeartsSeat('Helga'),
-          HeartsSeat('Otto'),
-          HeartsSeat('Bärbel'),
-        ],
+        seats: [for (final (i, n) in names.indexed) HeartsSeat(n, human: i == me)],
       );
   final Set<PlayingCard> _selected = {};
   bool _running = false;
@@ -51,9 +49,75 @@ class _HeartsScreenState extends State<HeartsScreen> {
   bool _rewardDone = false;
 
   AppScope get _app => AppScope.of(context);
-  HeartsSeat get _me => _e.seats.first;
+  int get _my => replayMe;
+  HeartsSeat get _me => _e.seats[_my];
   bool get _myTurn =>
-      _e.phase == HeartsPhase.playing && _e.current == 0 && !_running && !_showLast;
+      _e.phase == HeartsPhase.playing && _e.current == _my && !_running && !_showLast;
+
+  /// Sitz relativ zu dir: 0 unten, 1 links, 2 oben, 3 rechts.
+  int _rel(int seat) => (seat - _my + 4) % 4;
+
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get replayGame => heartsNetGame;
+  @override
+  String get replayTitle => 'Schwarze Dame';
+  @override
+  int get replaySeats => 4;
+  @override
+  List<String> get replayBotNames => const ['Helga', 'Otto', 'Bärbel'];
+  @override
+  List<List<Object?>> get replayLog => _e.actionLog;
+
+  @override
+  void replayNewGame(int seed, List<String> names, int me) {
+    _seed = seed;
+    _e = _make(names, me)..newGame();
+    _selected.clear();
+    _rewardDone = false;
+    _reward = 0;
+    _note = '';
+    _showLast = false;
+    _app.sfx.play(Sound.card);
+    if (replayIsHost) WidgetsBinding.instance.addPostFrameCallback((_) => _pump());
+  }
+
+  @override
+  void replayApply(List<dynamic> a) => heartsApply(_e, a);
+
+  @override
+  bool replayAllowed(int seat, List<dynamic> a) => heartsAllowed(_e, seat, a);
+
+  @override
+  Future<void> replayAfterRemote(List<List<dynamic>> acts) async {
+    if (acts.any((a) => a.first == 'c')) _app.sfx.play(Sound.card);
+    if (acts.any((a) => a.first == 'g' || a.first == 's')) {
+      _selected.clear();
+      _rewardDone = false;
+      _reward = 0;
+      _note = '';
+    }
+    if (acts.any((a) => a.first == 'p') && _e.phase == HeartsPhase.playing && _e.received.isNotEmpty) {
+      _note = 'Bekommen: ${sortedHand(_e.received).map(_cardName).join(', ')}';
+    }
+    // Stich fertig: kurz zeigen
+    if (acts.isNotEmpty && acts.last.first == 'c' && _e.trick.isEmpty && _e.lastTrick.length == 4) await _showTrick();
+    if (!mounted) return;
+    setState(() {});
+    _pump();
+  }
+
+  @override
+  void replayClosed() {
+    _seed = math.Random.secure().nextInt(1 << 31);
+    setState(() => _e = _make()..newGame());
+    _selected.clear();
+    _rewardDone = false;
+    _reward = 0;
+    _note = '';
+    _pump();
+  }
 
   @override
   void initState() {
@@ -84,15 +148,18 @@ class _HeartsScreenState extends State<HeartsScreen> {
   void setState(VoidCallback fn) {
     super.setState(fn);
     _persist();
+    replayBroadcast();
   }
 
   @override
   void dispose() {
     _persist();
+    replayDispose();
     super.dispose();
   }
 
   void _persist() {
+    if (replayActive) return;
     if (_e.phase == HeartsPhase.gameOver && _rewardDone) {
       _store.clearGame(_saveId);
       return;
@@ -112,16 +179,31 @@ class _HeartsScreenState extends State<HeartsScreen> {
   }
 
   void _pass() {
-    if (_selected.length != 3 || _e.phase != HeartsPhase.passing) return;
-    for (var s = 1; s < 4; s++) {
-      _e.choosePass(s, heartsBotPass(_e.seats[s].hand));
+    if (_selected.length != 3 || _e.phase != HeartsPhase.passing || _e.hasPassed(_my)) return;
+    if (replaySend(['p', _my, for (final c in _selected) cardCode(c)])) {
+      setState(_selected.clear);
+      _app.sfx.play(Sound.card);
+      return;
     }
-    _e.choosePass(0, _selected.toList());
+    _passBots();
+    _e.choosePass(_my, _selected.toList());
     _selected.clear();
-    final got = sortedHand(_e.received).map((c) => _cardName(c)).toList();
-    setState(() => _note = 'Bekommen: ${got.join(', ')}');
+    if (_e.phase == HeartsPhase.playing) {
+      final got = sortedHand(_e.received).map((c) => _cardName(c)).toList();
+      setState(() => _note = 'Bekommen: ${got.join(', ')}');
+    } else {
+      setState(() => _note = '');
+    }
     _app.sfx.play(Sound.card);
     _pump();
+  }
+
+  /// Computer geben ihre Karten weiter (nur allein oder als Gastgeber).
+  void _passBots() {
+    if (_e.phase != HeartsPhase.passing) return;
+    for (var s = 0; s < 4; s++) {
+      if (_e.phase == HeartsPhase.passing && replayIsBot(s) && !_e.hasPassed(s)) _e.choosePass(s, heartsBotPass(_e.seats[s].hand));
+    }
   }
 
   String _cardName(PlayingCard c) {
@@ -136,7 +218,8 @@ class _HeartsScreenState extends State<HeartsScreen> {
   }
 
   Future<void> _play(PlayingCard c) async {
-    if (!_myTurn || !_e.legalCards(0).contains(c)) return;
+    if (!_myTurn || !_e.legalCards(_my).contains(c)) return;
+    if (replaySend(['c', cardCode(c)])) return;
     final done = _e.play(c);
     _app.sfx.play(Sound.card);
     setState(() => _note = '');
@@ -147,7 +230,7 @@ class _HeartsScreenState extends State<HeartsScreen> {
 
   Future<void> _showTrick() async {
     // Ein sauberer Stich ohne Strafpunkte bringt ein paar Münzen
-    if (_e.lastTrickWinner == 0 && pointsOf(_e.lastTrick.map((t) => t.card)) == 0) {
+    if (_e.lastTrickWinner == _my && pointsOf(_e.lastTrick.map((t) => t.card)) == 0) {
       _app.wallet.credit(cleanTrickReward);
     }
     setState(() => _showLast = true);
@@ -158,8 +241,22 @@ class _HeartsScreenState extends State<HeartsScreen> {
 
   Future<void> _pump() async {
     if (_running) return;
+    if (replayIsGuest) {
+      _maybeReward();
+      return;
+    }
+    if (_e.phase == HeartsPhase.passing && _e.hasPassed(_my)) {
+      // Computer erst, wenn du weitergegeben hast (beim Gastgeber), sonst gleich beim Austeilen
+      _passBots();
+    } else if (_e.phase == HeartsPhase.passing && replayActive) {
+      _passBots();
+    }
+    if (_e.phase == HeartsPhase.playing && _e.received.isNotEmpty && _note.isEmpty && _e.tricksPlayed == 0 && _e.trick.isEmpty) {
+      _note = 'Bekommen: ${sortedHand(_e.received).map(_cardName).join(', ')}';
+    }
     _running = true;
-    while (mounted && _e.phase == HeartsPhase.playing && _e.current != 0) {
+    final e = _e;
+    while (mounted && _e == e && _e.phase == HeartsPhase.playing && replayIsBot(_e.current)) {
       await Future<void>.delayed(_app.settings.botDelay(600));
       if (!mounted) return;
       final done = _e.play(heartsBotPlay(_e));
@@ -177,13 +274,13 @@ class _HeartsScreenState extends State<HeartsScreen> {
     if (_rewardDone) return;
     if (_e.phase != HeartsPhase.handOver && _e.phase != HeartsPhase.gameOver) return;
     _rewardDone = true;
-    var reward = _e.moonShooter == 0 ? heartsMoonReward : heartsHandReward(_me.handPoints);
+    var reward = _e.moonShooter == _my ? heartsMoonReward : heartsHandReward(_me.handPoints);
     if (_e.phase == HeartsPhase.gameOver) {
-      if (_e.leaders.contains(0)) {
+      if (_e.leaders.contains(_my)) {
         reward += heartsWinBonus;
       } else {
         // Trostpreis je Gegner mit mehr Punkten
-        reward += placeReward(beatenCount([for (final s in _e.seats) s.score], 0), factor: 4);
+        reward += placeReward(beatenCount([for (final s in _e.seats) s.score], _my), factor: 4);
       }
     }
     _reward = reward;
@@ -197,6 +294,11 @@ class _HeartsScreenState extends State<HeartsScreen> {
   }
 
   void _next() {
+    if (replayIsGuest) return;
+    if (replayIsHost && _e.phase == HeartsPhase.gameOver) {
+      replayHostStart();
+      return;
+    }
     if (_e.phase == HeartsPhase.gameOver) {
       _seed = math.Random.secure().nextInt(1 << 31);
       _e = _make()..newGame();
@@ -215,11 +317,12 @@ class _HeartsScreenState extends State<HeartsScreen> {
   String get _status {
     switch (_e.phase) {
       case HeartsPhase.passing:
+        if (_e.hasPassed(_my)) return 'Warte, bis alle weitergegeben haben';
         return 'Drei Karten ${_e.passLabel} weitergeben (${_selected.length} von 3)';
       case HeartsPhase.handOver:
       case HeartsPhase.gameOver:
         final head = _e.phase == HeartsPhase.gameOver
-            ? (_e.leaders.contains(0)
+            ? (_e.leaders.contains(_my)
                 ? 'Spiel gewonnen'
                 : '${_e.seats[_e.leaders.first].name} gewinnt das Spiel')
             : (_e.moonShooter != null
@@ -238,13 +341,14 @@ class _HeartsScreenState extends State<HeartsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final legal = _myTurn ? _e.legalCards(0).toSet() : <PlayingCard>{};
-    final passing = _e.phase == HeartsPhase.passing;
+    final legal = _myTurn ? _e.legalCards(_my).toSet() : <PlayingCard>{};
+    final passing = _e.phase == HeartsPhase.passing && !_e.hasPassed(_my);
     final over = _e.phase == HeartsPhase.handOver || _e.phase == HeartsPhase.gameOver;
     return GameFrame(
       guide: heartsGuide,
       title: 'Schwarze Dame',
-      child: ListenableBuilder(
+      actions: replayActions(context),
+      child: replayScreen() ?? ListenableBuilder(
         listenable: _app.settings,
         builder: (context, _) => LayoutBuilder(
         builder: (context, box) {
@@ -274,12 +378,17 @@ class _HeartsScreenState extends State<HeartsScreen> {
                         label: 'Weitergeben',
                         onPressed: _selected.length == 3 ? _pass : null,
                       ),
-                    if (over)
+                    if (over && replayActive)
+                      ...replayButtons(label: _e.phase == HeartsPhase.gameOver ? 'Neues Spiel' : 'Nächste Runde', next: _next)
+                    else if (over) ...[
                       ActionButton(
                         primary: true,
                         label: _e.phase == HeartsPhase.gameOver ? 'Neues Spiel' : 'Nächste Runde',
                         onPressed: _next,
                       ),
+                      if (_e.phase == HeartsPhase.gameOver || MediaQuery.sizeOf(context).width < 420)
+                        ActionButton(label: 'Im Netzwerk', onPressed: replayOpenPanel),
+                    ],
                     if (!passing && !over)
                       Text(
                         'Dein Stand ${_me.score}, diese Runde ${pointsOf(_me.taken)}',
@@ -334,9 +443,9 @@ class _HeartsScreenState extends State<HeartsScreen> {
         );
         return Stack(
           children: [
-            Align(alignment: Alignment.topCenter, child: _badge(2, badgeW)),
-            Align(alignment: const Alignment(-1, 0.1), child: Padding(padding: const EdgeInsets.only(left: 6), child: _badge(1, badgeW))),
-            Align(alignment: const Alignment(1, 0.1), child: Padding(padding: const EdgeInsets.only(right: 6), child: _badge(3, badgeW))),
+            Align(alignment: Alignment.topCenter, child: _badge((_my + 2) % 4, badgeW)),
+            Align(alignment: const Alignment(-1, 0.1), child: Padding(padding: const EdgeInsets.only(left: 6), child: _badge((_my + 1) % 4, badgeW))),
+            Align(alignment: const Alignment(1, 0.1), child: Padding(padding: const EdgeInsets.only(right: 6), child: _badge((_my + 3) % 4, badgeW))),
             Align(
               alignment: const Alignment(0, 0.6),
               child: SizedBox.square(
@@ -364,8 +473,8 @@ class _HeartsScreenState extends State<HeartsScreen> {
       children: [
         for (final t in cards)
           Positioned(
-            left: pos(t.seat).dx,
-            top: pos(t.seat).dy,
+            left: pos(_rel(t.seat)).dx,
+            top: pos(_rel(t.seat)).dy,
             child: PlayingCardView(
               width: cw,
               card: t.card,
