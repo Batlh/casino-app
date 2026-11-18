@@ -82,8 +82,8 @@ void main() {
     expect(r.freeSpinsWon, kosmos.freeSpins);
   });
 
-  for (final g in allSlots) {
-    test('${g.name}: Auszahlungsquote nahe der Abstimmung', () {
+  for (final (i, g) in [...allSlots, ...slotVariants].indexed) {
+    test('${g.name}${i >= allSlots.length ? ' (Variante)' : ''}: Auszahlungsquote nahe der Abstimmung', () {
       final engine = SlotEngine(g.rules, rng: Random(4));
       final stake = g.stakes[3];
       const spins = 300000;
@@ -165,6 +165,18 @@ void main() {
       expect(h.boards.last.keys.every((c) => c >= 0 && c < 30), isTrue);
     }
     expect(rounds, greaterThan(0));
+  });
+
+  test('Edelsteinmine B: Grubenlampen fallen nach und zählen im letzten Bild', () {
+    final engine = SlotEngine(edelsteinmineB.rules, rng: Random(5));
+    var viaCascade = 0;
+    for (var i = 0; i < 20000; i++) {
+      final o = engine.play(100);
+      int count(List<List<int>> grid) => grid.expand((c) => c).where((x) => x == symScatter).length;
+      expect(o.scatterCount, count(o.lastGrid));
+      if (o.freeSpinsWon > 0 && count(o.firstGrid) < 3) viaCascade++;
+    }
+    expect(viaCascade, greaterThan(0));
   });
 
   test('Kaskaden: Streusymbole fallen nicht nach, was am Ende liegt, zählt', () {

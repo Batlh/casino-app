@@ -61,6 +61,13 @@ class Settings extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Edelsteinmine: Grubenlampen fallen in Kaskaden nach und zählen (Variante B). Standard aus.
+  bool get mineScatterDrops => _prefs.getBool('settings.mineScatterDrops') ?? false;
+  set mineScatterDrops(bool value) {
+    _prefs.setBool('settings.mineScatterDrops', value);
+    notifyListeners();
+  }
+
   /// Beim Start auf GitHub nach einer neuen Version suchen (core/updater.dart).
   bool get autoUpdate => _prefs.getBool('settings.autoUpdate') ?? true;
   set autoUpdate(bool value) {

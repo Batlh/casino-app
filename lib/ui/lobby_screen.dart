@@ -140,7 +140,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         edelsteinmine.blurb,
         edelsteinmine.lobbyColor,
         () => _SlotArt(edelsteinmine, 5, 6),
-        () => _open(const SlotScreen(game: edelsteinmine)),
+        () => _open(SlotScreen(game: AppScope.of(context).settings.mineScatterDrops ? edelsteinmineB : edelsteinmine)),
       ),
       _Game(
         drachenhort.name,

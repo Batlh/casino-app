@@ -92,7 +92,11 @@ class SlotRules {
     this.holdSpin,
     this.wheel,
     this.stickyWildsInFree = false,
+    this.scatterDrops = false,
   });
+
+  /// Kaskaden: Streusymbole fallen nach und zählen am Ende mit (sonst fallen sie nicht nach).
+  final bool scatterDrops;
 
   /// In Freispielen bleiben gelandete Joker bis zum Ende der Freispielserie liegen.
   final bool stickyWildsInFree;
@@ -531,7 +535,7 @@ class SlotEngine {
           // Streu- und Bonussymbole fallen nicht nach: Was am Anfang liegt, liegt auch am Ende
           do {
             above[r] = (above[r] - 1) % strip.length;
-          } while (strip[above[r]] == symScatter || strip[above[r]] == symBonus);
+          } while (!rules.scatterDrops && (strip[above[r]] == symScatter || strip[above[r]] == symBonus));
           fresh.insert(0, strip[above[r]]);
         }
         next.add([...fresh, ...kept]);
@@ -544,7 +548,8 @@ class SlotEngine {
     var total = steps.fold(0, (a, s) => a + s.win);
     // Streu- und Bonussymbole verschwinden in Kaskaden nie und fallen auch nicht nach: Was im Raster liegt,
     // liegt bis zum Ende. Gezählt wird im Raster vor dem Ausfüllen der Joker (sonst verdeckt ein Joker sie).
-    final raw = grid.expand((c) => c);
+    // Fallen sie nach (scatterDrops), zählt das letzte Bild der Kaskaden.
+    final raw = rules.scatterDrops ? steps.last.grid.expand((c) => c) : grid.expand((c) => c);
     final scatters = raw.where((s) => s == symScatter).length;
     final bonus = raw.where((s) => s == symBonus).length;
     var scatterWin = 0;

@@ -21,6 +21,15 @@ GAMES = {
         pays={0: [3, 4, 12], 1: [3, 7, 13], 2: [4, 9, 18], 3: [4, 12, 23], 4: [7, 18, 45], 5: [12, 27, 91]},
         cascade=[1, 2, 3, 5], free_cascade=[2, 4, 6, 10],
         scatter=[2, 5, 20], free=10, seed=1849),
+    # Edelsteinmine, Variante B (Einstellung): Grubenlampen fallen in Kaskaden nach und zählen am Ende.
+    # Längere Walzen, damit die Freispiele nicht zu oft kommen.
+    "mineB": dict(
+        mode="ways", anywhere=False, div=100, rows=3, stake=100, scatter_drop=True,
+        weights=[[11, 10, 8, 7, 5, 4, 0, 1, 0, 0], [11, 10, 8, 7, 5, 4, 2, 1, 0, 0], [11, 10, 8, 7, 5, 4, 2, 1, 0, 0],
+                 [11, 10, 8, 7, 5, 4, 2, 1, 0, 0], [11, 10, 8, 7, 5, 4, 0, 1, 0, 0]],
+        pays={0: [4, 5, 15], 1: [4, 9, 18], 2: [5, 12, 25], 3: [5, 16, 31], 4: [9, 25, 61], 5: [16, 36, 124]},
+        cascade=[1, 2, 3, 5], free_cascade=[2, 4, 6, 10],
+        scatter=[2, 5, 20], free=10, seed=1850),
     "drachen": dict(
         mode="ways", anywhere=True, div=50, rows=3, stake=100,
         weights=[[9, 8, 7, 6, 4, 3, 0, 0, 6, 0], [9, 8, 7, 6, 4, 3, 2, 0, 6, 0], [9, 8, 7, 6, 4, 3, 2, 0, 6, 0],

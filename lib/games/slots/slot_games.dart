@@ -266,6 +266,48 @@ const edelsteinmine = SlotGame(
   freeSpinLine: 'Freispiel, Kaskaden ab ×2',
 );
 
+/// Edelsteinmine mit der Einstellung „Grubenlampen fallen nach“: eigene, längere Walzen und Beträge.
+const edelsteinmineB = SlotGame(
+  name: 'Edelsteinmine',
+  blurb: '243 Wege, Kaskaden bis ×10',
+  rules: SlotRules(
+    rows: 3,
+    mode: PayMode.ways,
+    waysDivisor: 100,
+    strips: mineBStrips,
+    scatterDrops: true,
+    linePays: {
+      0: [4, 5, 15],
+      1: [4, 9, 18],
+      2: [5, 12, 25],
+      3: [5, 16, 31],
+      4: [9, 25, 61],
+      5: [16, 36, 124],
+    },
+    cascade: [1, 2, 3, 5],
+    freeCascade: [2, 4, 6, 10],
+    scatterPays: [2, 5, 20],
+    freeSpins: 10,
+  ),
+  stakes: [100, 200, 300, 500, 1000, 2000],
+  symbolNames: ['Quarz', 'Amethyst', 'Topas', 'Smaragd', 'Saphir', 'Rubin', 'Diamant', 'Grubenlampe', '', ''],
+  paintSymbol: paintMineSymbol,
+  paintBackdrop: paintMineBackdrop,
+  background: BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF4E342E), Color(0xFF2B1B14), Color(0xFF120C09)],
+    ),
+  ),
+  frame: [Color(0xFFFFD180), Color(0xFF8D6E63), Color(0xFF3E2723)],
+  lobbyColor: Color(0xFF3E2723),
+  featureText:
+      'Grubenlampen fallen in Kaskaden nach und zählen mit: Liegen am Ende drei oder mehr, zahlen sie das 2-, 5- oder 20-Fache des Einsatzes und starten 10 Freispiele. In Freispielen steigen die Kaskaden bis ×10.',
+  wildText: 'Der Diamant ersetzt jeden Edelstein, aber nicht die Grubenlampe.',
+  freeSpinLine: 'Freispiel, Kaskaden ab ×2',
+);
+
 const drachenhort = SlotGame(
   name: 'Drachenhort',
   blurb: 'Hold & Spin mit vier Jackpots',
@@ -498,5 +540,8 @@ const jadetempel = SlotGame(
       'Hold & Spin auf 6 × 5 Feldern.',
   wildText: 'Die Drachenperle ersetzt jedes Symbol außer der Glücksmünze.',
 );
+
+/// Spielvarianten, die per Einstellung statt eines Automaten aus allSlots laufen.
+const slotVariants = [edelsteinmineB];
 
 const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel];

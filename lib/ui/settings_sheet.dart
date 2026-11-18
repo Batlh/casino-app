@@ -207,6 +207,17 @@ Widget _general(BuildContext context) {
               onSelectionChanged: (s) => app.settings.slotWinMs = s.first,
             ),
           ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text('Edelsteinmine: Grubenlampen fallen nach', style: TextStyle(color: p.ink, fontSize: 17)),
+            subtitle: Text(
+              'Aus: Grubenlampen bleiben, wo sie gelandet sind, nur die zählen. An: Sie können in Kaskaden nachrutschen '
+              'und zählen am Ende mit. Eigene Abstimmung, ebenfalls rund 95 %. Gilt beim nächsten Öffnen des Automaten.',
+              style: TextStyle(color: p.inkSoft),
+            ),
+            value: app.settings.mineScatterDrops,
+            onChanged: (v) => app.settings.mineScatterDrops = v,
+          ),
           const SizedBox(height: 16),
           Text('Slots: Pause bei Automatik', style: TextStyle(color: p.ink, fontSize: 17)),
           Text(
