@@ -179,8 +179,8 @@ def play(g, rng, stake, free=False):
             nxt.append(fresh + kept)
         shown = expand(g, nxt, free)
     info["steps"] = steps
-    # Wie SlotEngine: Streu- und Bonussymbole am Ende der Kaskaden zählen
-    flat = [x for c in shown for x in c]
+    # Wie SlotEngine: im Raster vor dem Ausfüllen der Joker zählen (fallen in Kaskaden nicht nach)
+    flat = [x for c in grid for x in c]
     scatters = flat.count(SCATTER)
     bonus = flat.count(BONUS)
     freewon = 0

@@ -542,11 +542,11 @@ class SlotEngine {
     }
 
     var total = steps.fold(0, (a, s) => a + s.win);
-    // Streu- und Bonussymbole verschwinden in Kaskaden nie, es können nur neue nachfallen.
-    // Gezählt wird darum am Ende, was zuletzt zu sehen ist.
-    final last = steps.last.grid.expand((c) => c);
-    final scatters = last.where((s) => s == symScatter).length;
-    final bonus = last.where((s) => s == symBonus).length;
+    // Streu- und Bonussymbole verschwinden in Kaskaden nie und fallen auch nicht nach: Was im Raster liegt,
+    // liegt bis zum Ende. Gezählt wird im Raster vor dem Ausfüllen der Joker (sonst verdeckt ein Joker sie).
+    final raw = grid.expand((c) => c);
+    final scatters = raw.where((s) => s == symScatter).length;
+    final bonus = raw.where((s) => s == symBonus).length;
     var scatterWin = 0;
     var freeWon = 0;
     if (rules.hasScatter && scatters >= 3) {
