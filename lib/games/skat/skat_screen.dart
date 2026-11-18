@@ -375,7 +375,10 @@ class _SkatScreenState extends State<SkatScreen> {
             ),
             Expanded(
               child: Center(
-                child: Column(
+                // Im Querformat ist hier wenig Platz: lieber verkleinern als abschneiden
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (g.phase == SkatPhase.playing)
@@ -400,8 +403,9 @@ class _SkatScreenState extends State<SkatScreen> {
                           ),
                       ],
                     ),
-                    if (g.phase == SkatPhase.declare && _humanDeclarer) _declarePanel(pal),
+                    if (g.phase == SkatPhase.declare && _humanDeclarer) ConstrainedBox(constraints: BoxConstraints(maxWidth: w), child: _declarePanel(pal)),
                   ],
+                ),
                 ),
               ),
             ),
@@ -413,7 +417,8 @@ class _SkatScreenState extends State<SkatScreen> {
               padding: const EdgeInsets.fromLTRB(8, 2, 8, 10),
               child: HandFan(
                 cards: g.players[0].hand,
-                maxCardWidth: math.min(80, w / 7),
+                // Auch nach der Höhe richten, sonst ragt die Hand im Querformat über den Rand
+                maxCardWidth: math.min(math.min(80.0, w / 7), math.max(40.0, (box.maxHeight - 240) / 1.5)),
                 isRaised: _sel.contains,
                 isEnabled: (c) => !_myCard || g.legalCards(0).contains(c),
                 onTap: _tapCard,
