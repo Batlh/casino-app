@@ -239,14 +239,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload latest out/* --clobber
       - name: Ins Release der Version
-        if: matrix.target == 'windows'
         continue-on-error: true
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           v=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d+ -f1)
-          name="gluckspfennig-$v-windows.zip"
+          t=${{ matrix.target }}
+          name="gluckspfennig-$v-$t.zip"
           if ! gh release view "v$v" --json assets --jq '.assets[].name' | grep -qx "$name"; then
-            cp out/gluckspfennig-windows.zip "$name" && gh release upload "v$v" "$name"
+            cp "out/gluckspfennig-$t.zip" "$name" && gh release upload "v$v" "$name"
           fi
