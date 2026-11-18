@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -59,6 +60,10 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
     value: 1,
   );
 
+  /// Welcher Gewinn gerade hervorgehoben ist. Wechselt im Takt der Einstellung „Gewinne wechseln alle“.
+  final _winIndex = ValueNotifier<int>(0);
+  Timer? _winTimer;
+
   late int _stake = widget.game.stakes[2];
   int _freeSpins = 0;
   int _freeTotal = 0;
@@ -94,6 +99,8 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
     _auto = false;
     _spin.dispose();
     _pulse.dispose();
+    _winTimer?.cancel();
+    _winIndex.dispose();
     _drop.dispose();
     super.dispose();
   }
@@ -118,6 +125,21 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
       for (var i = 0; i < filler; i++) strip[(start + i) % strip.length],
       ..._tapes[reel].take(_heights[reel]),
     ];
+  }
+
+  /// Beginnt die Gewinnanzeige wieder beim ersten Gewinn.
+  void _restartWinCycle() {
+    _winTimer?.cancel();
+    _winIndex.value = 0;
+    void tick() {
+      _winTimer = Timer(Duration(milliseconds: _app.settings.slotWinMs), () {
+        if (!mounted) return;
+        _winIndex.value++;
+        tick();
+      });
+    }
+
+    tick();
   }
 
   Future<void> _pause(int ms) => Future<void>.delayed(Duration(milliseconds: ms));
@@ -162,6 +184,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
         final s = out.steps[i];
         if (!mounted) break;
         setState(() {
+          _restartWinCycle();
           _shown = _Shown(
             grid: s.grid,
             wins: s.wins,
@@ -260,7 +283,10 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
       setState(() => _stake = _stakes.first);
     }
     if (_freeSpins > 0 || _auto) {
-      await _pause(out.total > 0 ? 1600 : 700);
+      // Pause aus den Einstellungen; nach einem Gewinn so lange, bis jeder Gewinn einmal zu sehen war
+      final shownWins = _shown?.wins.length ?? 0;
+      final ms = math.max(_app.settings.slotAutoMs, math.min(shownWins * _app.settings.slotWinMs, 15000));
+      await _pause(ms);
       if (mounted && (_freeSpins > 0 || _auto)) _go();
     }
   }
@@ -293,6 +319,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
             cell: cell,
             spin: _spin,
             pulse: _pulse,
+            winIndex: _winIndex,
             drop: _drop,
             tapes: _tapes,
             heights: _heights,
@@ -306,7 +333,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
             children: [
               reelWindow,
               const SizedBox(height: 6),
-              _LineCaption(pulse: _pulse, shown: _hold == null ? _shown : null, game: widget.game),
+              _LineCaption(winIndex: _winIndex, shown: _hold == null ? _shown : null, game: widget.game),
             ],
           );
           if (wide) {
@@ -446,6 +473,7 @@ class _ReelWindow extends StatelessWidget {
     required this.cell,
     required this.spin,
     required this.pulse,
+    required this.winIndex,
     required this.drop,
     required this.tapes,
     required this.heights,
@@ -459,6 +487,7 @@ class _ReelWindow extends StatelessWidget {
   final double cell;
   final Animation<double> spin;
   final Animation<double> pulse;
+  final ValueListenable<int> winIndex;
   final Animation<double> drop;
   final List<List<int>> tapes;
   final List<int> heights;
@@ -489,6 +518,7 @@ class _ReelWindow extends StatelessWidget {
             painter: _ReelPainter(
               spin: spin,
               pulse: pulse,
+              winIndex: winIndex,
               drop: drop,
               tapes: tapes,
               heights: heights,
@@ -532,6 +562,7 @@ class _ReelPainter extends CustomPainter {
   _ReelPainter({
     required this.spin,
     required this.pulse,
+    required this.winIndex,
     required this.drop,
     required this.tapes,
     required this.heights,
@@ -539,11 +570,12 @@ class _ReelPainter extends CustomPainter {
     required this.hold,
     required this.stake,
     required this.game,
-  }) : super(repaint: Listenable.merge([spin, pulse, drop]));
+  }) : super(repaint: Listenable.merge([spin, pulse, drop, winIndex]));
 
   final SlotGame game;
   final Animation<double> spin;
   final Animation<double> pulse;
+  final ValueListenable<int> winIndex;
   final Animation<double> drop;
   final List<List<int>> tapes;
   final List<int> heights;
@@ -608,7 +640,7 @@ class _ReelPainter extends CustomPainter {
 
     if (s == null || drop.value < 1) return;
     if (s.wins.isNotEmpty) {
-      final index = (pulse.value * s.wins.length).floor() % s.wins.length;
+      final index = winIndex.value % s.wins.length;
       _paintWin(canvas, s, s.wins[index], cw, size.height);
     }
     final ringPaint = Paint()
@@ -735,9 +767,9 @@ String winText(SlotGame game, LineWin w, {int multiplier = 1}) {
 
 /// Text zum Gewinn, der gerade aufleuchtet.
 class _LineCaption extends StatelessWidget {
-  const _LineCaption({required this.pulse, required this.shown, required this.game});
+  const _LineCaption({required this.winIndex, required this.shown, required this.game});
 
-  final Animation<double> pulse;
+  final ValueListenable<int> winIndex;
   final _Shown? shown;
   final SlotGame game;
 
@@ -747,12 +779,12 @@ class _LineCaption extends StatelessWidget {
     return SizedBox(
       height: 24,
       child: AnimatedBuilder(
-        animation: pulse,
+        animation: winIndex,
         builder: (context, _) {
           final s = shown;
           if (s == null || s.wins.isEmpty) return const SizedBox.shrink();
           // Gleiche Auswahl wie der aufleuchtende Gewinn im Walzenfenster
-          final index = (pulse.value * s.wins.length).floor() % s.wins.length;
+          final index = winIndex.value % s.wins.length;
           return FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(

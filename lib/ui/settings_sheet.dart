@@ -170,6 +170,43 @@ Widget _general(BuildContext context) {
             ),
           ),
           const SizedBox(height: 16),
+          Text('Slots: Gewinne wechseln alle', style: TextStyle(color: p.ink, fontSize: 17)),
+          Text(
+            'Wie lange jeder Gewinn auf den Walzen hervorgehoben bleibt, bevor der nächste gezeigt wird.',
+            style: TextStyle(color: p.inkSoft, fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<int>(
+              showSelectedIcon: false,
+              segments: [
+                for (final ms in Settings.slotWinSteps) ButtonSegment(value: ms, label: Text(_seconds(ms))),
+              ],
+              selected: {app.settings.slotWinMs},
+              onSelectionChanged: (s) => app.settings.slotWinMs = s.first,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text('Slots: Pause bei Automatik', style: TextStyle(color: p.ink, fontSize: 17)),
+          Text(
+            'Wartezeit zwischen zwei Drehungen bei Automatik und Freispielen. Nach einem Gewinn wird mindestens so lange '
+            'gewartet, bis jeder Gewinn einmal gezeigt wurde.',
+            style: TextStyle(color: p.inkSoft, fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<int>(
+              showSelectedIcon: false,
+              segments: [
+                for (final ms in Settings.slotAutoSteps) ButtonSegment(value: ms, label: Text(_seconds(ms))),
+              ],
+              selected: {app.settings.slotAutoMs},
+              onSelectionChanged: (s) => app.settings.slotAutoMs = s.first,
+            ),
+          ),
+          const SizedBox(height: 16),
           Text(
             'Kartengröße ${(app.settings.cardScale * 100).round()} %',
             style: TextStyle(color: p.ink, fontSize: 17),
@@ -377,4 +414,10 @@ Widget _eins(BuildContext context) {
           ),
     ],
   );
+}
+
+/// 1500 → „1,5 s“
+String _seconds(int ms) {
+  final whole = ms % 1000 == 0;
+  return '${whole ? ms ~/ 1000 : (ms / 1000).toStringAsFixed(1).replaceAll('.', ',')} s';
 }

@@ -68,6 +68,22 @@ class Settings extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Slots: wie lange jeder Gewinn hervorgehoben wird, bevor der nächste kommt (Millisekunden).
+  static const slotWinSteps = [1000, 1500, 2500, 4000];
+  int get slotWinMs => _prefs.getInt('settings.slotWinMs') ?? 1500;
+  set slotWinMs(int value) {
+    _prefs.setInt('settings.slotWinMs', value);
+    notifyListeners();
+  }
+
+  /// Slots: Pause zwischen zwei Drehungen bei Automatik und Freispielen (Millisekunden).
+  static const slotAutoSteps = [1000, 2000, 3000, 5000];
+  int get slotAutoMs => _prefs.getInt('settings.slotAutoMs') ?? 2000;
+  set slotAutoMs(int value) {
+    _prefs.setInt('settings.slotAutoMs', value);
+    notifyListeners();
+  }
+
   static const _cardNamesKey = 'settings.cardNames';
   static const _penaltyKey = 'settings.mauPenaltyEndsTurn';
   static const _jackKey = 'settings.mauJackOnJack';
