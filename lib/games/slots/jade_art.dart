@@ -31,7 +31,7 @@ void paintJadeBackdrop(Canvas canvas, Rect rect, double time) {
   // Rote Laternen oben, sanft schwingend
   for (var i = 0; i < 4; i++) {
     final x = rect.left + rect.width * (0.12 + i * 0.25);
-    final swing = math.sin(time * 2 * math.pi + i) * 0.08;
+    final swing = math.sin(time * 2 * math.pi * 10 + i) * 0.08;
     canvas.save();
     canvas.translate(x, rect.top);
     canvas.rotate(swing);

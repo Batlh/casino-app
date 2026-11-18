@@ -33,7 +33,8 @@ void paintJahrmarktBackdrop(Canvas canvas, Rect rect, double time) {
     for (var i = 0; i < n; i++) {
       final x = rect.left + rect.width * (i + 0.5) / n;
       final sag = math.sin(i / (n - 1) * math.pi) * rect.height * 0.04;
-      final on = ((time * n).floor() + i + row) % 3 == 0;
+      // 150 Schritte je Durchlauf (durch 3 teilbar): die Lichterkette läuft nahtlos weiter
+      final on = ((time * 150).floor() + i + row) % 3 == 0;
       final color = [const Color(0xFFFFEB3B), const Color(0xFFFF5252), const Color(0xFF69F0AE)][i % 3];
       if (on) glow(canvas, Offset(x, y0 + sag), 9, color.withValues(alpha: 0.6));
       canvas.drawCircle(Offset(x, y0 + sag), 2.5, fillOf(on ? color : color.withValues(alpha: 0.35)));

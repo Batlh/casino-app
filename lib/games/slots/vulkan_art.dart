@@ -30,12 +30,13 @@ void paintVulkanBackdrop(Canvas canvas, Rect rect, double time) {
     ..close();
   canvas.drawPath(mountain, fillOf(const Color(0xCC2A1410)));
   // Glut am Krater, pulsierend
-  final pulse = 0.6 + 0.4 * math.sin(time * 2 * math.pi);
+  final pulse = 0.6 + 0.4 * math.sin(time * 2 * math.pi * 12);
   glow(canvas, Offset(rect.center.dx, base - rect.height * 0.42), rect.width * 0.18 * pulse, const Color(0x99FF7043));
   // Funken steigen aus dem Krater
   final rng = math.Random(11);
   for (var i = 0; i < 16; i++) {
-    final speed = 0.4 + rng.nextDouble() * 0.8;
+    // Ganze Umläufe je Durchlauf: nahtlose Schleife
+    final speed = 5 + rng.nextInt(11);
     final t = (time * speed + rng.nextDouble()) % 1;
     final x = rect.center.dx + (rng.nextDouble() - 0.5) * rect.width * 0.2 * (1 + t * 2);
     final y = base - rect.height * (0.42 + t * 0.55);

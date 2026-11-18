@@ -32,7 +32,8 @@ void paintDrachenBackdrop(Canvas canvas, Rect rect, double time) {
   final rng = math.Random(3);
   for (var i = 0; i < 18; i++) {
     final x = rect.left + rng.nextDouble() * rect.width;
-    final speed = 0.5 + rng.nextDouble();
+    // Ganze Umläufe je Durchlauf: nahtlose Schleife
+    final speed = 6 + rng.nextInt(13);
     final y = rect.bottom - ((time * speed + rng.nextDouble()) % 1) * rect.height;
     canvas.drawCircle(Offset(x, y), 1.5 + rng.nextDouble() * 2, fillOf(const Color(0x99FF9800)));
   }

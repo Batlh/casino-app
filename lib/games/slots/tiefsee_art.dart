@@ -45,7 +45,8 @@ void paintTiefseeBackdrop(Canvas canvas, Rect rect, double time) {
   final rng = math.Random(3000);
   for (var i = 0; i < 46; i++) {
     final x = rect.left + rng.nextDouble() * rect.width;
-    final speed = 0.5 + rng.nextDouble();
+    // Ganze Umläufe je Durchlauf: nahtlose Schleife
+    final speed = 6 + rng.nextInt(13);
     final y0 = rng.nextDouble();
     final y = rect.top + ((y0 - time * speed) % 1.0) * rect.height;
     final r = 0.8 + rng.nextDouble() * 2.2;

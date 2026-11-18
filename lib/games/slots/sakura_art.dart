@@ -61,11 +61,12 @@ void paintSakuraBackdrop(Canvas canvas, Rect rect, double time) {
   // Fallende Blüten, leicht pendelnd
   final rng = math.Random(26);
   for (var i = 0; i < 16; i++) {
-    final speed = 0.3 + rng.nextDouble() * 0.5;
+    // Ganze Umläufe je Durchlauf: nahtlose Schleife
+    final speed = 3 + rng.nextInt(6);
     final t = (time * speed + rng.nextDouble()) % 1;
     final x = rect.left + rng.nextDouble() * rect.width + math.sin((t + i) * 2 * math.pi) * 12;
     final y = rect.top + t * rect.height;
-    sakuraBlossom(canvas, Offset(x, y), 3 + rng.nextDouble() * 4, light: const Color(0xCCFFE4EE), dark: const Color(0xCCF8BBD0), turn: t * 6);
+    sakuraBlossom(canvas, Offset(x, y), 3 + rng.nextDouble() * 4, light: const Color(0xCCFFE4EE), dark: const Color(0xCCF8BBD0), turn: t * math.pi * 4);
   }
 }
 

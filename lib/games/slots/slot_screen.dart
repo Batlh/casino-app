@@ -58,6 +58,8 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
     vsync: this,
     duration: const Duration(milliseconds: 1600),
   )..repeat();
+  /// Zeitbasis der Hintergründe: ein Durchlauf dauert backdropLoop, alle Bewegungen darin sind ganze Zyklen.
+  late final AnimationController _ambient = AnimationController(vsync: this, duration: backdropLoop)..repeat();
   late final AnimationController _drop = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 380),
@@ -103,6 +105,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
     _auto = false;
     _spin.dispose();
     _pulse.dispose();
+    _ambient.dispose();
     _winTimer?.cancel();
     _winIndex.dispose();
     _drop.dispose();
@@ -324,6 +327,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
             cell: cell,
             spin: _spin,
             pulse: _pulse,
+            ambient: _ambient,
             winIndex: _winIndex,
             drop: _drop,
             tapes: _tapes,
@@ -478,6 +482,7 @@ class _ReelWindow extends StatelessWidget {
     required this.cell,
     required this.spin,
     required this.pulse,
+    required this.ambient,
     required this.winIndex,
     required this.drop,
     required this.tapes,
@@ -492,6 +497,7 @@ class _ReelWindow extends StatelessWidget {
   final double cell;
   final Animation<double> spin;
   final Animation<double> pulse;
+  final Animation<double> ambient;
   final ValueListenable<int> winIndex;
   final Animation<double> drop;
   final List<List<int>> tapes;
@@ -523,6 +529,7 @@ class _ReelWindow extends StatelessWidget {
             painter: _ReelPainter(
               spin: spin,
               pulse: pulse,
+              ambient: ambient,
               winIndex: winIndex,
               drop: drop,
               tapes: tapes,
@@ -567,6 +574,7 @@ class _ReelPainter extends CustomPainter {
   _ReelPainter({
     required this.spin,
     required this.pulse,
+    required this.ambient,
     required this.winIndex,
     required this.drop,
     required this.tapes,
@@ -575,11 +583,12 @@ class _ReelPainter extends CustomPainter {
     required this.hold,
     required this.stake,
     required this.game,
-  }) : super(repaint: Listenable.merge([spin, pulse, drop, winIndex]));
+  }) : super(repaint: Listenable.merge([spin, pulse, ambient, drop, winIndex]));
 
   final SlotGame game;
   final Animation<double> spin;
   final Animation<double> pulse;
+  final Animation<double> ambient;
   final ValueListenable<int> winIndex;
   final Animation<double> drop;
   final List<List<int>> tapes;
@@ -593,7 +602,7 @@ class _ReelPainter extends CustomPainter {
     final rect = Offset.zero & size;
     final rules = game.rules;
     final reels = rules.reels;
-    game.paintBackdrop(canvas, rect, pulse.value);
+    game.paintBackdrop(canvas, rect, ambient.value);
     final cw = size.width / reels;
 
     final h = hold;

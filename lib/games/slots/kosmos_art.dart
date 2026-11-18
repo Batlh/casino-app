@@ -42,7 +42,8 @@ void paintKosmosSky(Canvas canvas, Rect rect, double twinkle) {
 
 /// Hintergrund hinter den Walzen.
 void paintKosmosBackdrop(Canvas canvas, Rect rect, double time) {
-  paintKosmosSky(canvas, rect, time);
+  // 12 Funkelzyklen je Durchlauf, damit die Schleife nahtlos ist
+  paintKosmosSky(canvas, rect, time * 12);
   canvas.drawRect(rect, Paint()..color = const Color(0x55120A33));
 }
 

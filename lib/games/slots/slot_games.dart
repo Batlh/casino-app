@@ -13,6 +13,10 @@ import 'slot_engine.dart';
 import 'tiefsee_art.dart';
 import 'vulkan_art.dart';
 
+/// Dauer eines Hintergrund-Durchlaufs. paintBackdrop bekommt die Zeit als 0 bis 1 über diese Dauer;
+/// jede Bewegung darin macht ganze Zyklen, damit der Übergang von 1 auf 0 nicht ruckelt.
+const backdropLoop = Duration(seconds: 20);
+
 /// Ein Slot: Regeln plus eigene Grafik und Texte.
 class SlotGame {
   const SlotGame({

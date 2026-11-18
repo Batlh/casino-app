@@ -32,11 +32,11 @@ void paintMineBackdrop(Canvas canvas, Rect rect, double time) {
   // Funkelnde Adern
   for (var i = 0; i < 14; i++) {
     final o = Offset(rect.left + rng.nextDouble() * rect.width, rect.top + rng.nextDouble() * rect.height);
-    final a = (math.sin(time * 2 * math.pi + i) + 1) / 2;
+    final a = (math.sin(time * 2 * math.pi * 12 + i) + 1) / 2;
     sparkle(canvas, o, 3 + 4 * a, Color.lerp(const Color(0x0000E5FF), const Color(0xCCB3F5FF), a)!);
   }
   // Laternenschein, leicht flackernd
-  final flicker = 0.85 + 0.15 * math.sin(time * 2 * math.pi * 3);
+  final flicker = 0.85 + 0.15 * math.sin(time * 2 * math.pi * 36);
   glow(canvas, Offset(rect.center.dx, rect.top), rect.width * 0.6 * flicker, const Color(0x55FFB74D));
 }
 
