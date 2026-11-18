@@ -32,6 +32,7 @@ import '../games/shogi/shogi_screen.dart';
 import '../games/craps/craps_screen.dart';
 import '../games/eins/eins_card.dart';
 import '../games/ente/ente_screen.dart';
+import '../games/gluecksrad/gluecksrad_screen.dart';
 import '../games/eins/eins_engine.dart';
 import '../games/eins/eins_screen.dart';
 import '../games/hearts/hearts_screen.dart';
@@ -257,6 +258,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF0277BD),
         _EntenArt.new,
         () => _open(const EntenScreen()),
+      ),
+      _Game(
+        'Glücksrad',
+        'Geldrad wie im Casino: auf 1 bis 20 oder Joker setzen',
+        const Color(0xFF6D4C41),
+        _RadArt.new,
+        () => _open(const GluecksradScreen()),
       ),
       _Game(
         'Rubbellose',
@@ -959,6 +967,30 @@ class _EntenArt extends CustomPainter {
       canvas.drawCircle(c.translate(w * 0.28, -w * 0.3), w * 0.22, Paint()..color = const Color(0xFFFFEE58));
       canvas.drawCircle(c.translate(w * 0.34, -w * 0.33), w * 0.04, Paint()..color = const Color(0xFF241410));
     }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _RadArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero).translate(0, 6);
+    final r = size.shortestSide * 0.36;
+    canvas.drawCircle(c, r + 4, Paint()..color = const Color(0xFF3E2723));
+    const colors = [Color(0xFFFFF8E7), Color(0xFF64B5F6), Color(0xFF81C784), Color(0xFFBA68C8), Color(0xFFFFB74D), Color(0xFFE53935)];
+    const n = 18;
+    for (var i = 0; i < n; i++) {
+      canvas.drawArc(Rect.fromCircle(center: c, radius: r), -math.pi / 2 + i * 2 * math.pi / n, 2 * math.pi / n, true, Paint()..color = colors[i % colors.length]);
+    }
+    canvas.drawCircle(c, r * 0.2, Paint()..color = const Color(0xFFFFC95C));
+    final pointer = Path()
+      ..moveTo(c.dx, c.dy - r + 6)
+      ..lineTo(c.dx - 6, c.dy - r - 8)
+      ..lineTo(c.dx + 6, c.dy - r - 8)
+      ..close();
+    canvas.drawPath(pointer, Paint()..color = const Color(0xFFD32F2F));
   }
 
   @override

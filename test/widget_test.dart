@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gluckspfennig/games/bingo/bingo_screen.dart';
 import 'package:gluckspfennig/games/ente/ente_screen.dart';
+import 'package:gluckspfennig/games/gluecksrad/gluecksrad_screen.dart';
 import 'package:gluckspfennig/games/lose/lose_screens.dart';
 import 'package:gluckspfennig/core/settings.dart';
 import 'package:gluckspfennig/core/sfx.dart';
@@ -80,6 +81,7 @@ void main() {
         HoldemScreen(draw: true),
         BingoScreen(),
         EntenScreen(),
+        GluecksradScreen(),
         RubbelScreen(),
         PullTabScreen(),
         PachinkoScreen(),
