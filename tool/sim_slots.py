@@ -170,7 +170,11 @@ def play(g, rng, stake, free=False):
             k = len(shown[r]) - len(kept)
             fresh = []
             for _ in range(k):
-                above[r] = (above[r] - 1) % len(strips[r])
+                # Wie SlotEngine: Streu- und Bonussymbole fallen nicht nach
+                while True:
+                    above[r] = (above[r] - 1) % len(strips[r])
+                    if strips[r][above[r]] not in (SCATTER, BONUS):
+                        break
                 fresh.insert(0, strips[r][above[r]])
             nxt.append(fresh + kept)
         shown = expand(g, nxt, free)

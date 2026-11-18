@@ -167,6 +167,18 @@ void main() {
     expect(rounds, greaterThan(0));
   });
 
+  test('Kaskaden: Streusymbole fallen nicht nach, was am Ende liegt, zählt', () {
+    for (final g in [edelsteinmine, vulkaninsel]) {
+      final engine = SlotEngine(g.rules, rng: Random(31));
+      for (var i = 0; i < 3000; i++) {
+        final o = engine.play(g.stakes.first);
+        int count(List<List<int>> grid) => grid.expand((c) => c).where((x) => x == symScatter).length;
+        expect(count(o.lastGrid), count(o.firstGrid), reason: g.name);
+        expect(o.scatterCount, count(o.lastGrid));
+      }
+    }
+  });
+
   test('Alte Slots: play() zahlt genau wie spin()', () {
     for (final g in [kosmos78, schrebergarten]) {
       final a = SlotEngine(g.rules, rng: Random(9));

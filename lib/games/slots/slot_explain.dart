@@ -57,7 +57,8 @@ String cascadeText(SlotRules r) {
   final free = r.freeCascade.isNotEmpty ? ' In Freispielen beginnt die Leiter höher: ${_x(r.freeCascade)}.' : '';
   return 'Nach einem Gewinn verschwinden alle Symbole, die gewonnen haben. Die übrigen rutschen nach unten, von oben fallen '
       'neue nach. Gibt es wieder einen Gewinn, geht es weiter, bis nichts mehr gewinnt. Alles gehört zur selben Drehung, '
-      'der Einsatz wird nur einmal bezahlt. Jede Stufe zählt mehr: der erste Gewinn ${r.cascade.first == 1 ? 'normal' : '×${r.cascade.first}'}, '
+      'der Einsatz wird nur einmal bezahlt. Streusymbole bleiben liegen und fallen nie nach: Was am Anfang liegt, zählt für '
+      'die Freispiele. Jede Stufe zählt mehr: der erste Gewinn ${r.cascade.first == 1 ? 'normal' : '×${r.cascade.first}'}, '
       'danach ${_x(r.cascade.skip(1).toList())}, ab dann bleibt es bei ×${r.cascade.last}.$free';
 }
 

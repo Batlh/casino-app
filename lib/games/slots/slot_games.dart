@@ -235,12 +235,12 @@ const edelsteinmine = SlotGame(
     waysDivisor: 100,
     strips: mineStrips,
     linePays: {
-      0: [3, 5, 14],
-      1: [3, 8, 16],
-      2: [5, 11, 22],
-      3: [5, 14, 27],
-      4: [8, 22, 54],
-      5: [14, 32, 108],
+      0: [3, 4, 12],
+      1: [3, 7, 13],
+      2: [4, 9, 18],
+      3: [4, 12, 23],
+      4: [7, 18, 45],
+      5: [12, 27, 91],
     },
     cascade: [1, 2, 3, 5],
     freeCascade: [2, 4, 6, 10],
@@ -377,15 +377,15 @@ const vulkaninsel = SlotGame(
     waysDivisor: 500,
     strips: vulkanStrips,
     linePays: {
-      0: [1, 3, 6, 12],
-      1: [2, 4, 8, 15],
-      2: [2, 5, 9, 20],
-      3: [3, 6, 12, 27],
-      4: [5, 9, 19, 46],
-      5: [8, 15, 38, 92],
+      0: [1, 2, 5, 9],
+      1: [2, 3, 6, 12],
+      2: [2, 4, 7, 15],
+      3: [2, 5, 9, 21],
+      4: [4, 7, 15, 35],
+      5: [6, 12, 29, 71],
     },
-    cascade: [1, 2, 3, 4, 5],
-    freeCascade: [2, 4, 6, 8, 10, 15],
+    cascade: [1, 2, 2, 3, 3],
+    freeCascade: [2, 3, 4, 5, 6, 8],
     scatterPays: [2, 5, 20],
     freeSpins: 12,
   ),
@@ -404,8 +404,8 @@ const vulkaninsel = SlotGame(
   lobbyColor: Color(0xFF6B1F14),
   featureText:
       'Jede Walze zeigt bei jeder Drehung 2 bis 5 Symbole, das ergibt bis zu 4.096 Wege. Gewinnsymbole verschwinden, neue fallen nach, '
-      'jede Kaskade erhöht den Multiplikator bis ×5. Drei oder mehr Vulkane zahlen das 2-, 5- oder 20-Fache des Einsatzes und '
-      'starten 12 Freispiele, dort steigt der Multiplikator bis ×15.',
+      'jede Kaskade erhöht den Multiplikator bis ×3. Drei oder mehr Vulkane zahlen das 2-, 5- oder 20-Fache des Einsatzes und '
+      'starten 12 Freispiele, dort steigt der Multiplikator bis ×8.',
   wildText: 'Der Lavastein ersetzt jedes Symbol außer dem Vulkan.',
   freeSpinLine: 'Freispiel, Kaskaden ab ×2',
 );

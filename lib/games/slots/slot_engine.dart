@@ -528,7 +528,10 @@ class SlotEngine {
         final strip = rules.strips[r];
         final fresh = <int>[];
         for (var i = 0; i < k; i++) {
-          above[r] = (above[r] - 1) % strip.length;
+          // Streu- und Bonussymbole fallen nicht nach: Was am Anfang liegt, liegt auch am Ende
+          do {
+            above[r] = (above[r] - 1) % strip.length;
+          } while (strip[above[r]] == symScatter || strip[above[r]] == symBonus);
           fresh.insert(0, strip[above[r]]);
         }
         next.add([...fresh, ...kept]);
