@@ -57,14 +57,14 @@ Reihenfolge: Bauteile zuerst in der Physik (pinball_table.dart) mit Tests, dann 
 ## Mehrspieler im lokalen Netzwerk
 - Grundgerüst steht (core/net/lan.dart), Bingo, Poker (Hold'em, Omaha, Five Card Draw), Mau-Mau, Eins, Skat, Schwarze Dame, Pik Dame,
   Arschloch, Kniffel, Mensch ärgere dich nicht, Leiterspiel, Halma, Backgammon und die Brettspiele Reversi,
-  Mühle, Dame, Schach, Go, Shogi und die gemeinsamen Tische Roulette, Glücksrad, Craps, Sic Bo laufen schon.
+  Mühle, Dame, Schach, Go, Shogi und die gemeinsamen Tische Roulette, Glücksrad, Craps, Sic Bo, Keno, Baccarat laufen schon.
   Einstieg überall auch über die Einstellungen („Im Netzwerk spielen“).
   Für neue Spiele: core/net/lan_table.dart (Tisch, Warteraum) und ui/net_panels.dart (Bildschirme).
 - Drei Wege: Sicht schicken (Poker, Mau-Mau), Startwert plus Aktionen nachspielen (Eins; ActionLog-Spiele über ui/net_replay_mixin.dart),
   Züge austauschen (Brettspiele, core/net/net_duel.dart und ui/net_duel_mixin.dart),
   gemeinsamer Tisch (Ergebnis vom Gastgeber, jeder rechnet selbst ab: ui/net_shared_mixin.dart).
 - Nächste Kandidaten: Viererkette (Zufallssteine), Mahjong (drei Varianten, Ansagen mit Wartefenster),
-  Keno (gemeinsame Ziehung), Blackjack/Baccarat (gemeinsamer Geber).
+  Blackjack (gemeinsamer Geber, jeder spielt seine Hand nacheinander).
 - Pro Spiel: Züge als Nachrichten, jeder sieht nur seine eigenen Karten, Computer füllen freie Plätze.
 
 ## Sonstiges

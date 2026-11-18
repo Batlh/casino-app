@@ -102,8 +102,37 @@ class BaccaratShoe {
       if (bankerDraws(bt, third)) b.add(_draw());
     }
     final r = BacRound(p, b);
+    record(r);
+    return r;
+  }
+
+  /// Runde in die Verlaufsanzeige eintragen (auch für Runden vom Gastgeber im Netz).
+  void record(BacRound r) {
     history.add(r.winner);
     if (history.length > 60) history.removeAt(0);
-    return r;
+  }
+}
+
+/// Karten einer Runde für das Netz: [[Rang, Farbe], …] je Seite.
+List<List<List<int>>> bacRoundToJson(BacRound r) => [
+      for (final side in [r.player, r.banker]) [for (final c in side) [c.rank, c.suit.index]],
+    ];
+
+/// Runde vom Gastgeber; null, wenn die Daten nicht passen.
+BacRound? bacRoundFromJson(Object? o) {
+  try {
+    final sides = o as List;
+    if (sides.length != 2) return null;
+    List<PlayingCard> cards(Object? side) => [
+          for (final c in side as List)
+            PlayingCard(((c as List)[0] as num).toInt(), Suit.values[(c[1] as num).toInt()]),
+        ];
+    final p = cards(sides[0]);
+    final b = cards(sides[1]);
+    bool ok(List<PlayingCard> x) => x.length >= 2 && x.length <= 3 && x.every((c) => c.rank >= 2 && c.rank <= 14);
+    if (!ok(p) || !ok(b)) return null;
+    return BacRound(p, b);
+  } catch (_) {
+    return null;
   }
 }

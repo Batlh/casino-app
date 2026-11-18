@@ -6,6 +6,7 @@ import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_shared_mixin.dart';
 import '../../ui/widgets.dart';
 import '../cards/playing_card.dart';
 import 'baccarat_engine.dart';
@@ -39,7 +40,7 @@ class BaccaratScreen extends StatefulWidget {
   State<BaccaratScreen> createState() => _BaccaratScreenState();
 }
 
-class _BaccaratScreenState extends State<BaccaratScreen> {
+class _BaccaratScreenState extends State<BaccaratScreen> with NetSharedTable {
   final _shoe = BaccaratShoe();
   final Map<BacBet, int> _bets = {};
   int _chip = 50;
@@ -53,6 +54,33 @@ class _BaccaratScreenState extends State<BaccaratScreen> {
   AppScope get _app => AppScope.of(context);
   int get _total => _bets.values.fold(0, (a, b) => a + b);
 
+  @override
+  void dispose() {
+    sharedDispose();
+    super.dispose();
+  }
+
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get sharedGame => 'baccarat';
+  @override
+  String get sharedTitle => 'Baccarat';
+  BacRound? _pending;
+
+  /// Runde vom Gastgeber: gleiche Karten für alle, jeder rechnet seine Einsätze selbst ab.
+  @override
+  void sharedResult(Object? outcome) {
+    final r = bacRoundFromJson(outcome);
+    if (r == null) return;
+    if (_dealing) {
+      _pending = r;
+      return;
+    }
+    _shoe.record(r);
+    _play(r);
+  }
+
   void _place(BacBet b) {
     if (_dealing) return;
     if (!_app.wallet.canAfford(_total + _chip)) return;
@@ -61,11 +89,28 @@ class _BaccaratScreenState extends State<BaccaratScreen> {
       _bets[b] = (_bets[b] ?? 0) + _chip;
       _round = null;
     });
+    sharedStake(_total);
+  }
+
+  void _clear() {
+    setState(_bets.clear);
+    sharedStake(0);
   }
 
   Future<void> _deal() async {
-    if (_dealing || _total == 0 || !_app.wallet.spend(_total)) return;
+    if (_dealing || sharedGuest) return;
+    // Am Netztisch teilt der Gastgeber auch ohne eigenen Einsatz aus
+    if (_total == 0 && !sharedHost) return;
+    if (!_app.wallet.canAfford(_total)) return;
     final r = _shoe.play();
+    sharedSend(bacRoundToJson(r));
+    await _play(r);
+  }
+
+  Future<void> _play(BacRound r) async {
+    // Wer sich den Einsatz nicht mehr leisten kann, schaut nur zu
+    if (_total > 0 && !_app.wallet.spend(_total)) _bets.clear();
+    final stake = _total;
     setState(() {
       _dealing = true;
       _round = r;
@@ -88,24 +133,44 @@ class _BaccaratScreenState extends State<BaccaratScreen> {
     if (r.player.length > 2) await step(() => _shownP = 3);
     if (r.banker.length > 2) await step(() => _shownB = 3);
     if (!mounted) return;
+    if (stake == 0) {
+      setState(() {
+        _dealing = false;
+        _message = '${_who(r)}, ${r.playerTotal} zu ${r.bankerTotal}';
+      });
+      _next();
+      return;
+    }
     var paid = 0;
     for (final e in _bets.entries) {
       paid += r.payout(e.key, e.value);
     }
     if (paid > 0) _app.wallet.credit(paid);
-    final who = switch (r.winner) {
-      BacWinner.player => 'Spieler gewinnt',
-      BacWinner.banker => 'Bank gewinnt',
-      BacWinner.tie => 'Unentschieden',
-    };
-    final net = paid - _total;
+    final net = paid - stake;
     _app.sfx.play(net > 0 ? Sound.win : (net == 0 ? Sound.tick : Sound.lose));
     setState(() {
       _dealing = false;
-      _big = net >= _total * 5 && net > 0;
-      _message = '$who, ${r.playerTotal} zu ${r.bankerTotal}. '
+      _big = net >= stake * 5 && net > 0;
+      _message = '${_who(r)}, ${r.playerTotal} zu ${r.bankerTotal}. '
           '${net > 0 ? 'Du gewinnst ${formatCoins(net)}' : (net == 0 ? 'Einsatz zurück' : 'Verloren')}';
     });
+    _app.wallet.refillIfBroke();
+    _next();
+  }
+
+  String _who(BacRound r) => switch (r.winner) {
+        BacWinner.player => 'Spieler gewinnt',
+        BacWinner.banker => 'Bank gewinnt',
+        BacWinner.tie => 'Unentschieden',
+      };
+
+  void _next() {
+    final next = _pending;
+    _pending = null;
+    if (next != null && mounted) {
+      _shoe.record(next);
+      _play(next);
+    }
   }
 
   @override
@@ -114,7 +179,9 @@ class _BaccaratScreenState extends State<BaccaratScreen> {
       title: 'Baccarat',
       guide: baccaratGuide,
       background: const BoxDecoration(gradient: RadialGradient(radius: 1.2, colors: [Color(0xFF14504A), Color(0xFF07211E)])),
-      child: LayoutBuilder(builder: (context, box) {
+      actions: sharedActions(context),
+      network: sharedActive ? null : sharedOpenPanel,
+      child: sharedScreen() ?? LayoutBuilder(builder: (context, box) {
         final w = box.maxWidth;
         final cw = math.min(84.0, w / 8);
         return SingleChildScrollView(
@@ -135,6 +202,7 @@ class _BaccaratScreenState extends State<BaccaratScreen> {
                   ),
                   const SizedBox(height: 10),
                   ResultBanner(text: _message, highlight: _big, maxLines: 2),
+                  sharedStakesBar(),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
@@ -149,11 +217,11 @@ class _BaccaratScreenState extends State<BaccaratScreen> {
                     spacing: 8,
                     alignment: WrapAlignment.center,
                     children: [
-                      ActionButton(label: 'Löschen', onPressed: _dealing || _bets.isEmpty ? null : () => setState(_bets.clear)),
+                      ActionButton(label: 'Löschen', onPressed: _dealing || _bets.isEmpty ? null : _clear),
                       ActionButton(
                         primary: true,
-                        label: _total == 0 ? 'Austeilen' : 'Austeilen: ${formatCoins(_total)}',
-                        onPressed: _dealing || _total == 0 || !_app.wallet.canAfford(_total) ? null : _deal,
+                        label: sharedGuest ? 'Der Gastgeber teilt aus' : (_total == 0 ? 'Austeilen' : 'Austeilen: ${formatCoins(_total)}'),
+                        onPressed: _dealing || sharedGuest || (_total == 0 && !sharedHost) || !_app.wallet.canAfford(_total) ? null : _deal,
                       ),
                     ],
                   ),
