@@ -6,6 +6,7 @@ import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guides.dart';
+import '../../ui/net_shared_mixin.dart';
 import '../../ui/widgets.dart';
 import 'roulette_engine.dart';
 import 'roulette_painters.dart';
@@ -18,7 +19,7 @@ class RouletteScreen extends StatefulWidget {
 }
 
 class _RouletteScreenState extends State<RouletteScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, NetSharedTable {
   final _rng = math.Random.secure();
   late final AnimationController _spin = AnimationController(
     vsync: this,
@@ -46,7 +47,29 @@ class _RouletteScreenState extends State<RouletteScreen>
   @override
   void dispose() {
     _spin.dispose();
+    sharedDispose();
     super.dispose();
+  }
+
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get sharedGame => 'roulette';
+  @override
+  String get sharedTitle => 'Roulette';
+
+  /// Kam ein Ergebnis, während das Rad noch lief, dreht es danach.
+  int? _pending;
+
+  @override
+  void sharedResult(Object? outcome) {
+    final n = (outcome as num?)?.toInt();
+    if (n == null || n < 0 || n > 36) return;
+    if (_spinning) {
+      _pending = n;
+      return;
+    }
+    _spinTo(n);
   }
 
   void _place(BetSpot spot) {
@@ -61,9 +84,13 @@ class _RouletteScreenState extends State<RouletteScreen>
       }
       _bets[spot] = (_bets[spot] ?? 0) + _chip;
     });
+    sharedStake(_staked);
   }
 
-  void _clear() => setState(() => _bets = {});
+  void _clear() {
+    setState(() => _bets = {});
+    sharedStake(0);
+  }
 
   void _repeat() {
     final total = _lastBets.values.fold(0, (a, b) => a + b);
@@ -75,12 +102,25 @@ class _RouletteScreenState extends State<RouletteScreen>
       _message = '';
       _big = false;
     });
+    sharedStake(_staked);
   }
 
   Future<void> _run() async {
-    final stake = _staked;
-    if (stake == 0 || _spinning || !_app.wallet.spend(stake)) return;
+    if (_spinning || sharedGuest) return;
+    // Am Netztisch dreht der Gastgeber auch ohne eigenen Einsatz
+    if (_staked == 0 && !sharedHost) return;
+    if (_staked > 0 && !_app.wallet.canAfford(_staked)) return;
     final n = spinWheel(_rng);
+    sharedSend(n);
+    await _spinTo(n);
+  }
+
+  Future<void> _spinTo(int n) async {
+    var stake = _staked;
+    if (stake > 0 && !_app.wallet.spend(stake)) {
+      _bets = {};
+      stake = 0;
+    }
     final index = wheelOrder.indexOf(n);
     final wallet = _app.wallet;
     final placed = Map.of(_bets);
@@ -113,10 +153,12 @@ class _RouletteScreenState extends State<RouletteScreen>
       _result = n;
       _history.insert(0, n);
       if (_history.length > 12) _history.removeLast();
-      _lastBets = placed;
+      if (placed.isNotEmpty) _lastBets = placed;
       _bets = {};
       final net = back - stake;
-      if (net > 0) {
+      if (stake == 0) {
+        _message = '$n';
+      } else if (net > 0) {
         _message = '$n: Gewonnen +${formatCoins(net)}';
         _big = true;
         _app.sfx.play(net >= stake * 10 ? Sound.bigWin : Sound.win);
@@ -129,6 +171,10 @@ class _RouletteScreenState extends State<RouletteScreen>
     });
     wallet.refillIfBroke();
     if (!wallet.canAfford(_chip)) setState(() => _chip = 10);
+    sharedStake(0);
+    final next = _pending;
+    _pending = null;
+    if (next != null && mounted) _spinTo(next);
   }
 
   @override
@@ -136,7 +182,8 @@ class _RouletteScreenState extends State<RouletteScreen>
     return GameFrame(
       guide: rouletteGuide,
       title: 'Roulette',
-      child: LayoutBuilder(
+      actions: sharedActions(context),
+      child: sharedScreen() ?? LayoutBuilder(
         builder: (context, box) {
           final wide = box.maxWidth > box.maxHeight * 1.2;
           if (wide) return _wideLayout(box);
@@ -207,6 +254,7 @@ class _RouletteScreenState extends State<RouletteScreen>
       mainAxisSize: MainAxisSize.min,
       children: [
         ResultBanner(text: _message, highlight: _big),
+        sharedStakesBar(),
         BetPicker(
           value: _chip,
           size: 42,
@@ -221,8 +269,8 @@ class _RouletteScreenState extends State<RouletteScreen>
           children: [
             ActionButton(
               primary: true,
-              label: _staked > 0 ? 'Drehen: ${formatCoins(_staked)}' : 'Drehen',
-              onPressed: _staked > 0 && !_spinning ? _run : null,
+              label: sharedGuest ? 'Der Gastgeber dreht' : (_staked > 0 ? 'Drehen: ${formatCoins(_staked)}' : 'Drehen'),
+              onPressed: !sharedGuest && (_staked > 0 || sharedHost) && !_spinning ? _run : null,
             ),
             if (_staked > 0)
               ActionButton(
@@ -234,6 +282,8 @@ class _RouletteScreenState extends State<RouletteScreen>
                 label: 'Wiederholen',
                 onPressed: _lastBets.isNotEmpty && !_spinning ? _repeat : null,
               ),
+            if (!sharedActive && MediaQuery.sizeOf(context).width < 420)
+              ActionButton(label: 'Im Netzwerk', onPressed: sharedOpenPanel),
           ],
         ),
       ],
