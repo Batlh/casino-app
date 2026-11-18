@@ -1,0 +1,28 @@
+name: Release-Text
+# Ersetzt den Text eines vorhandenen Releases durch docs/neu/<Version>.md (ohne neu zu bauen)
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version ohne v, z. B. 0.9.47'
+        required: true
+permissions:
+  contents: write
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ inputs.version }}
+        run: |
+          test -f "docs/neu/$V.md" || { echo "docs/neu/$V.md fehlt"; exit 1; }
+          sha=$(gh release view "v$V" --json targetCommitish -q .targetCommitish)
+          {
+            echo "Stand vom $(gh release view "v$V" --json createdAt -q '.createdAt[:10]') (Commit ${sha:0:7})."
+            echo
+            echo "Änderungen seit der Vorversion:"
+            cat "docs/neu/$V.md"
+          } > notes.md
+          gh release edit "v$V" --notes-file notes.md

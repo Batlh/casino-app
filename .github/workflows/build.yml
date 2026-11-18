@@ -156,7 +156,14 @@ jobs:
             echo "Stand vom $(date +%F) (Commit ${GITHUB_SHA:0:7})."
             echo
             echo "Änderungen seit der Vorversion:"
-            git log --no-merges --format='- %s' ${prev:+$prev..}HEAD | sed 's/ *\[skip ci\]//' | head -25
+            # Handgeschriebene Liste in docs/neu/<Version>.md, wichtigstes zuerst. Die App zeigt die ersten acht Zeilen mit „- “.
+            if [ -f "docs/neu/$v.md" ]; then
+              cat "docs/neu/$v.md"
+            else
+              # Sonst die Commit-Titel ohne interne Einträge (Version, Planung, Tests)
+              git log --no-merges --format='- %s' ${prev:+$prev..}HEAD | sed 's/ *\[skip ci\]//' \
+                | grep -v -E '^- (Version|Versionsnummer|Planung|Tests?|Golden|CI|Build)\b' | head -40
+            fi
           } > notes.md
           gh release create "v$v" --target "$GITHUB_SHA" --title "Glückspfennig $v" --notes-file notes.md \
             --latest "gluckspfennig-$v.apk"
