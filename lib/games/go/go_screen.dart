@@ -9,6 +9,7 @@ import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_duel_mixin.dart';
 import '../../ui/tap_catcher.dart';
 import '../../ui/widgets.dart';
 import '../board/seats.dart';
@@ -61,7 +62,7 @@ class GoScreen extends StatefulWidget {
   State<GoScreen> createState() => _GoScreenState();
 }
 
-class _GoScreenState extends State<GoScreen> {
+class _GoScreenState extends State<GoScreen> with NetDuelScreen {
   static const _saveId = 'go';
   late final Settings _store;
   GoGame? _g;
@@ -104,10 +105,65 @@ class _GoScreenState extends State<GoScreen> {
   void dispose() {
     _token++;
     _persist();
+    duelDispose();
     super.dispose();
   }
 
+  // ---------------------------------------------------------------- Netzwerk
+
+  int _netSize = 9;
+
+  @override
+  String get duelGame => 'go';
+  @override
+  String get duelTitle => 'Go';
+  @override
+  List<String> get duelSides => const ['Schwarz', 'Weiß'];
+  @override
+  Map<String, Object?> get duelOptions => {'n': _netSize};
+
+  @override
+  List<Widget> duelLobbyExtras() => [
+        const SizedBox(height: 12),
+        Wrap(alignment: WrapAlignment.center, spacing: 8, children: [
+          ChoiceChip(label: const Text('9×9'), selected: _netSize == 9, onSelected: (_) => setState(() => _netSize = 9)),
+          ChoiceChip(label: const Text('13×13'), selected: _netSize == 13, onSelected: (_) => setState(() => _netSize = 13)),
+        ]),
+      ];
+
+  @override
+  void duelStart(List<String> names, int mySeat, Map<String, Object?> options) {
+    _token++;
+    setState(() {
+      _seats = [Seat(names[0], human: mySeat == 0), Seat(names[1], human: mySeat == 1)];
+      _g = GoGame((options['n'] as num?)?.toInt() == 13 ? 13 : 9);
+      _paid = true;
+      _busy = false;
+      _msg = '${names[0]} (Schwarz) beginnt';
+    });
+  }
+
+  /// Züge im Netz: Feld, -1 passen, -2 aufgeben.
+  @override
+  bool duelApply(Object? move) {
+    final g = _g;
+    if (g == null || g.over || move is! int) return false;
+    if (move == -1) {
+      _pass(remote: true);
+    } else if (move == -2) {
+      _resign(remote: true);
+    } else {
+      if (!g.isLegal(move)) return false;
+      _play(move, remote: true);
+    }
+    return true;
+  }
+
+  @override
+  void duelClosed() => _newGame();
+
   void _persist() {
+    if (duelActive) return;
     final g = _g;
     if (g == null || g.over) {
       _store.clearGame(_saveId);
@@ -213,11 +269,12 @@ class _GoScreenState extends State<GoScreen> {
     _play(p);
   }
 
-  void _play(int p) {
+  void _play(int p, {bool remote = false}) {
     final g = _g!;
     final who = g.current;
     final before = g.captures[who];
     g.play(p);
+    if (!remote) duelSendMove(p);
     final taken = g.captures[who] - before;
     AppScope.of(context).sfx.play(taken > 0 ? Sound.lose : Sound.chip);
     setState(() => _msg = taken > 0
@@ -226,10 +283,11 @@ class _GoScreenState extends State<GoScreen> {
     _bot();
   }
 
-  void _pass() {
+  void _pass({bool remote = false}) {
     final g = _g!;
     final who = g.current;
     g.pass();
+    if (!remote) duelSendMove(-1);
     if (g.over) {
       _finish();
       return;
@@ -238,9 +296,10 @@ class _GoScreenState extends State<GoScreen> {
     _bot();
   }
 
-  void _resign() {
+  void _resign({bool remote = false}) {
     final g = _g!;
     g.resign();
+    if (!remote) duelSendMove(-2);
     _finish();
   }
 
@@ -248,7 +307,7 @@ class _GoScreenState extends State<GoScreen> {
     final g = _g!;
     final w = g.winner!;
     final s = g.score();
-    final reward = seatReward(_seats, w - 1, goRewards[_level]);
+    final reward = duelPlaying ? 0 : seatReward(_seats, w - 1, goRewards[_level]);
     if (reward > 0 && !_paid) {
       _paid = true;
       AppScope.of(context).wallet.credit(reward);
@@ -262,7 +321,7 @@ class _GoScreenState extends State<GoScreen> {
 
   Future<void> _bot() async {
     final g = _g;
-    if (g == null || g.over || _seats[g.current - 1].human) return;
+    if (g == null || g.over || _seats[g.current - 1].human || duelRemote(g.current - 1)) return;
     final token = ++_token;
     setState(() => _busy = true);
     final copy = g.copy();
@@ -293,7 +352,8 @@ class _GoScreenState extends State<GoScreen> {
     return GameFrame(
       title: 'Go',
       guide: goGuide,
-      child: g == null
+      actions: duelActions(context),
+      child: duelScreen() ?? (g == null
           ? const SizedBox.shrink()
           : Column(
               children: [
@@ -353,16 +413,21 @@ class _GoScreenState extends State<GoScreen> {
                         ActionButton(label: 'Passen', onPressed: _humanTurn ? _pass : null),
                         ActionButton(label: 'Aufgeben', onPressed: _humanTurn ? _resign : null),
                       ],
-                      ActionButton(primary: g.over, label: 'Neues Spiel', onPressed: _newGame),
-                      ActionButton(
-                        label: 'Go-Schule',
-                        onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const GoSchoolScreen())),
-                      ),
+                      if (duelPlaying)
+                        ...duelButtons(over: g.over)
+                      else ...[
+                        ActionButton(primary: g.over, label: 'Neues Spiel', onPressed: _newGame),
+                        ActionButton(
+                          label: 'Go-Schule',
+                          onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const GoSchoolScreen())),
+                        ),
+                        if (g.over || MediaQuery.sizeOf(context).width < 420) ActionButton(label: 'Im Netzwerk', onPressed: duelOpenPanel),
+                      ],
                     ],
                   ),
                 ),
               ],
-            ),
+            )),
     );
   }
 }

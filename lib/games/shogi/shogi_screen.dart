@@ -9,6 +9,7 @@ import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guides.dart';
+import '../../ui/net_duel_mixin.dart';
 import '../../ui/widgets.dart';
 import '../board/board_setup.dart';
 import '../cards/card_widgets.dart';
@@ -34,7 +35,7 @@ class ShogiScreen extends StatefulWidget {
   State<ShogiScreen> createState() => _ShogiScreenState();
 }
 
-class _ShogiScreenState extends State<ShogiScreen> {
+class _ShogiScreenState extends State<ShogiScreen> with NetDuelScreen {
   ShogiGame _g = ShogiGame();
   BoardSetup _setup = const BoardSetup(level: 1);
   int? _selected;
@@ -51,11 +52,48 @@ class _ShogiScreenState extends State<ShogiScreen> {
 
   AppScope get _app => AppScope.of(context);
   ShogiLevel? get _level => _setup.level == null ? null : ShogiLevel.values[_setup.level!];
-  int get _humanColor => _setup.humanFirst ? sente : gote;
+  int get _humanColor => duelPlaying ? (duelSeat == 0 ? sente : gote) : (_setup.humanFirst ? sente : gote);
   ShogiResult get _result => _g.result;
   bool get _over => _result != ShogiResult.none;
-  bool get _humanTurn => !_over && !_thinking && (_level == null || _g.side == _humanColor);
-  bool get _flipped => _level != null ? _humanColor == gote : (_turnBoard && _g.side == gote);
+  bool get _humanTurn => !_over && !_thinking && (duelPlaying ? _g.side == _humanColor : (_level == null || _g.side == _humanColor));
+  bool get _flipped => duelPlaying || _level != null ? _humanColor == gote : (_turnBoard && _g.side == gote);
+
+  List<String> _netNames = const ['Sente', 'Gote'];
+
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get duelGame => 'shogi';
+  @override
+  String get duelTitle => 'Shogi';
+  @override
+  List<String> get duelSides => const ['Sente', 'Gote'];
+
+  @override
+  void duelStart(List<String> names, int mySeat, Map<String, Object?> options) {
+    setState(() {
+      _token++;
+      _netNames = names;
+      _g = ShogiGame();
+      _clearSelection();
+      _thinking = false;
+      _rewarded = false;
+      _reward = 0;
+    });
+    _app.sfx.play(Sound.card);
+  }
+
+  @override
+  bool duelApply(Object? move) {
+    if (_over || move is! String) return false;
+    final m = _g.legalMoves().where((x) => x.usi == move).firstOrNull;
+    if (m == null) return false;
+    _play(m, remote: true);
+    return true;
+  }
+
+  @override
+  void duelClosed() => _newGame();
 
   static const _saveId = 'shogi';
 
@@ -99,6 +137,7 @@ class _ShogiScreenState extends State<ShogiScreen> {
   }
 
   void _persist() {
+    if (duelActive) return;
     final s = _store;
     if (_over || _g.moves.isEmpty) {
       s.clearGame(_saveId);
@@ -187,9 +226,11 @@ class _ShogiScreenState extends State<ShogiScreen> {
     _maybeComputer();
   }
 
-  void _play(ShogiMove m) {
+  void _play(ShogiMove m, {bool remote = false}) {
     final capture = !m.isDrop && _g.board[m.to] != 0;
+    final usi = m.usi;
     _g.make(m);
+    if (!remote) duelSendMove(usi);
     _app.sfx.play(capture ? Sound.chip : Sound.card);
     setState(_clearSelection);
     if (_over) _finish();
@@ -197,7 +238,7 @@ class _ShogiScreenState extends State<ShogiScreen> {
 
   Future<void> _maybeComputer() async {
     final level = _level;
-    if (level == null || _over || _g.side == _humanColor || _thinking) return;
+    if (level == null || duelPlaying || _over || _g.side == _humanColor || _thinking) return;
     setState(() => _thinking = true);
     final token = _token;
     final copy = _g.copy();
@@ -221,7 +262,7 @@ class _ShogiScreenState extends State<ShogiScreen> {
     _rewarded = true;
     final r = _result;
     final level = _level;
-    if (level == null) {
+    if (level == null || duelPlaying) {
       _app.sfx.play(Sound.win);
       return;
     }
@@ -254,6 +295,11 @@ class _ShogiScreenState extends State<ShogiScreen> {
     }
     final check = _g.inCheck() ? 'Ōte! Der König steht im Schach. ' : '';
     if (_thinking) return '${check}Der Computer überlegt …';
+    if (duelPlaying) {
+      if (_g.side != _humanColor) return '$check${_netNames[_g.side == sente ? 0 : 1]} ist am Zug';
+      if (_dropType != null) return 'Tipp ein freies Feld zum Einsetzen an';
+      return '${check}Du bist am Zug';
+    }
     if (_level != null) {
       if (_dropType != null) return 'Tipp ein freies Feld zum Einsetzen an';
       return '${check}Du bist am Zug';
@@ -267,7 +313,8 @@ class _ShogiScreenState extends State<ShogiScreen> {
       title: 'Shogi',
       guide: shogiGuide,
       background: const BoxDecoration(color: Color(0xFF3A2116)),
-      child: LayoutBuilder(builder: (context, box) => _layout(box)),
+      actions: duelActions(context),
+      child: duelScreen() ?? LayoutBuilder(builder: (context, box) => _layout(box)),
     );
   }
 
@@ -301,9 +348,14 @@ class _ShogiScreenState extends State<ShogiScreen> {
       runSpacing: 8,
       alignment: WrapAlignment.center,
       children: [
-        ActionButton(primary: _over, label: 'Neues Spiel', onPressed: _thinking ? null : _newGame),
-        ActionButton(label: 'Rückgängig', onPressed: _g.canUndo && !_thinking ? _undo : null),
-        if (_level == null)
+        if (duelPlaying)
+          ...duelButtons(over: _over)
+        else ...[
+          ActionButton(primary: _over, label: 'Neues Spiel', onPressed: _thinking ? null : _newGame),
+          ActionButton(label: 'Rückgängig', onPressed: _g.canUndo && !_thinking ? _undo : null),
+          if (_over || MediaQuery.sizeOf(context).width < 420) ActionButton(label: 'Im Netzwerk', onPressed: duelOpenPanel),
+        ],
+        if (_level == null && !duelPlaying)
           ActionButton(
             label: _turnBoard ? 'Brett fest' : 'Brett mitdrehen',
             onPressed: () => setState(() => _turnBoard = !_turnBoard),
@@ -311,7 +363,9 @@ class _ShogiScreenState extends State<ShogiScreen> {
       ],
     );
     final info = Text(
-      _level == null
+      duelPlaying
+          ? '${_netNames[0]} (Sente) gegen ${_netNames[1]} (Gote) im Netz'
+          : _level == null
           ? 'Zu zweit an einem Gerät'
           : 'Gegen den Computer: ${_level!.label}. Du spielst ${_humanColor == sente ? 'Sente' : 'Gote'}',
       textAlign: TextAlign.center,
