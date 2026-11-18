@@ -651,8 +651,8 @@ class _ReelPainter extends CustomPainter {
     // Liegende Joker in Freispielen rosa umranden
     final stickyPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..color = const Color(0xFFFF80AB);
+      ..strokeWidth = 4
+      ..color = const Color(0xFFFF2E88);
     for (final (r, row) in s.sticky) {
       if (row >= s.grid[r].length) continue;
       final ch = size.height / s.grid[r].length;
