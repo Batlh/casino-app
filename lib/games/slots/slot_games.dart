@@ -9,6 +9,7 @@ import 'slot_data.dart';
 import 'slot_data_neu.dart';
 import 'slot_engine.dart';
 import 'tiefsee_art.dart';
+import 'vulkan_art.dart';
 
 /// Ein Slot: Regeln plus eigene Grafik und Texte.
 class SlotGame {
@@ -359,4 +360,48 @@ const jahrmarkt = SlotGame(
   freeSpinLine: 'Freispiel, Sterne füllen die Walze',
 );
 
-const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt];
+/// Sechs Walzen, jede Drehung mit neuer Höhe je Walze (2 bis 5 Symbole), dazu Kaskaden.
+const vulkaninsel = SlotGame(
+  name: 'Vulkaninsel',
+  blurb: 'Wechselnde Walzen, bis zu 4.096 Wege',
+  rules: SlotRules(
+    rows: 5,
+    heights: [2, 3, 4, 5],
+    mode: PayMode.ways,
+    waysDivisor: 500,
+    strips: vulkanStrips,
+    linePays: {
+      0: [1, 3, 6, 12],
+      1: [2, 4, 8, 15],
+      2: [2, 5, 9, 20],
+      3: [3, 6, 12, 27],
+      4: [5, 9, 19, 46],
+      5: [8, 15, 38, 92],
+    },
+    cascade: [1, 2, 3, 4, 5],
+    freeCascade: [2, 4, 6, 8, 10, 15],
+    scatterPays: [2, 5, 20],
+    freeSpins: 12,
+  ),
+  stakes: [500, 1000, 1500, 2000, 3000, 5000],
+  symbolNames: ['Kokosnuss', 'Ananas', 'Hibiskus', 'Papagei', 'Schildkröte', 'Tiki-Maske', 'Lavastein', 'Vulkan', '', ''],
+  paintSymbol: paintVulkanSymbol,
+  paintBackdrop: paintVulkanBackdrop,
+  background: BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF2B1036), Color(0xFF5E1F24), Color(0xFF1A0B0B)],
+    ),
+  ),
+  frame: [Color(0xFFFFAB40), Color(0xFFBF360C), Color(0xFF3E1A10)],
+  lobbyColor: Color(0xFF6B1F14),
+  featureText:
+      'Jede Walze zeigt bei jeder Drehung 2 bis 5 Symbole, das ergibt bis zu 4.096 Wege. Gewinnsymbole verschwinden, neue fallen nach, '
+      'jede Kaskade erhöht den Multiplikator bis ×5. Drei oder mehr Vulkane zahlen das 2-, 5- oder 20-Fache des Einsatzes und '
+      'starten 12 Freispiele, dort steigt der Multiplikator bis ×15.',
+  wildText: 'Der Lavastein ersetzt jedes Symbol außer dem Vulkan.',
+  freeSpinLine: 'Freispiel, Kaskaden ab ×2',
+);
+
+const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel];

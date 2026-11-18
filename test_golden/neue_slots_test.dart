@@ -15,8 +15,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens_test.dart' show loadFonts;
 
-final _games = [tiefsee, edelsteinmine, drachenhort, jahrmarkt];
-const _ids = ['tiefsee', 'mine', 'drachen', 'jahrmarkt'];
+final _games = [tiefsee, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel];
+const _ids = ['tiefsee', 'mine', 'drachen', 'jahrmarkt', 'vulkan'];
 
 class _Sheet extends CustomPainter {
   @override
@@ -77,11 +77,11 @@ void main() {
   }
 
   testWidgets('Symbole neue Slots', (tester) async {
-    tester.view.physicalSize = const Size(1600, 640);
+    tester.view.physicalSize = const Size(1600, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.runAsync(loadFonts);
-    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1600, 640), painter: _Sheet()))));
+    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1600, 800), painter: _Sheet()))));
     await expectLater(find.byType(RepaintBoundary).first, matchesGoldenFile('goldens/symbole_neu.png'));
   });
 
@@ -118,6 +118,18 @@ void main() {
     await finish(tester);
   });
 
+  testWidgets('Vulkaninsel: wechselnde Höhen und Kaskaden', (tester) async {
+    await tester.runAsync(loadFonts);
+    final seed = _seedFor(vulkaninsel, (o) => o.steps.length >= 3);
+    await start(tester, SlotScreen(game: vulkaninsel, seed: seed));
+    await spin(tester);
+    await snap('vulkan_kaskade_1');
+    await tester.pump(const Duration(milliseconds: 1100));
+    await tester.pump(const Duration(milliseconds: 500));
+    await snap('vulkan_kaskade_2');
+    await finish(tester);
+  });
+
   testWidgets('Drachenhort: Hold & Spin', (tester) async {
     await tester.runAsync(loadFonts);
     final seed = _seedFor(drachenhort, (o) => o.holdSpin != null && o.holdSpin!.boards.length >= 3);
@@ -151,18 +163,20 @@ void main() {
 
   testWidgets('Gewinnpläne', (tester) async {
     await tester.runAsync(loadFonts);
-    for (var i = 0; i < _games.length; i++) {
-      final g = _games[i];
+    final plans = [..._games, kosmos78, schrebergarten];
+    const planIds = [..._ids, 'kosmos', 'garten'];
+    for (var i = 0; i < plans.length; i++) {
+      final g = plans[i];
       await start(tester, SlotScreen(game: g));
       showSlotPayTable(tester.element(find.byType(Navigator).first), g, g.stakes[2]);
       await tester.pump(const Duration(milliseconds: 600));
-      await snap('gewinnplan_${_ids[i]}_1');
+      await snap('gewinnplan_${planIds[i]}_1');
       final pos = tester
           .state<ScrollableState>(find.descendant(of: find.byType(BottomSheet), matching: find.byType(Scrollable)).first)
           .position;
       pos.jumpTo(pos.maxScrollExtent);
       await tester.pump(const Duration(milliseconds: 300));
-      await snap('gewinnplan_${_ids[i]}_2');
+      await snap('gewinnplan_${planIds[i]}_2');
     }
     await finish(tester);
   });

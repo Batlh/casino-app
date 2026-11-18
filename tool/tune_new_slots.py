@@ -41,6 +41,14 @@ GAMES = {
                   values=[5, 10, 15, 20, 25, 50, 100, 200, 500, 2000],
                   weights=[300, 250, 180, 120, 80, 40, 15, 8, 3, 1], grand=10000),
         free=0, seed=1954),
+    # Sechs Walzen mit wechselnder Höhe (2 bis 5 Symbole), bis zu 4.096 Wege, Kaskaden
+    "vulkan": dict(
+        mode="ways", anywhere=False, div=500, rows=5, heights=[2, 3, 4, 5], stake=500,
+        weights=[[9, 8, 7, 6, 4, 3, 0, 1, 0, 0]] + [[9, 8, 7, 6, 4, 3, 2, 1, 0, 0]] * 4 + [[9, 8, 7, 6, 4, 3, 0, 1, 0, 0]],
+        pays={0: [1, 3, 6, 12], 1: [2, 4, 8, 15], 2: [2, 5, 9, 20], 3: [3, 6, 12, 27], 4: [5, 9, 19, 46],
+              5: [8, 15, 38, 92]},
+        cascade=[1, 2, 3, 4, 5], free_cascade=[2, 4, 6, 8, 10, 15],
+        scatter=[2, 5, 20], free=12, seed=1815),
 }
 
 

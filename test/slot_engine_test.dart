@@ -107,6 +107,27 @@ void main() {
     });
   }
 
+  test('Vulkaninsel: jede Walze 2 bis 5 hoch, Wege = Produkt der Treffer je Walze', () {
+    final engine = SlotEngine(vulkaninsel.rules, rng: Random(12));
+    for (var i = 0; i < 500; i++) {
+      final o = engine.play(500);
+      expect(o.heights.every((h) => h >= 2 && h <= 5), isTrue);
+      for (final s in o.steps) {
+        for (var r = 0; r < 6; r++) {
+          expect(s.grid[r].length, o.heights[r], reason: 'Kaskaden behalten die Höhe');
+        }
+        for (final w in s.wins) {
+          expect(w.start, 0);
+          var ways = 1;
+          for (var r = 0; r < w.count; r++) {
+            ways *= s.grid[r].where((x) => x == w.symbol || x == symWild).length;
+          }
+          expect(w.ways, ways);
+        }
+      }
+    }
+  });
+
   test('Alte Slots: play() zahlt genau wie spin()', () {
     for (final g in [kosmos78, schrebergarten]) {
       final a = SlotEngine(g.rules, rng: Random(9));

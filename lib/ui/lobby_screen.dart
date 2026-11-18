@@ -147,6 +147,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         () => _open(const SlotScreen(game: jahrmarkt)),
       ),
       _Game(
+        vulkaninsel.name,
+        vulkaninsel.blurb,
+        vulkaninsel.lobbyColor,
+        () => _SlotArt(vulkaninsel, 5, symScatter),
+        () => _open(const SlotScreen(game: vulkaninsel)),
+      ),
+      _Game(
         "Texas Hold'em",
         'No-Limit gegen bis zu fünf Gegner',
         const Color(0xFF7A1F12),

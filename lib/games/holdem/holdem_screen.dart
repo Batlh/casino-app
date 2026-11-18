@@ -591,6 +591,7 @@ class _Felt extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 3),
             child: GestureDetector(
+              key: ValueKey('hand-$i'),
               onTap: tappable ? () => onTapCard(i) : null,
               child: AnimatedSlide(
                 duration: const Duration(milliseconds: 150),
