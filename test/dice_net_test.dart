@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gluckspfennig/games/backgammon/bg_engine.dart';
 import 'package:gluckspfennig/games/kniffel/kniffel_engine.dart';
 import 'package:gluckspfennig/games/madn/madn_engine.dart';
 
@@ -43,6 +44,35 @@ void main() {
       steps++;
     }
     expect(a.phase, MadnPhase.over);
+    expect(b.winner, a.winner);
+  });
+
+  test('Backgammon: gleicher Startwert, jeder Zug einmal gewürfelt, gleiche Partie', () {
+    final a = BgGame(rng: Random(12))..start();
+    final b = BgGame(rng: Random(12))..start();
+    expect(b.dice, a.dice);
+    expect(b.current, a.current);
+    final rng = Random(1);
+    var turns = 0;
+    while (!a.over && turns < 500) {
+      if (!a.rolled) a.roll();
+      if (!b.rolled) b.roll();
+      expect(b.dice, a.dice, reason: 'Zug $turns');
+      final seqs = a.sequences();
+      final seq = seqs.isEmpty ? const <BgStep>[] : seqs[rng.nextInt(seqs.length)];
+      for (final st in seq) {
+        a.apply(st);
+        b.apply(b.stepFor(st.from, st.die)!);
+      }
+      if (!a.over) {
+        a.endTurn();
+        b.endTurn();
+      }
+      expect(b.pips(0), a.pips(0));
+      expect(b.pips(1), a.pips(1));
+      turns++;
+    }
+    expect(a.over, isTrue);
     expect(b.winner, a.winner);
   });
 }

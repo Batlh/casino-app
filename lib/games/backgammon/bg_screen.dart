@@ -8,6 +8,7 @@ import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_duel_mixin.dart';
 import '../../ui/tap_catcher.dart';
 import '../../ui/widgets.dart';
 import '../board/seats.dart';
@@ -55,7 +56,7 @@ class BgScreen extends StatefulWidget {
   State<BgScreen> createState() => _BgScreenState();
 }
 
-class _BgScreenState extends State<BgScreen> {
+class _BgScreenState extends State<BgScreen> with NetDuelScreen {
   static const _saveId = 'backgammon';
   late final Settings _store;
   BgGame? _g;
@@ -106,10 +107,81 @@ class _BgScreenState extends State<BgScreen> {
   void dispose() {
     _token++;
     _persist();
+    duelDispose();
     super.dispose();
   }
 
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get duelGame => 'backgammon';
+  @override
+  String get duelTitle => 'Backgammon';
+  @override
+  List<String> get duelSides => const ['Weiß', 'Schwarz'];
+
+  /// Gemeinsamer Startwert: Beide Geräte würfeln damit dieselben Würfe, solange jeder Zug einmal würfelt.
+  @override
+  Map<String, Object?> get duelOptions => {'seed': math.Random().nextInt(1 << 30)};
+
+  @override
+  void duelStart(List<String> names, int mySeat, Map<String, Object?> options) {
+    _token++;
+    final g = BgGame(rng: math.Random((options['seed'] as num?)?.toInt() ?? 1))..start();
+    setState(() {
+      _seats = [Seat(names[0], human: mySeat == 0), Seat(names[1], human: mySeat == 1)];
+      _g = g;
+      _paid = true;
+      _busy = false;
+      _msg = '${names[g.current]} hat beim Auswürfeln gewonnen und beginnt mit ${g.dice[0]} und ${g.dice[1]}';
+    });
+    _beginTurn();
+  }
+
+  /// Ein ganzer Zug der Gegenseite: Liste der Schritte [von, nach, Auge]. Gewürfelt wird hier mit demselben Zufall.
+  @override
+  bool duelApply(Object? move) {
+    final g = _g;
+    if (g == null || g.over || move is! List) return false;
+    if (!g.rolled) g.roll();
+    final seqs = g.sequences();
+    final steps = <BgStep>[];
+    final probe = g.copy();
+    for (final raw in move) {
+      if (raw is! List || raw.length != 3) return false;
+      final st = probe.stepFor(raw[0] as int, raw[2] as int);
+      if (st == null || st.to != raw[1]) return false;
+      probe.apply(st);
+      steps.add(st);
+    }
+    final ok = steps.isEmpty
+        ? seqs.isEmpty
+        : seqs.any((sq) => sq.length == steps.length && [for (var i = 0; i < sq.length; i++) sq[i].same(steps[i])].every((x) => x));
+    if (!ok && !probe.over) return false;
+    for (final st in steps) {
+      g.apply(st);
+    }
+    AppScope.of(context).sfx.play(steps.any((x) => x.hit) ? Sound.lose : Sound.chip);
+    if (g.over) {
+      _finish(g);
+    } else {
+      _endTurn();
+    }
+    return true;
+  }
+
+  @override
+  void duelClosed() => _newGame();
+
+  /// Eigenen fertigen Zug an die Gegenseite schicken.
+  void _sendTurn() {
+    final g = _g;
+    if (g == null || !duelPlaying || g.current != duelSeat) return;
+    duelSendMove([for (final st in _played) [st.from, st.to, st.die]]);
+  }
+
   void _persist() {
+    if (duelActive) return;
     final g = _turnStart ?? _g;
     if (g == null || (_g?.over ?? true)) {
       _store.clearGame(_saveId);
@@ -172,6 +244,7 @@ class _BgScreenState extends State<BgScreen> {
     _sel = null;
     _seqs = g.rolled ? g.sequences() : const [];
     setState(() {});
+    if (duelRemote(g.current)) return;
     if (!_seats[g.current].human) {
       _botTurn();
     } else if (g.rolled && _seqs.isEmpty) {
@@ -183,6 +256,9 @@ class _BgScreenState extends State<BgScreen> {
     final g = _g;
     if (g == null || g.rolled || g.over) return;
     g.roll();
+    // Rückgängig führt nur bis nach dem Wurf zurück, nicht vor ihn
+    _turnStart = g.copy();
+    _played.clear();
     AppScope.of(context).sfx.play(Sound.tick);
     _seqs = g.sequences();
     setState(() => _msg = '${_seats[g.current].name} würfelt ${g.dice[0]} und ${g.dice[1]}');
@@ -204,6 +280,7 @@ class _BgScreenState extends State<BgScreen> {
 
   void _endTurn() {
     final g = _g!;
+    _sendTurn();
     if (g.over) {
       _finish(g);
       return;
@@ -220,7 +297,7 @@ class _BgScreenState extends State<BgScreen> {
   void _finish(BgGame g) {
     final w = g.winner!;
     final kind = ['', '', ' mit Gammon', ' mit Backgammon'][g.winKind];
-    final reward = seatReward(_seats, w, bgRewards[_level] * g.winKind);
+    final reward = duelPlaying ? 0 : seatReward(_seats, w, bgRewards[_level] * g.winKind);
     if (reward > 0 && !_paid) {
       _paid = true;
       AppScope.of(context).wallet.credit(reward);
@@ -264,6 +341,7 @@ class _BgScreenState extends State<BgScreen> {
     AppScope.of(context).sfx.play(s.hit ? Sound.lose : Sound.chip);
     _sel = null;
     if (g.over) {
+      _sendTurn();
       _finish(g);
       return;
     }
@@ -365,7 +443,8 @@ class _BgScreenState extends State<BgScreen> {
     return GameFrame(
       title: 'Backgammon',
       guide: bgGuide,
-      child: g == null
+      actions: duelActions(context),
+      child: duelScreen() ?? (g == null
           ? const SizedBox.shrink()
           : Column(
               children: [
@@ -441,12 +520,17 @@ class _BgScreenState extends State<BgScreen> {
                         ActionButton(label: 'Rückgängig', onPressed: _played.isEmpty || _busy ? null : _undo),
                         ActionButton(primary: true, label: 'Zug beenden', onPressed: _turnComplete && !_busy ? _endTurn : null),
                       ],
-                      ActionButton(label: 'Neues Spiel', onPressed: _newGame),
+                      if (duelPlaying)
+                        ...duelButtons(over: g.over)
+                      else ...[
+                        ActionButton(label: 'Neues Spiel', onPressed: _newGame),
+                        if (g.over || MediaQuery.sizeOf(context).width < 420) ActionButton(label: 'Im Netzwerk', onPressed: duelOpenPanel),
+                      ],
                     ],
                   ),
                 ),
               ],
-            ),
+            )),
     );
   }
 }
