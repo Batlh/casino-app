@@ -1,6 +1,6 @@
 # Planung
 
-Ideen und offene Vorhaben, Stand 18.11.2026. Reihenfolge ist noch offen.
+Ideen und offene Vorhaben, Stand 18.11.2026. Reihenfolge ist noch offen. Erledigt: Glücksrad, Entchen angeln.
 
 ## Neue Spiele
 
@@ -29,6 +29,30 @@ Ideen und offene Vorhaben, Stand 18.11.2026. Reihenfolge ist noch offen.
 - Entchen schwimmen im Becken, man angelt eins; unter dem Entchen steht der Gewinn
   (Niete, klein, mittel, groß). Gewinn wird beim Angeln ausgewürfelt wie bei den Losen.
 - Preis pro Angelversuch, eigene Gewinntabelle, kleine Angel-Animation.
+
+### Drei neue Flippertische
+Vorhanden: Neon Nacht, Weltraumstation, Piratenbucht, Spukschloss, Rennstrecke, Neonstadt. Jeder neue Tisch bekommt
+ein Bauteil, das es noch nicht gibt, damit er sich anders spielt und nicht nur anders aussieht. Eigene Entwürfe, keine
+Nachbauten echter Automaten (keine Namen, Figuren oder Spielelemente bekannter Geräte).
+
+1. **Angelsee**
+   - Neu: **Rückschuss links** („Rettungsring“): Die linke Auslaufbahn schießt die Kugel zurück ins Spiel,
+     muss über die Ziele „R-I-N-G“ wieder scharf gemacht werden.
+   - Drehspinner „Angelschnur“ zählt Meter; Missionen der Reihe nach: Barsch → Hecht → Zander → Wels.
+   - Multiball „Schwarm“ über drei gefangene Kugeln im Bootssteg (Saucer), Jackpot auf der Stegrampe.
+2. **Dschungeltempel**
+   - Neu: **Tempeltor** (Weiche): Drei Fallziele räumen öffnet das Tor, dahinter liegt das Kugelschloss.
+     Ohne offenes Tor prallt die Kugel ab.
+   - Neu: **dritter Flipper** oben links, von dort ist die Lianenrampe gut zu treffen.
+   - Missionen: Idol finden, Brücke überqueren, Schatzkammer.
+3. **Zirkus**
+   - Neu: **gefangene Kugel** („Kanone“): eine feste zweite Kugel hinter einer Gasse; trifft man sie, stößt sie
+     gegen ein Ziel. Fünf Treffer = „Mensch aus der Kanone“ (Bonus).
+   - Neu: **Glücksrad im Saucer**: Kugel im Loch dreht ein kleines Rad mit Zufallspreis (Punkte, Ballrettung,
+     Extrakugel, Mission erhöhen).
+   - Trapezrampe und Jongleur-Bumper, Missionen: Seiltanz, Raubtiernummer, Große Manege.
+
+Reihenfolge: Bauteile zuerst in der Physik (pinball_table.dart) mit Tests, dann die Tische.
 
 ## Mehrspieler im lokalen Netzwerk
 - Grundgerüst steht (core/net/lan.dart), Bingo läuft schon.

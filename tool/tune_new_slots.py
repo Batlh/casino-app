@@ -37,6 +37,14 @@ GAMES = {
         pays={0: [5], 1: [8], 2: [10], 3: [15], 4: [24], 5: [58]},
         wild_mults=([2, 3, 5], [6, 3, 1]),
         seed=1977),
+    # 3 × 3, 27 Wege, Kaskaden; neun Fruchtsorten (0–5 und 10–12), damit nicht ständig wieder etwas passt
+    "lawine": dict(
+        mode="ways", anywhere=False, div=20, rows=3, stake=100,
+        weights=[[8, 8, 7, 6, 5, 4, 0, 2, 0, 0, 8, 7, 6], [8, 8, 7, 6, 5, 4, 2, 2, 0, 0, 8, 7, 6],
+                 [8, 8, 7, 6, 5, 4, 0, 2, 0, 0, 8, 7, 6]],
+        pays={0: [15], 1: [15], 10: [18], 2: [22], 11: [26], 3: [29], 12: [36], 4: [51], 5: [110]},
+        cascade=[1, 2, 3, 5], free_cascade=[2, 4, 6, 10],
+        scatter=[3], free=8, seed=2611),
     "drachen": dict(
         mode="ways", anywhere=True, div=50, rows=3, stake=100,
         weights=[[9, 8, 7, 6, 4, 3, 0, 0, 6, 0], [9, 8, 7, 6, 4, 3, 2, 0, 6, 0], [9, 8, 7, 6, 4, 3, 2, 0, 6, 0],
@@ -94,7 +102,7 @@ def build_strips(g):
         for _ in range(500):
             rng.shuffle(s)
             # keine gleichen Nachbarn, Sonder-Symbole nicht direkt untereinander
-            c = sum(s[i] == s[(i + 1) % len(s)] or (s[i] >= 6 and s[(i + 1) % len(s)] >= 6) for i in range(len(s)))
+            c = sum(s[i] == s[(i + 1) % len(s)] or (6 <= s[i] <= 9 and 6 <= s[(i + 1) % len(s)] <= 9) for i in range(len(s)))
             if c < score:
                 best, score = s[:], c
         strips.append(best)

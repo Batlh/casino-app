@@ -5,6 +5,7 @@ import 'frucht_art.dart';
 import 'garten_art.dart';
 import 'jahrmarkt_art.dart';
 import 'kosmos_art.dart';
+import 'lawine_art.dart';
 import 'jade_art.dart';
 import 'mine_art.dart';
 import 'slot_data.dart';
@@ -585,4 +586,50 @@ const fruechtekorb = SlotGame(
       'und zählt dann als so viele Wege: Eine Sieben ×3 macht aus einem Weg drei.',
 );
 
-const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb];
+/// 3 × 3 mit 27 Wegen und Kaskaden; neun Fruchtsorten.
+const fruchtlawine = SlotGame(
+  name: 'Fruchtlawine',
+  blurb: '3 Walzen, 27 Wege, Früchte fallen nach',
+  rules: SlotRules(
+    rows: 3,
+    mode: PayMode.ways,
+    waysDivisor: 20,
+    strips: lawineStrips,
+    linePays: {
+      0: [15],
+      1: [15],
+      10: [18],
+      2: [22],
+      11: [26],
+      3: [29],
+      12: [36],
+      4: [51],
+      5: [110],
+    },
+    cascade: [1, 2, 3, 5],
+    freeCascade: [2, 4, 6, 10],
+    scatterPays: [3],
+    freeSpins: 8,
+  ),
+  stakes: [20, 40, 100, 200, 500, 1000],
+  symbolNames: ['Kirsche', 'Zitrone', 'Orange', 'Pflaume', 'Melone', 'Glocke', 'Sieben', 'Stern', '', '', 'Erdbeere', 'Banane', 'Traube'],
+  paintSymbol: paintLawineSymbol,
+  paintBackdrop: paintLawineBackdrop,
+  background: BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF00382F), Color(0xFF00211C), Color(0xFF00110E)],
+    ),
+  ),
+  frame: [Color(0xFFB9F6CA), Color(0xFF00C853), Color(0xFF1B5E20)],
+  lobbyColor: Color(0xFF00695C),
+  featureText:
+      'Drei gleiche Früchte auf den drei Walzen nebeneinander gewinnen, egal in welcher Reihe: 27 Wege. Gewinnfrüchte verschwinden, '
+      'neue fallen nach, jede Kaskade erhöht den Multiplikator: ×1, ×2, ×3, ×5. Drei Sterne zahlen das 3-Fache des Einsatzes und '
+      'starten 8 Freispiele, dort geht die Leiter ×2, ×4, ×6, ×10.',
+  wildText: 'Die Sieben liegt nur auf der mittleren Walze und ersetzt jede Frucht.',
+  freeSpinLine: 'Freispiel, Kaskaden ab ×2',
+);
+
+const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb, fruchtlawine];

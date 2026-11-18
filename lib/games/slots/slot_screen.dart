@@ -933,8 +933,12 @@ class _PayTableSheet extends StatelessWidget {
 
     final paySymbols = [
       if (!ways && rules.linePays.containsKey(symWild)) symWild,
-      for (var s = 5; s >= 0; s--)
-        if (rules.linePays.containsKey(s)) s,
+      // nach höchster Auszahlung, damit auch Symbole über 9 (Fruchtlawine) mit drin sind
+      ...(rules.linePays.keys.where((s) => s != symWild).toList()
+        ..sort((a, b) {
+          final d = rules.linePays[b]!.last.compareTo(rules.linePays[a]!.last);
+          return d != 0 ? d : b.compareTo(a);
+        })),
     ];
     final hold = rules.holdSpin;
     final wheel = rules.wheel;

@@ -17,18 +17,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens_test.dart' show loadFonts;
 
-final _games = [tiefsee, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb];
-const _ids = ['tiefsee', 'mine', 'drachen', 'jahrmarkt', 'vulkan', 'sakura', 'jade', 'frucht'];
+final _games = [tiefsee, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb, fruchtlawine];
+const _ids = ['tiefsee', 'mine', 'drachen', 'jahrmarkt', 'vulkan', 'sakura', 'jade', 'frucht', 'lawine'];
 
 class _Sheet extends CustomPainter {
   @override
   void paint(ui.Canvas canvas, Size size) {
-    final cell = size.width / 10;
+    final cell = size.width / 11;
     for (var g = 0; g < _games.length; g++) {
       _games[g].paintBackdrop(canvas, Rect.fromLTWH(0, g * cell, size.width, cell), 0.2);
-      for (var i = 0; i < 10; i++) {
-        if (i >= _games[g].symbolNames.length) continue;
-        _games[g].paintSymbol(canvas, Rect.fromLTWH(i * cell, g * cell, cell, cell), i);
+      final names = _games[g].symbolNames;
+      // Symbole ohne Namen gibt es in dem Spiel nicht
+      final syms = [for (var i = 0; i < names.length; i++) if (names[i].isNotEmpty) i];
+      for (var k = 0; k < syms.length; k++) {
+        _games[g].paintSymbol(canvas, Rect.fromLTWH(k * cell, g * cell, cell, cell), syms[k]);
       }
     }
   }
@@ -79,11 +81,11 @@ void main() {
   }
 
   testWidgets('Symbole neue Slots', (tester) async {
-    tester.view.physicalSize = const Size(1600, 1280);
+    tester.view.physicalSize = const Size(1650, 1350);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.runAsync(loadFonts);
-    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1600, 1280), painter: _Sheet()))));
+    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1650, 1350), painter: _Sheet()))));
     await expectLater(find.byType(RepaintBoundary).first, matchesGoldenFile('goldens/symbole_neu.png'));
   });
 
@@ -169,6 +171,18 @@ void main() {
     await spin(tester);
     await tester.pump(const Duration(milliseconds: 200));
     await snap('frucht_joker');
+    await finish(tester);
+  });
+
+  testWidgets('Fruchtlawine: Kaskaden', (tester) async {
+    await tester.runAsync(loadFonts);
+    final seed = _seedFor(fruchtlawine, (o) => o.steps.length >= 3);
+    await start(tester, SlotScreen(game: fruchtlawine, seed: seed));
+    await spin(tester);
+    await snap('lawine_kaskade_1');
+    await tester.pump(const Duration(milliseconds: 1100));
+    await tester.pump(const Duration(milliseconds: 500));
+    await snap('lawine_kaskade_2');
     await finish(tester);
   });
 
