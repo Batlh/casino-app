@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/debug_log.dart';
+import '../../core/net/lan.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
@@ -9,6 +12,7 @@ import '../../core/wallet.dart';
 import '../../ui/guides.dart';
 import '../../ui/widgets.dart';
 import 'holdem_engine.dart';
+import 'holdem_net.dart';
 
 class HoldemTable {
   const HoldemTable(this.name, this.smallBlind, this.bigBlind, this.buyIn);
@@ -66,13 +70,35 @@ class _HoldemScreenState extends State<HoldemScreen> {
   /// Five Card Draw: Stellen der Karten, die du ablegen willst.
   final Set<int> _discard = {};
 
+  // Netzwerk
+  String _name = '';
+  HoldemHost? _host;
+  HoldemGuest? _guest;
+  LanBrowser? _browser;
+  List<LanTable> _tables = [];
+  List<String> _addresses = [];
+  StreamSubscription<Object?>? _sub;
+  final _manualAddress = TextEditingController();
+  int _netBots = 2;
+
+  /// Als Mitspieler: Chips schon zurück ins Münzkonto gebucht.
+  bool _guestPaidOut = false;
+  bool _rebuyAsked = false;
+  String _guestTurnKey = '';
+
   AppScope get _app => AppScope.of(context);
   HoldemPlayer? get _me => _engine?.human;
+  String get _gameId => holdemNetGame(omaha: widget.omaha, draw: widget.draw);
+  String get _displayName => _name.trim().isEmpty ? 'Spieler' : _name.trim();
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _wallet; // Beim ersten Aufbau festhalten, in dispose gibt es keinen Kontext mehr
+    if (_name.isEmpty) {
+      final s = AppScope.of(context).settings;
+      _name = '${s.loadGame('poker')?['name'] ?? s.loadGame('bingo')?['name'] ?? ''}';
+    }
   }
 
   @override
@@ -83,7 +109,18 @@ class _HoldemScreenState extends State<HoldemScreen> {
       _wallet.credit(me.stack);
       _wallet.refillIfBroke();
     }
+    _guestPayOut();
+    _sub?.cancel();
+    _host?.close();
+    _guest?.close();
+    _browser?.close();
+    _manualAddress.dispose();
     super.dispose();
+  }
+
+  void _saveName(String v) {
+    _name = v;
+    AppScope.of(context).settings.saveGame('poker', {'name': v});
   }
 
   HoldemPlayer _newBot(int stack) {
@@ -114,16 +151,22 @@ class _HoldemScreenState extends State<HoldemScreen> {
 
   void _nextHand() {
     final e = _engine!;
+    final host = _host;
+    if (host != null) _hostSeats(e, host);
     // Ausgeschiedene Gegner werden durch neue ersetzt
     for (var i = 0; i < e.players.length; i++) {
       final p = e.players[i];
-      if (!p.isHuman && p.stack == 0) {
+      if (!p.isHuman && !p.remote && p.stack == 0) {
         final fresh = _newBot(_table.buyIn);
         p
           ..name = fresh.name
           ..style = fresh.style
           ..stack = fresh.stack;
       }
+    }
+    if (e.players.where((p) => p.stack > 0).length < 2) {
+      setState(() => _message = 'Zu wenige Spieler mit Chips');
+      return;
     }
     e.startHand();
     _app.sfx.play(Sound.card);
@@ -134,6 +177,7 @@ class _HoldemScreenState extends State<HoldemScreen> {
       _big = false;
       _prepareRaise();
     });
+    _publish();
     _pump();
   }
 
@@ -148,25 +192,37 @@ class _HoldemScreenState extends State<HoldemScreen> {
     if (_botRunning) return;
     _botRunning = true;
     final e = _engine!;
-    while (mounted && !e.handOver && !e.actor.isHuman) {
-      await Future<void>.delayed(_app.settings.botDelay(750));
-      if (!mounted) break;
+    while (mounted && _engine == e && !e.handOver && !e.actor.isHuman) {
+      final a = e.actor;
+      // Mitspieler im Netz ziehen selbst; wer gegangen ist, passt
+      if (a.remote && !a.left) break;
+      await Future<void>.delayed(a.left ? const Duration(milliseconds: 300) : _app.settings.botDelay(750));
+      if (!mounted || _engine != e || e.handOver || e.actor != a) break;
       final street = e.street;
       if (e.drawing) {
-        e.discard(drawDiscards(e.actor.hole));
+        e.discard(a.left ? const <int>[] : drawDiscards(a.hole));
         _app.sfx.play(Sound.card);
       } else {
-        e.apply(botDecide(e, _rng));
+        e.apply(a.left ? (e.toCall == 0 ? HoldemAction.check : HoldemAction.fold) : botDecide(e, _rng));
         _app.sfx.play(Sound.chip);
         if (e.street != street) _app.sfx.play(Sound.card);
       }
       setState(_prepareRaise);
+      _publish();
     }
     _botRunning = false;
     if (mounted && e.handOver) _finishHand();
   }
 
   void _act(HoldemAction action) {
+    final guest = _guest;
+    if (guest != null) {
+      final e = guest.engine;
+      if (e == null || e.handOver || !e.actor.isHuman) return;
+      guest.act(action);
+      _app.sfx.play(action.kind == HoldemActionKind.fold ? Sound.card : Sound.chip);
+      return;
+    }
     final e = _engine!;
     if (e.handOver || !e.actor.isHuman) return;
     final street = e.street;
@@ -174,6 +230,7 @@ class _HoldemScreenState extends State<HoldemScreen> {
     _app.sfx.play(action.kind == HoldemActionKind.fold ? Sound.card : Sound.chip);
     if (e.street != street) _app.sfx.play(Sound.card);
     setState(_prepareRaise);
+    _publish();
     if (e.handOver) {
       _finishHand();
     } else {
@@ -183,6 +240,15 @@ class _HoldemScreenState extends State<HoldemScreen> {
 
   /// Five Card Draw: deine markierten Karten ablegen und neue ziehen.
   void _swap() {
+    final guest = _guest;
+    if (guest != null) {
+      final e = guest.engine;
+      if (e == null || !e.drawing || !e.actor.isHuman) return;
+      guest.discard(_discard);
+      _app.sfx.play(Sound.card);
+      setState(_discard.clear);
+      return;
+    }
     final e = _engine!;
     if (!e.drawing || !e.actor.isHuman) return;
     e.discard(_discard);
@@ -191,6 +257,7 @@ class _HoldemScreenState extends State<HoldemScreen> {
       _discard.clear();
       _prepareRaise();
     });
+    _publish();
     if (e.handOver) {
       _finishHand();
     } else {
@@ -199,16 +266,16 @@ class _HoldemScreenState extends State<HoldemScreen> {
   }
 
   void _toggleDiscard(int i) {
-    final e = _engine!;
+    final e = _guest?.engine ?? _engine!;
     if (!e.drawing || !e.actor.isHuman) return;
     setState(() => _discard.contains(i) ? _discard.remove(i) : _discard.add(i));
   }
 
-  void _finishHand() {
-    final e = _engine!;
+  void _finishHand([HoldemEngine? mirror]) {
+    final e = mirror ?? _engine!;
     final parts = <String>[];
     for (final r in e.results) {
-      final who = r.winners.map((w) => w.name).join(' und ');
+      final who = r.winners.map((w) => w.isHuman ? 'Du' : w.name).join(' und ');
       final hand = r.value == null ? '' : ' mit ${handName(r.value!)}';
       final verb = r.winners.length == 1 && r.winners.first.isHuman
           ? 'gewinnst'
@@ -223,9 +290,17 @@ class _HoldemScreenState extends State<HoldemScreen> {
       _big = false;
     });
     _app.sfx.play(iWon ? Sound.win : Sound.lose);
+    if (mirror == null) _publish();
   }
 
   void _rebuy() {
+    final guest = _guest;
+    if (guest != null) {
+      if (_rebuyAsked || !_wallet.spend(guest.buyIn)) return;
+      guest.rebuy();
+      setState(() => _rebuyAsked = true);
+      return;
+    }
     final me = _me!;
     if (!_wallet.spend(_table.buyIn)) return;
     setState(() => me.stack = _table.buyIn);
@@ -233,6 +308,10 @@ class _HoldemScreenState extends State<HoldemScreen> {
   }
 
   void _leave() {
+    if (_guest != null) {
+      _closeNet();
+      return;
+    }
     final me = _me;
     if (me == null) return;
     _wallet.credit(me.stack);
@@ -242,6 +321,254 @@ class _HoldemScreenState extends State<HoldemScreen> {
       _message = '';
     });
     _wallet.refillIfBroke();
+    if (_host != null) _closeNet();
+  }
+
+  // ---------------------------------------------------------------- Netzwerk: Gastgeber
+
+  void _publish() {
+    final e = _engine;
+    if (e != null) _host?.publish(e, _handNumber);
+  }
+
+  Future<void> _openTable() async {
+    final t = _table;
+    final host = HoldemHost(
+      hostName: _displayName,
+      omaha: widget.omaha,
+      draw: widget.draw,
+      buyIn: t.buyIn,
+      info: '${t.name} · Blinds ${t.smallBlind}/${t.bigBlind} · Einstieg ${formatCoins(t.buyIn)}',
+    );
+    host.onMove = _remoteMove;
+    host.onLeave = _remoteLeft;
+    try {
+      await host.open();
+    } catch (e) {
+      debugLog.warn('netz', 'Tisch eröffnen: $e');
+      setState(() => _message = 'Tisch konnte nicht eröffnet werden');
+      await host.close();
+      return;
+    }
+    _addresses = await localAddresses();
+    _sub = host.changed.listen((_) {
+      if (mounted) setState(() {});
+    });
+    setState(() {
+      _host = host;
+      _message = '';
+    });
+  }
+
+  /// Startet das Spiel am eigenen Tisch: du, alle Mitspieler, dazu Computer bis zur gewählten Zahl.
+  void _hostStart() {
+    final host = _host!;
+    if (!_wallet.spend(_table.buyIn)) return;
+    _botNameCursor = _rng.nextInt(_botNames.length);
+    final guests = host.seats.values.take(5).toList();
+    final players = [HoldemPlayer(_displayName, _table.buyIn, isHuman: true)];
+    for (final s in guests) {
+      final p = HoldemPlayer(s.name, _table.buyIn)..remote = true;
+      host.seat(s, p);
+      players.add(p);
+    }
+    for (var i = 0; i < math.min(_netBots, 6 - players.length); i++) {
+      players.add(_newBot(_table.buyIn));
+    }
+    debugLog.info('netz', 'Poker ($_gameId) startet mit ${guests.length} Mitspielern und ${players.length - guests.length - 1} Computern');
+    setState(() {
+      _engine = HoldemEngine(
+        players: players,
+        smallBlind: _table.smallBlind,
+        bigBlind: _table.bigBlind,
+        omaha: widget.omaha,
+        draw: widget.draw,
+      );
+    });
+    _nextHand();
+  }
+
+  /// Zwischen zwei Händen: Gegangene durch Computer ersetzen, Nachkäufe, neue Mitspieler auf freie Plätze.
+  void _hostSeats(HoldemEngine e, HoldemHost host) {
+    for (final p in e.players) {
+      if (p.remote && p.left) {
+        final fresh = _newBot(_table.buyIn);
+        p
+          ..remote = false
+          ..left = false
+          ..name = fresh.name
+          ..style = fresh.style
+          ..stack = fresh.stack;
+      }
+    }
+    for (final s in host.seats.values) {
+      final p = s.player;
+      if (p != null && s.rebuy) {
+        if (p.stack == 0) p.stack = _table.buyIn;
+        s.rebuy = false;
+      }
+      if (p == null) {
+        // Neuer Mitspieler übernimmt den Platz eines Computers, sonst einen neuen Platz bis sechs
+        final bot = e.players.where((q) => !q.isHuman && !q.remote).firstOrNull;
+        if (bot != null) {
+          bot
+            ..name = s.name
+            ..style = null
+            ..remote = true
+            ..stack = _table.buyIn;
+          host.seat(s, bot);
+        } else if (e.players.length < 6) {
+          final q = HoldemPlayer(s.name, _table.buyIn)..remote = true;
+          e.players.add(q);
+          host.seat(s, q);
+        }
+      }
+    }
+  }
+
+  void _remoteMove(HoldemSeat seat, LanMessage m) {
+    final e = _engine;
+    final p = seat.player;
+    if (e == null || p == null || e.handOver || e.actor != p) return;
+    if ((m['hand'] as num?)?.toInt() != _handNumber) return;
+    final street = e.street;
+    try {
+      if (m['t'] == 'discard') {
+        if (!e.drawing) return;
+        final cards = {for (final c in m['cards'] as List) (c as num).toInt()}.where((c) => c >= 0 && c < p.hole.length);
+        e.discard(cards);
+        _app.sfx.play(Sound.card);
+      } else {
+        final a = holdemActionOf(m);
+        if (a == null || e.drawing) return;
+        if (a.kind == HoldemActionKind.check && e.toCall > 0) return;
+        if (a.kind == HoldemActionKind.raise && !e.canRaise) return;
+        e.apply(a);
+        _app.sfx.play(a.kind == HoldemActionKind.fold ? Sound.card : Sound.chip);
+      }
+    } catch (err) {
+      debugLog.warn('netz', 'Ungültiger Zug von ${seat.name}: $err');
+      return;
+    }
+    if (e.street != street) _app.sfx.play(Sound.card);
+    if (!mounted) return;
+    setState(_prepareRaise);
+    _publish();
+    if (e.handOver) {
+      _finishHand();
+    } else {
+      _pump();
+    }
+  }
+
+  void _remoteLeft(HoldemSeat seat) {
+    final p = seat.player;
+    if (p == null) return;
+    p.left = true;
+    debugLog.info('netz', '${seat.name} hat den Tisch verlassen');
+    final e = _engine;
+    if (e != null && !e.handOver && e.actor == p) _pump();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _closeNet() async {
+    _guestPayOut();
+    await _sub?.cancel();
+    _sub = null;
+    await _host?.close();
+    await _guest?.close();
+    await _browser?.close();
+    if (!mounted) return;
+    setState(() {
+      _host = null;
+      _guest = null;
+      _browser = null;
+      _message = '';
+    });
+  }
+
+  // ---------------------------------------------------------------- Netzwerk: Mitspieler
+
+  Future<void> _browse() async {
+    final b = LanBrowser(_gameId);
+    await b.start();
+    _sub = b.tables.listen((t) {
+      if (mounted) setState(() => _tables = t);
+    });
+    setState(() {
+      _browser = b;
+      _tables = b.current;
+      _message = '';
+    });
+  }
+
+  Future<void> _join(String address, int port) async {
+    final guest = HoldemGuest(_displayName);
+    guest.onSeat = (cost) {
+      if (!_wallet.spend(cost)) {
+        if (mounted) setState(() => _message = 'Nicht genug Münzen für den Einstieg');
+        return false;
+      }
+      _guestPaidOut = false;
+      return true;
+    };
+    try {
+      await guest.join(address, port);
+    } catch (e) {
+      debugLog.warn('netz', 'Beitreten: $e');
+      if (mounted) setState(() => _message = 'Tisch nicht erreichbar');
+      await guest.close();
+      return;
+    }
+    await _sub?.cancel();
+    await _browser?.close();
+    _browser = null;
+    var wasOver = true;
+    var lastHand = 0;
+    _sub = guest.changed.listen((_) {
+      if (!mounted) return;
+      final e = guest.engine;
+      if (e != null) {
+        if (guest.hand != lastHand) {
+          lastHand = guest.hand;
+          _handNumber = guest.hand;
+          _discard.clear();
+          _message = '';
+          _rebuyAsked = false;
+          _app.sfx.play(Sound.card);
+        }
+        if (e.handOver && !wasOver) _finishHand(e);
+        wasOver = e.handOver;
+        // Regler für das Erhöhen erst setzen, wenn du neu dran bist
+        final key = '${guest.hand}-${e.street.name}-${e.toAct}';
+        if (!e.handOver && !e.drawing && e.actor.isHuman && key != _guestTurnKey) {
+          _guestTurnKey = key;
+          _raiseTo = e.minRaiseTo;
+        }
+      }
+      if (!guest.lan.connected) {
+        _guestPayOut();
+        _message = 'Der Gastgeber hat den Tisch geschlossen';
+      }
+      setState(() {});
+    });
+    setState(() {
+      _guest = guest;
+      _message = '';
+    });
+  }
+
+  /// Chips des Mitspielers zurück ins Münzkonto (einmal, beim Gehen oder wenn der Tisch schließt).
+  void _guestPayOut() {
+    final guest = _guest;
+    if (guest == null || _guestPaidOut || !guest.seated) return;
+    _guestPaidOut = true;
+    final me = guest.engine?.human;
+    // Ohne Sicht hat noch keine Hand begonnen: der volle Einstieg kommt zurück
+    final chips = (me == null ? guest.buyIn : me.stack) + (_rebuyAsked ? guest.buyIn : 0);
+    _wallet.credit(chips);
+    _wallet.refillIfBroke();
+    debugLog.info('netz', 'Poker verlassen, $chips Chips zurück');
   }
 
   @override
@@ -250,7 +577,13 @@ class _HoldemScreenState extends State<HoldemScreen> {
     return GameFrame(
       guide: widget.draw ? fiveCardDrawGuide : (widget.omaha ? omahaGuide : holdemGuide),
       title: widget.draw ? 'Five Card Draw' : (widget.omaha ? 'Omaha' : "Texas Hold'em"),
-      child: e == null ? _lobby() : _tableView(e),
+      child: _guest != null
+          ? _guestView()
+          : _browser != null
+              ? _browseView()
+              : e == null
+                  ? (_host != null ? _hostLobby() : _lobby())
+                  : _tableView(e),
     );
   }
 
@@ -313,12 +646,166 @@ class _HoldemScreenState extends State<HoldemScreen> {
                   textAlign: TextAlign.center,
                   style: style.copyWith(fontSize: 15),
                 ),
+                const SizedBox(height: 18),
+                Text('Im lokalen Netzwerk', textAlign: TextAlign.center, style: style.copyWith(fontWeight: FontWeight.w700)),
+                TextFormField(
+                  initialValue: _name,
+                  maxLength: 16,
+                  decoration: const InputDecoration(labelText: 'Dein Name am Tisch', counterText: ''),
+                  onChanged: _saveName,
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ActionButton(label: 'Tisch eröffnen', onPressed: _openTable),
+                    ActionButton(label: 'Tisch beitreten', onPressed: _browse),
+                  ],
+                ),
+                if (_message.isNotEmpty)
+                  Padding(padding: const EdgeInsets.only(top: 8), child: Text(_message, textAlign: TextAlign.center, style: style)),
+                const SizedBox(height: 6),
+                Text(
+                  'Alle Geräte im selben WLAN. Der gewählte Tisch oben gilt für alle; freie Plätze füllen Computer.',
+                  textAlign: TextAlign.center,
+                  style: style.copyWith(fontSize: 14),
+                ),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  Widget _netPanel(List<Widget> children) => Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+          ),
+        ),
+      );
+
+  TextStyle get _netStyle => TextStyle(color: Palette.of(context).onFelt, fontSize: 16);
+
+  Widget _hostLobby() {
+    final host = _host!;
+    final style = _netStyle;
+    final guests = host.seats.length;
+    final maxBots = math.max(0, 5 - guests);
+    return _netPanel([
+      Text('Dein Tisch ist offen', textAlign: TextAlign.center, style: style.copyWith(fontSize: 20, fontWeight: FontWeight.w800)),
+      const SizedBox(height: 4),
+      Text(host.info, textAlign: TextAlign.center, style: style),
+      Text('Von Hand beitreten: ${_addresses.isEmpty ? '–' : _addresses.map((a) => '$a:${host.lan.port}').join(' oder ')}',
+          textAlign: TextAlign.center, style: style.copyWith(fontSize: 14)),
+      const SizedBox(height: 12),
+      Text('Am Tisch', style: style.copyWith(fontWeight: FontWeight.w700)),
+      Text('• $_displayName (du)', style: style),
+      for (final s in host.seats.values) Text('• ${s.name}', style: style),
+      const SizedBox(height: 12),
+      Text('Computer-Gegner dazu', style: style.copyWith(fontWeight: FontWeight.w700)),
+      const SizedBox(height: 6),
+      Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8,
+        children: [
+          for (var n = 0; n <= maxBots; n++)
+            ChoiceChip(label: Text('$n'), selected: math.min(_netBots, maxBots) == n, onSelected: (_) => setState(() => _netBots = n)),
+        ],
+      ),
+      const SizedBox(height: 14),
+      Center(
+        child: Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
+          ActionButton(
+            primary: true,
+            label: 'Spiel starten: ${formatCoins(_table.buyIn)}',
+            onPressed: _wallet.canAfford(_table.buyIn) && (guests > 0 || _netBots > 0) ? _hostStart : null,
+          ),
+          ActionButton(label: 'Tisch schließen', onPressed: _closeNet),
+        ]),
+      ),
+      const SizedBox(height: 8),
+      Text('Wer später beitritt, übernimmt ab der nächsten Hand den Platz eines Computers.',
+          textAlign: TextAlign.center, style: style.copyWith(fontSize: 14)),
+    ]);
+  }
+
+  Widget _browseView() {
+    final style = _netStyle;
+    return _netPanel([
+      Text('Offene Tische', textAlign: TextAlign.center, style: style.copyWith(fontSize: 20, fontWeight: FontWeight.w800)),
+      const SizedBox(height: 6),
+      if (_tables.isEmpty)
+        Text('Suche im WLAN …', textAlign: TextAlign.center, style: style)
+      else
+        for (final t in _tables)
+          Card(
+            child: ListTile(
+              title: Text(t.name),
+              subtitle: Text('${t.info}\n${t.address}'),
+              isThreeLine: true,
+              trailing: const Icon(Icons.login),
+              onTap: () => _join(t.address, t.port),
+            ),
+          ),
+      const SizedBox(height: 12),
+      TextField(
+        controller: _manualAddress,
+        decoration: const InputDecoration(labelText: 'Von Hand: Adresse:Port, z. B. 192.168.1.20:41234'),
+        keyboardType: TextInputType.url,
+      ),
+      const SizedBox(height: 10),
+      Center(
+        child: Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
+          ActionButton(
+            label: 'Verbinden',
+            onPressed: () {
+              final parts = _manualAddress.text.trim().split(':');
+              final port = parts.length == 2 ? int.tryParse(parts[1]) : null;
+              if (port != null) _join(parts[0], port);
+            },
+          ),
+          ActionButton(label: 'Zurück', onPressed: _closeNet),
+        ]),
+      ),
+      if (_message.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_message, textAlign: TextAlign.center, style: style)),
+    ]);
+  }
+
+  Widget _guestView() {
+    final guest = _guest!;
+    final style = _netStyle;
+    final e = guest.engine;
+    if (!guest.lan.connected) {
+      return _netPanel([
+        Text(_message.isEmpty ? 'Verbindung beendet' : _message, textAlign: TextAlign.center, style: style.copyWith(fontSize: 18)),
+        const SizedBox(height: 12),
+        Center(child: ActionButton(primary: true, label: 'Zurück', onPressed: _closeNet)),
+      ]);
+    }
+    if (e == null) {
+      return _netPanel([
+        Text(guest.info.isEmpty ? 'Verbunden' : guest.info, textAlign: TextAlign.center, style: style.copyWith(fontSize: 18, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 12),
+        Text('Am Tisch', style: style.copyWith(fontWeight: FontWeight.w700)),
+        for (final p in guest.lobby) Text('• $p', style: style),
+        const SizedBox(height: 12),
+        Text(
+          guest.seated ? 'Einstieg bezahlt, gleich geht es los …' : 'Warte, bis der Gastgeber das Spiel startet …',
+          textAlign: TextAlign.center,
+          style: style,
+        ),
+        if (_message.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_message, textAlign: TextAlign.center, style: style)),
+        const SizedBox(height: 12),
+        Center(child: ActionButton(label: 'Tisch verlassen', onPressed: _closeNet)),
+      ]);
+    }
+    return _tableView(e);
   }
 
   Widget _tableView(HoldemEngine e) {
@@ -390,6 +877,27 @@ class _HoldemScreenState extends State<HoldemScreen> {
   }
 
   List<Widget> _betweenHands(HoldemEngine e, HoldemPlayer me) {
+    final guest = _guest;
+    if (guest != null) {
+      return [
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (me.stack == 0)
+              ActionButton(
+                primary: true,
+                label: _rebuyAsked ? 'Nachkauf angemeldet' : 'Nachkaufen: ${formatCoins(guest.buyIn)}',
+                onPressed: !_rebuyAsked && _wallet.canAfford(guest.buyIn) ? _rebuy : null,
+              )
+            else
+              const ActionButton(label: 'Warte auf den Gastgeber', onPressed: null),
+            ActionButton(label: 'Tisch verlassen', onPressed: _leave),
+          ],
+        ),
+      ];
+    }
     final othersHaveChips = e.players.any((p) => !p.isHuman);
     return [
       Wrap(
@@ -463,7 +971,7 @@ class _HoldemScreenState extends State<HoldemScreen> {
                 max: maxTo.toDouble(),
                 activeColor: p.accent,
                 onChanged: (v) {
-                  final step = _table.smallBlind;
+                  final step = e.smallBlind;
                   final snapped = ((v / step).round() * step).clamp(minTo, maxTo);
                   setState(() => _raiseTo = snapped);
                 },

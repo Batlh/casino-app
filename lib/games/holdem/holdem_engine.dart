@@ -30,6 +30,12 @@ class HoldemPlayer {
   /// Spielstil der Computer-Gegner.
   BotStyle? style;
 
+  /// Mitspieler im Netz: zieht selbst, nicht der Computer.
+  bool remote = false;
+
+  /// Mitspieler im Netz hat den Tisch verlassen; passt automatisch und wird zwischen den Händen ersetzt.
+  bool left = false;
+
   List<PlayingCard> hole = [];
   int streetBet = 0;
   int totalBet = 0;
