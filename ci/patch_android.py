@@ -37,14 +37,14 @@ manifest.write_text(m, encoding="utf-8")
 
 xml = app / "src" / "main" / "res" / "xml"
 xml.mkdir(parents=True, exist_ok=True)
-shutil.copy(root / "ci" / "android" / "update_paths.xml", xml / "update_paths.xml")
+shutil.copy(root / "ci" / "update" / "update_paths.xml", xml / "update_paths.xml")
 
 activities = list((app / "src" / "main").rglob("MainActivity.kt")) + list((app / "src" / "main").rglob("MainActivity.java"))
 for a in activities:
     a.unlink()
 target = app / "src" / "main" / "kotlin" / "de" / "privat" / "gluckspfennig" / "MainActivity.kt"
 target.parent.mkdir(parents=True, exist_ok=True)
-shutil.copy(root / "ci" / "android" / "MainActivity.kt", target)
+shutil.copy(root / "ci" / "update" / "MainActivity.kt", target)
 
 gradle = app / "build.gradle.kts"
 g = gradle.read_text(encoding="utf-8")
