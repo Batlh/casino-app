@@ -201,6 +201,7 @@ class _RadPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
     final r = size.shortestSide / 2 - 16;
+    if (r < 20) return;
     final n = radReihe.length;
     final seg = 2 * math.pi / n;
     canvas.drawCircle(c, r + 12, Paint()..color = const Color(0xFF5D4037));
