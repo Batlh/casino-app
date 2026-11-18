@@ -160,15 +160,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
     return 'Gewonnen: +${formatCoins(r.total)}';
   }
 
-  void _showPayTable() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (context) => _PayTableSheet(game: widget.game, stake: _stake),
-    );
-  }
+  void _showPayTable() => showSlotPayTable(context, widget.game, _stake);
 
   @override
   Widget build(BuildContext context) {
@@ -313,6 +305,17 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
       ],
     );
   }
+}
+
+/// Gewinnplan eines Slots für den gewählten Einsatz.
+void showSlotPayTable(BuildContext context, SlotGame game, int stake) {
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (context) => _PayTableSheet(game: game, stake: stake),
+  );
 }
 
 /// Fortschritt einer Walze bei Gesamtzeit t. Walzen halten nacheinander.

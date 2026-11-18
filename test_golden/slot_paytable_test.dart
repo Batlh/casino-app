@@ -21,11 +21,7 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(GluckspfennigApp(wallet: Wallet(prefs), sfx: Sfx(prefs, silent: true), settings: Settings(prefs)));
     await tester.pump();
-    tester
-        .state<NavigatorState>(find.byType(Navigator).first)
-        .push(MaterialPageRoute<void>(builder: (_) => const SlotScreen(game: tiefsee)));
-    await tester.pump(const Duration(milliseconds: 600));
-    await tester.tap(find.text('Gewinnplan'));
+    showSlotPayTable(tester.element(find.byType(Navigator).first), tiefsee, 100);
     await tester.pump(const Duration(milliseconds: 600));
     await tester.drag(find.byType(ListView).last, const Offset(0, -900));
     await tester.pump(const Duration(milliseconds: 600));
