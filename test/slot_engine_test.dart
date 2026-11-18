@@ -191,6 +191,31 @@ void main() {
     }
   });
 
+  test('Früchtekorb: Joker mit Multiplikator zählt als so viele Wege', () {
+    // Kirsche · Sieben · zwei Kirschen; die Sieben bekommt ×3 → 1 × 3 × 2 = 6 Wege
+    final grid = [
+      [0, 1, 2],
+      [3, symWild, 4],
+      [0, 0, 5],
+    ];
+    final engine = SlotEngine(fruechtekorb.rules);
+    final wins = engine.winsOf(grid, 100, 1, wildMults: {1 * 3 + 1: 3});
+    final cherry = wins.firstWhere((w) => w.symbol == 0);
+    expect(cherry.ways, 6);
+    expect(cherry.payout, 5 * 6 * 100 ~/ 20);
+    // Ohne Multiplikator wären es 2 Wege
+    expect(engine.winsOf(grid, 100, 1).firstWhere((w) => w.symbol == 0).ways, 2);
+    // Beim Drehen bekommt jeder Joker einen der Werte
+    final e2 = SlotEngine(fruechtekorb.rules, rng: Random(2));
+    var seen = <int>{};
+    for (var i = 0; i < 3000; i++) {
+      final o = e2.play(100);
+      seen.addAll(o.wildMults.values);
+      expect(o.wildMults.length, o.firstGrid.expand((c) => c).where((x) => x == symWild).length);
+    }
+    expect(seen, {2, 3, 5});
+  });
+
   test('Alte Slots: play() zahlt genau wie spin()', () {
     for (final g in [kosmos78, schrebergarten]) {
       final a = SlotEngine(g.rules, rng: Random(9));

@@ -36,8 +36,12 @@ class _Shown {
     this.coins = const {},
     this.multiplier = 1,
     this.sticky = const {},
+    this.wildMults = const {},
   });
   final List<List<int>> grid;
+
+  /// Multiplikatoren der Joker (Feld = Walze * rows + Reihe), nur im ersten Bild.
+  final Map<int, int> wildMults;
 
   /// Einsatz der Drehung, für die Aufschlüsselung der Gewinne.
   final int stake;
@@ -209,6 +213,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
             stake: stake,
             falls: s.falls,
             coins: i == 0 ? out.coins : const {},
+            wildMults: i == 0 ? out.wildMults : const {},
             multiplier: s.multiplier,
             sticky: free && _rules.stickyWildsInFree ? {..._engine.stickyWilds} : const {},
           );
@@ -582,6 +587,26 @@ void _paintLabel(Canvas canvas, Rect box, String text, {double scale = 0.24}) {
   tp.paint(canvas, Offset(box.center.dx - tp.width / 2, box.bottom - tp.height - box.height * 0.04));
 }
 
+/// Kleines rundes Schild oben rechts im Feld, z. B. der Multiplikator eines Jokers.
+void _paintBadge(Canvas canvas, Rect box, String text) {
+  final r = box.width * 0.17;
+  final c = Offset(box.right - r * 0.9, box.top + r * 0.9);
+  canvas.drawCircle(c, r, Paint()..color = const Color(0xFFD32F2F));
+  canvas.drawCircle(
+    c,
+    r,
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = Colors.white,
+  );
+  final tp = TextPainter(
+    text: TextSpan(text: text, style: TextStyle(fontFamily: bodyFont, color: Colors.white, fontWeight: FontWeight.w900, fontSize: r * 0.95)),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
+}
+
 class _ReelPainter extends CustomPainter {
   _ReelPainter({
     required this.spin,
@@ -650,6 +675,8 @@ class _ReelPainter extends CustomPainter {
           game.paintSymbol(canvas, box, s.grid[r][row]);
           final coin = s.coins[r * rules.rows + row];
           if (coin != null) _paintLabel(canvas, box, coinLabel(rules, coin, stake));
+          final wm = s.wildMults[r * rules.rows + row];
+          if (wm != null) _paintBadge(canvas, box, '×$wm');
         }
       }
       canvas.restore();
@@ -825,7 +852,7 @@ class _LineCaption extends StatelessWidget {
           // Antippen zeigt, wie der Betrag zustande kommt
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => showWinBreakdown(context, game, s.grid, win, stake: s.stake, multiplier: s.multiplier),
+            onTap: () => showWinBreakdown(context, game, s.grid, win, stake: s.stake, multiplier: s.multiplier, wildMults: s.wildMults),
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Row(

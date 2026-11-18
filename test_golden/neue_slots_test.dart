@@ -17,8 +17,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens_test.dart' show loadFonts;
 
-final _games = [tiefsee, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel];
-const _ids = ['tiefsee', 'mine', 'drachen', 'jahrmarkt', 'vulkan', 'sakura', 'jade'];
+final _games = [tiefsee, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb];
+const _ids = ['tiefsee', 'mine', 'drachen', 'jahrmarkt', 'vulkan', 'sakura', 'jade', 'frucht'];
 
 class _Sheet extends CustomPainter {
   @override
@@ -79,11 +79,11 @@ void main() {
   }
 
   testWidgets('Symbole neue Slots', (tester) async {
-    tester.view.physicalSize = const Size(1600, 1120);
+    tester.view.physicalSize = const Size(1600, 1280);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.runAsync(loadFonts);
-    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1600, 1120), painter: _Sheet()))));
+    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1600, 1280), painter: _Sheet()))));
     await expectLater(find.byType(RepaintBoundary).first, matchesGoldenFile('goldens/symbole_neu.png'));
   });
 
@@ -159,6 +159,16 @@ void main() {
     await snap('sakura_freispiel_1');
     await tester.pump(Duration(milliseconds: p2 + 2100));
     await snap('sakura_freispiel_2');
+    await finish(tester);
+  });
+
+  testWidgets('Früchtekorb: Joker mit Multiplikator', (tester) async {
+    await tester.runAsync(loadFonts);
+    final seed = _seedFor(fruechtekorb, (o) => o.wildMults.values.any((m) => m >= 3) && o.total > 0);
+    await start(tester, SlotScreen(game: fruechtekorb, seed: seed));
+    await spin(tester);
+    await tester.pump(const Duration(milliseconds: 200));
+    await snap('frucht_joker');
     await finish(tester);
   });
 

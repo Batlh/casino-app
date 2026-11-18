@@ -30,6 +30,13 @@ GAMES = {
         pays={0: [4, 5, 15], 1: [4, 9, 18], 2: [5, 12, 25], 3: [5, 16, 31], 4: [9, 25, 61], 5: [16, 36, 124]},
         cascade=[1, 2, 3, 5], free_cascade=[2, 4, 6, 10],
         scatter=[2, 5, 20], free=10, seed=1850),
+    # 3 × 3 mit 27 Wegen, Joker mit Multiplikator ×2, ×3 oder ×5 (zählt als so viele Wege)
+    "frucht": dict(
+        mode="ways", anywhere=False, div=20, rows=3, stake=100,
+        weights=[[10, 9, 8, 7, 5, 4, 0, 0, 0, 0], [10, 9, 8, 7, 5, 4, 3, 0, 0, 0], [10, 9, 8, 7, 5, 4, 0, 0, 0, 0]],
+        pays={0: [5], 1: [8], 2: [10], 3: [15], 4: [24], 5: [58]},
+        wild_mults=([2, 3, 5], [6, 3, 1]),
+        seed=1977),
     "drachen": dict(
         mode="ways", anywhere=True, div=50, rows=3, stake=100,
         weights=[[9, 8, 7, 6, 4, 3, 0, 0, 6, 0], [9, 8, 7, 6, 4, 3, 2, 0, 6, 0], [9, 8, 7, 6, 4, 3, 2, 0, 6, 0],

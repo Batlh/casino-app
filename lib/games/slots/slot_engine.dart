@@ -93,7 +93,13 @@ class SlotRules {
     this.wheel,
     this.stickyWildsInFree = false,
     this.scatterDrops = false,
+    this.wildMultipliers = const [],
+    this.wildMultiplierWeights = const [],
   });
+
+  /// Wege-Slots: Jeder Joker bekommt beim Dreh einen Multiplikator (z. B. ×2, ×3, ×5) und zählt als so viele Wege.
+  final List<int> wildMultipliers;
+  final List<int> wildMultiplierWeights;
 
   /// Kaskaden: Streusymbole fallen nach und zählen am Ende mit (sonst fallen sie nicht nach).
   final bool scatterDrops;
@@ -289,7 +295,11 @@ class SpinOutcome {
     required this.total,
     this.holdSpin,
     this.wheel,
+    this.wildMults = const {},
   });
+
+  /// Multiplikatoren der Joker im ersten Raster (Feld = Walze * rows + Reihe).
+  final Map<int, int> wildMults;
 
   final List<int> stops;
   final List<int> heights;
@@ -377,8 +387,8 @@ class SlotEngine {
   }
 
   /// Alle Gewinne eines Rasters, Multiplikator eingerechnet.
-  List<LineWin> winsOf(List<List<int>> shown, int stake, int multiplier) =>
-      rules.mode == PayMode.lines ? _lineWins(shown, stake, multiplier) : _wayWins(shown, stake, multiplier);
+  List<LineWin> winsOf(List<List<int>> shown, int stake, int multiplier, {Map<int, int> wildMults = const {}}) =>
+      rules.mode == PayMode.lines ? _lineWins(shown, stake, multiplier) : _wayWins(shown, stake, multiplier, wildMults);
 
   List<LineWin> _lineWins(List<List<int>> shown, int stake, int multiplier) {
     final lineBet = stake ~/ rules.lineCount;
@@ -397,7 +407,7 @@ class SlotEngine {
 
   /// Wege: je Symbol jede längste Folge nebeneinanderliegender Walzen, auf denen es (oder ein Joker) liegt.
   /// Der Joker ersetzt nur, er zahlt bei Wegen nicht selbst. Eine Folge braucht mindestens ein echtes Symbol.
-  List<LineWin> _wayWins(List<List<int>> shown, int stake, int multiplier) {
+  List<LineWin> _wayWins(List<List<int>> shown, int stake, int multiplier, [Map<int, int> wildMults = const {}]) {
     final wins = <LineWin>[];
     final reels = rules.reels;
     for (final sym in rules.linePays.keys) {
@@ -423,7 +433,8 @@ class SlotEngine {
             var c = 0;
             for (var row = 0; row < shown[i].length; row++) {
               if (shown[i][row] == sym || shown[i][row] == symWild) {
-                c++;
+                // Ein Joker mit Multiplikator zählt als so viele Wege
+                c += shown[i][row] == symWild ? (wildMults[i * rules.rows + row] ?? 1) : 1;
                 cells.add((i, row));
               }
             }
@@ -489,6 +500,14 @@ class SlotEngine {
   SpinOutcome playGrid(List<List<int>> grid, int stake, {bool free = false, List<int> stops = const []}) {
     final reels = rules.reels;
     final heights = [for (final c in grid) c.length];
+    final wildMults = <int, int>{};
+    if (rules.wildMultipliers.isNotEmpty) {
+      for (var r = 0; r < reels; r++) {
+        for (var row = 0; row < grid[r].length; row++) {
+          if (grid[r][row] == symWild) wildMults[r * rules.rows + row] = _pick(rules.wildMultipliers, rules.wildMultiplierWeights);
+        }
+      }
+    }
     final coins = <int, int>{};
     if (rules.holdSpin != null) {
       for (var r = 0; r < reels; r++) {
@@ -507,7 +526,7 @@ class SlotEngine {
     List<List<int>>? falls;
     while (true) {
       final mult = ladder.isEmpty ? baseMult : baseMult * ladder[min(steps.length, ladder.length - 1)];
-      final wins = winsOf(shown, stake, mult);
+      final wins = winsOf(shown, stake, mult, wildMults: steps.isEmpty ? wildMults : const {});
       final win = wins.fold(0, (a, w) => a + w.payout);
       steps.add(CascadeStep(grid: shown, wins: wins, multiplier: mult, win: win, falls: falls));
       if (ladder.isEmpty || wins.isEmpty || steps.length > 50) break;
@@ -611,7 +630,18 @@ class SlotEngine {
       holdSpin: hold,
       wheel: wheel,
       total: total,
+      wildMults: wildMults,
     );
+  }
+
+  int _pick(List<int> values, List<int> weights) {
+    if (weights.length != values.length) return values[_rng.nextInt(values.length)];
+    var x = _rng.nextInt(weights.fold(0, (a, b) => a + b));
+    for (var i = 0; i < values.length; i++) {
+      x -= weights[i];
+      if (x < 0) return values[i];
+    }
+    return values.last;
   }
 
   /// Hold & Spin ab den Startmünzen. Werte in Zehnteln des Einsatzes.

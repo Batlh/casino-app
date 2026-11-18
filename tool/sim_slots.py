@@ -47,7 +47,7 @@ def line_hit(g, syms):
     return (WILD, run, wild) if wild > normal else (first, count, normal)
 
 
-def wins(g, grid, stake, mult):
+def wins(g, grid, stake, mult, wm=None):
     """Liste (Auszahlung, Felder)."""
     out = []
     reels = len(grid)
@@ -82,7 +82,8 @@ def wins(g, grid, stake, mult):
                     c = 0
                     for row, x in enumerate(grid[i]):
                         if x == sym or x == WILD:
-                            c += 1
+                            # Joker mit Multiplikator zählt als so viele Wege
+                            c += (wm or {}).get(i * g["rows"] + row, 1) if x == WILD else 1
                             cells.append((i, row))
                     ways *= c
                 out.append((p * ways * stake * mult // g["div"], cells))
@@ -143,6 +144,13 @@ def play(g, rng, stake, free=False):
             for row, x in enumerate(grid[r]):
                 if x == WILD:
                     held.add((r, row))
+    wm = {}
+    if g.get("wild_mults"):
+        vals, wts = g["wild_mults"]
+        for r in range(reels):
+            for row, x in enumerate(grid[r]):
+                if x == WILD:
+                    wm[r * g["rows"] + row] = rng.choices(vals, wts)[0]
     coins = {}
     if g.get("hold"):
         for r in range(reels):
@@ -158,7 +166,7 @@ def play(g, rng, stake, free=False):
     info = {}
     while True:
         m = base * ladder[min(steps, len(ladder) - 1)] if ladder else base
-        ws = wins(g, shown, stake, m)
+        ws = wins(g, shown, stake, m, wm if steps == 0 else None)
         total += sum(w[0] for w in ws)
         steps += 1
         if not ladder or not ws or steps > 50:

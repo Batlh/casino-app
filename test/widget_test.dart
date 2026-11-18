@@ -74,6 +74,7 @@ void main() {
         SlotScreen(game: vulkaninsel),
         SlotScreen(game: sakura),
         SlotScreen(game: jadetempel),
+        SlotScreen(game: fruechtekorb),
         HoldemScreen(),
         HoldemScreen(draw: true),
         BingoScreen(),

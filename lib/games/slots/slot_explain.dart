@@ -110,6 +110,13 @@ GameGuide slotGuide(SlotGame g) {
     GuideSection('So wird gewonnen', ways ? waysText(r) : linesText(r)),
     if (ways) GuideSection('Wege zählen', waysExampleText(r), picture: (_) => WaysExample(game: g)),
     if (r.heights != null) GuideSection('Wechselnde Walzen', heightsText(r)),
+    if (r.wildMultipliers.isNotEmpty)
+      GuideSection(
+        'Joker mit Multiplikator',
+        'Jeder Joker bekommt bei der Drehung ${r.wildMultipliers.map((m) => '×$m').join(', ').replaceFirst(RegExp(r', (?=[^,]*$)'), ' oder ')}. '
+            'Er zählt dann nicht als ein Weg, sondern als so viele: Liegen auf Walze 1 eine Kirsche, auf Walze 2 eine Sieben ×3 und '
+            'auf Walze 3 zwei Kirschen, sind das 1 × 3 × 2 = 6 Wege.',
+      ),
     GuideSection('Joker', g.wildText),
     if (r.hasScatter) GuideSection('Freispiele', freeSpinsText(g)),
     if (r.cascades) GuideSection('Kaskaden', cascadeText(r)),
@@ -200,7 +207,8 @@ class _WaysExamplePainter extends CustomPainter {
 }
 
 /// Aufschlüsselung eines Gewinns: welche Felder, wie viele Wege, welcher Betrag, welcher Multiplikator.
-List<String> winBreakdown(SlotGame game, List<List<int>> grid, LineWin w, {required int stake, required int multiplier}) {
+List<String> winBreakdown(SlotGame game, List<List<int>> grid, LineWin w,
+    {required int stake, required int multiplier, Map<int, int> wildMults = const {}}) {
   final r = game.rules;
   final name = game.symbolNames[w.symbol];
   final lines = <String>[];
@@ -217,8 +225,20 @@ List<String> winBreakdown(SlotGame game, List<List<int>> grid, LineWin w, {requi
   }
   final counts = <int>[];
   final wildsPer = <int>[];
+  final mults = <String>[];
   for (var i = w.start; i < w.start + w.count; i++) {
-    counts.add(grid[i].where((s) => s == w.symbol || s == symWild).length);
+    var c = 0;
+    for (var row = 0; row < grid[i].length; row++) {
+      final s = grid[i][row];
+      if (s == symWild) {
+        final m = wildMults[i * r.rows + row] ?? 1;
+        c += m;
+        if (m > 1) mults.add('Joker ×$m auf Walze ${i + 1} zählt als $m');
+      } else if (s == w.symbol) {
+        c++;
+      }
+    }
+    counts.add(c);
     wildsPer.add(grid[i].where((s) => s == symWild).length);
   }
   lines.add('${w.count} × $name nebeneinander, Walze ${w.start + 1} bis ${w.start + w.count}.');
@@ -226,6 +246,7 @@ List<String> winBreakdown(SlotGame game, List<List<int>> grid, LineWin w, {requi
     final j = wildsPer[k];
     lines.add('Walze ${w.start + k + 1}: ${counts[k]}-mal${j > 0 ? ' (davon $j Joker)' : ''}');
   }
+  lines.addAll(mults);
   lines.add('Wege: ${counts.join(' × ')} = ${w.ways}');
   final pay = r.linePays[w.symbol]![w.count - 3];
   final perWay = pay * stake / r.waysDivisor;
@@ -239,9 +260,9 @@ List<String> winBreakdown(SlotGame game, List<List<int>> grid, LineWin w, {requi
 
 /// Blatt mit der Aufschlüsselung, geöffnet durch Tippen auf die Gewinnzeile.
 Future<void> showWinBreakdown(BuildContext context, SlotGame game, List<List<int>> grid, LineWin w,
-    {required int stake, required int multiplier}) {
+    {required int stake, required int multiplier, Map<int, int> wildMults = const {}}) {
   final p = Palette.of(context);
-  final text = winBreakdown(game, grid, w, stake: stake, multiplier: multiplier);
+  final text = winBreakdown(game, grid, w, stake: stake, multiplier: multiplier, wildMults: wildMults);
   return showModalBottomSheet<void>(
     context: context,
     useSafeArea: true,

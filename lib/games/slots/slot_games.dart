@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'drachen_art.dart';
+import 'frucht_art.dart';
 import 'garten_art.dart';
 import 'jahrmarkt_art.dart';
 import 'kosmos_art.dart';
@@ -411,7 +412,7 @@ const jahrmarkt = SlotGame(
 /// Sechs Walzen, jede Drehung mit neuer Höhe je Walze (2 bis 5 Symbole), dazu Kaskaden.
 const vulkaninsel = SlotGame(
   name: 'Vulkaninsel',
-  blurb: 'Wechselnde Walzen, bis zu 4.096 Wege',
+  blurb: 'Wechselnde Walzen, bis zu 15.625 Wege',
   rules: SlotRules(
     rows: 5,
     heights: [2, 3, 4, 5],
@@ -445,7 +446,7 @@ const vulkaninsel = SlotGame(
   frame: [Color(0xFFFFAB40), Color(0xFFBF360C), Color(0xFF3E1A10)],
   lobbyColor: Color(0xFF6B1F14),
   featureText:
-      'Jede Walze zeigt bei jeder Drehung 2 bis 5 Symbole, das ergibt bis zu 4.096 Wege. Gewinnsymbole verschwinden, neue fallen nach, '
+      'Jede Walze zeigt bei jeder Drehung 2 bis 5 Symbole, das ergibt bis zu 15.625 Wege. Gewinnsymbole verschwinden, neue fallen nach, '
       'jede Kaskade erhöht den Multiplikator bis ×3. Drei oder mehr Vulkane zahlen das 2-, 5- oder 20-Fache des Einsatzes und '
       'starten 12 Freispiele, dort steigt der Multiplikator bis ×8.',
   wildText: 'Der Lavastein ersetzt jedes Symbol außer dem Vulkan.',
@@ -536,7 +537,7 @@ const jadetempel = SlotGame(
   frame: [Color(0xFFFFE082), Color(0xFF2E7D32), Color(0xFF1B3A1B)],
   lobbyColor: Color(0xFF1E5631),
   featureText:
-      'Jede Walze zeigt bei jeder Drehung 2 bis 5 Symbole, das ergibt bis zu 4.096 Wege. Sechs oder mehr Glücksmünzen starten '
+      'Jede Walze zeigt bei jeder Drehung 2 bis 5 Symbole, das ergibt bis zu 15.625 Wege. Sechs oder mehr Glücksmünzen starten '
       'Hold & Spin auf 6 × 5 Feldern.',
   wildText: 'Die Drachenperle ersetzt jedes Symbol außer der Glücksmünze.',
 );
@@ -544,4 +545,44 @@ const jadetempel = SlotGame(
 /// Spielvarianten, die per Einstellung statt eines Automaten aus allSlots laufen.
 const slotVariants = [edelsteinmineB];
 
-const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel];
+/// Drei Walzen à drei Reihen, 27 Wege; Joker mit ×2, ×3 oder ×5 zählt als so viele Wege.
+const fruechtekorb = SlotGame(
+  name: 'Früchtekorb',
+  blurb: '3 Walzen, 27 Wege, Joker bis ×5',
+  rules: SlotRules(
+    rows: 3,
+    mode: PayMode.ways,
+    waysDivisor: 20,
+    strips: fruchtStrips,
+    linePays: {
+      0: [5],
+      1: [8],
+      2: [10],
+      3: [15],
+      4: [24],
+      5: [58],
+    },
+    wildMultipliers: [2, 3, 5],
+    wildMultiplierWeights: [6, 3, 1],
+  ),
+  stakes: [20, 40, 100, 200, 500, 1000],
+  symbolNames: ['Kirsche', 'Zitrone', 'Orange', 'Pflaume', 'Melone', 'Glocke', 'Sieben', '', '', ''],
+  paintSymbol: paintFruchtSymbol,
+  paintBackdrop: paintFruchtBackdrop,
+  background: BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF5A0000), Color(0xFF2B0000), Color(0xFF140000)],
+    ),
+  ),
+  frame: [Color(0xFFFFE082), Color(0xFFFFB300), Color(0xFF8D6E00)],
+  lobbyColor: Color(0xFF8E1B1B),
+  featureText:
+      'Drei gleiche Früchte auf den drei Walzen nebeneinander gewinnen, egal in welcher Reihe: 3 × 3 × 3 = 27 Wege. '
+      'Liegt eine Frucht auf einer Walze zweimal, zählt das doppelt.',
+  wildText: 'Die Sieben liegt nur auf der mittleren Walze und ersetzt jede Frucht. Sie bekommt bei jeder Drehung ×2, ×3 oder ×5 '
+      'und zählt dann als so viele Wege: Eine Sieben ×3 macht aus einem Weg drei.',
+);
+
+const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb];
