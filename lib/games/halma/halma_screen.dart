@@ -8,6 +8,7 @@ import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_replay_mixin.dart';
 import '../../ui/tap_catcher.dart';
 import '../../ui/widgets.dart';
 import '../board/seats.dart';
@@ -51,7 +52,7 @@ class HalmaScreen extends StatefulWidget {
   State<HalmaScreen> createState() => _HalmaScreenState();
 }
 
-class _HalmaScreenState extends State<HalmaScreen> {
+class _HalmaScreenState extends State<HalmaScreen> with NetReplayScreen {
   static const _saveId = 'halma';
   late final Settings _store;
   HalmaGame? _g;
@@ -88,16 +89,93 @@ class _HalmaScreenState extends State<HalmaScreen> {
   void setState(VoidCallback fn) {
     super.setState(fn);
     _persist();
+    replayBroadcast();
   }
 
   @override
   void dispose() {
     _token++;
     _persist();
+    replayDispose();
     super.dispose();
   }
 
+  // ---------------------------------------------------------------- Netzwerk
+
+  /// Züge: ['m', von, nach] und ['x'] aussetzen. Wer nicht ziehen kann, setzt auf allen Geräten gleich aus.
+  final List<List<Object?>> _log = [];
+
+  @override
+  String get replayGame => 'halma';
+  @override
+  String get replayTitle => 'Halma';
+  @override
+  int get replaySeats => 6;
+  @override
+  List<String> get replayBotNames => const [];
+  @override
+  List<List<Object?>> get replayLog => _log;
+
+  @override
+  void replayNewGame(int seed, List<String> names, int me, Map<String, Object?> options) {
+    _token++;
+    _log.clear();
+    _seats = [for (final (i, n) in names.indexed) Seat(n, human: replayHumans.contains(i))];
+    _g = HalmaGame(names.length);
+    _paid = false;
+    _busy = false;
+    _sel = null;
+    _msg = '${names[0]} beginnt';
+  }
+
+  @override
+  void replayApply(List<dynamic> a) {
+    final g = _g!;
+    if (a[0] == 'm') {
+      g.play(a[1] as int, a[2] as int);
+      _log.add(a);
+      _skipBlocked();
+    } else {
+      g.pass();
+      _log.add(a);
+    }
+  }
+
+  @override
+  bool replayAllowed(int seat, List<dynamic> a) {
+    final g = _g;
+    if (g == null || g.over || g.current != seat || a.isEmpty || a[0] != 'm' || a.length != 3) return false;
+    return g.legalMoves().any((m) => m.$1 == a[1] && m.$2 == a[2]);
+  }
+
+  @override
+  void replayAfterRemote(List<List<dynamic>> acts) {
+    final g = _g;
+    if (g != null && acts.isNotEmpty) {
+      AppScope.of(context).sfx.play(Sound.chip);
+      if (g.over) {
+        _msg = 'Gewonnen hat ${_winnerName(g)}';
+        if (_inTarget(g, replayMe) == 10) AppScope.of(context).sfx.play(Sound.win);
+      } else if (!_msg.contains('setzt aus')) {
+        _msg = '${_seats[g.current].name} ist dran';
+      }
+    }
+    setState(() => _sel = null);
+    _bot();
+  }
+
+  String _winnerName(HalmaGame g) {
+    for (var i = 0; i < _seats.length; i++) {
+      if (_inTarget(g, i) == 10) return _seats[i].name;
+    }
+    return '';
+  }
+
+  @override
+  void replayClosed() => _newGame();
+
   void _persist() {
+    if (replayActive) return;
     final g = _g;
     if (g == null || g.over) {
       _store.clearGame(_saveId);
@@ -130,7 +208,8 @@ class _HalmaScreenState extends State<HalmaScreen> {
 
   bool get _humanTurn {
     final g = _g;
-    return g != null && !g.over && _seats[g.current].human && !_busy;
+    if (g == null || g.over || _busy) return false;
+    return replayActive ? g.current == replayMe : _seats[g.current].human;
   }
 
   void _tap(Offset pos, double unit, Offset center) {
@@ -162,15 +241,20 @@ class _HalmaScreenState extends State<HalmaScreen> {
   void _play(int from, int to) {
     final g = _g!;
     final who = g.current;
+    if (replaySend(['m', from, to])) {
+      setState(() => _sel = null);
+      return;
+    }
     if (!g.play(from, to)) {
       debugLog.warn('halma', 'Ungültiger Zug $from → $to');
       return;
     }
+    _log.add(['m', from, to]);
     final sfx = AppScope.of(context).sfx;
     sfx.play(Sound.chip);
     var text = '${_seats[g.current].name} ist dran';
     if (g.over) {
-      final reward = seatReward(_seats, who, halmaWinReward);
+      final reward = replayActive && who != replayMe ? 0 : seatReward(_seats, who, halmaWinReward);
       if (reward > 0 && !_paid) {
         _paid = true;
         AppScope.of(context).wallet.credit(reward);
@@ -198,7 +282,8 @@ class _HalmaScreenState extends State<HalmaScreen> {
 
   Future<void> _bot() async {
     final g = _g;
-    if (g == null || g.over || _seats[g.current].human) return;
+    if (replayIsGuest) return;
+    if (g == null || g.over || (_seats[g.current].human && !(replayActive && replayIsBot(g.current)))) return;
     final token = ++_token;
     setState(() => _busy = true);
     await Future<void>.delayed(_store.botDelay(450));
@@ -207,6 +292,7 @@ class _HalmaScreenState extends State<HalmaScreen> {
     _busy = false;
     if (m == null) {
       g.pass();
+      _log.add(['x']);
       setState(() {});
       _bot();
       return;
@@ -221,7 +307,8 @@ class _HalmaScreenState extends State<HalmaScreen> {
     return GameFrame(
       title: 'Halma',
       guide: halmaGuide,
-      child: g == null
+      actions: replayActions(context),
+      child: replayScreen() ?? (g == null
           ? const SizedBox.shrink()
           : LayoutBuilder(builder: (context, box) {
               final landscape = box.maxWidth > box.maxHeight * 1.1;
@@ -252,7 +339,14 @@ class _HalmaScreenState extends State<HalmaScreen> {
               final side = Column(mainAxisSize: MainAxisSize.min, children: [
                 chips,
                 ResultBanner(text: _msg, highlight: g.over, maxLines: 2),
-                ActionButton(primary: g.over, label: 'Neues Spiel', onPressed: _newGame),
+                Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
+                  if (replayActive)
+                    ...replayButtons(label: 'Neues Spiel', next: replayHostStart)
+                  else ...[
+                    ActionButton(primary: g.over, label: 'Neues Spiel', onPressed: _newGame),
+                    if (g.over || MediaQuery.sizeOf(context).width < 420) ActionButton(label: 'Im Netzwerk', onPressed: replayOpenPanel),
+                  ],
+                ]),
               ]);
               final bw = landscape ? box.maxWidth - 300 : box.maxWidth;
               final bh = landscape ? box.maxHeight : box.maxHeight - 170;
@@ -280,7 +374,7 @@ class _HalmaScreenState extends State<HalmaScreen> {
                       Expanded(child: Center(child: board)),
                       Padding(padding: const EdgeInsets.all(8), child: side),
                     ]);
-            }),
+            })),
     );
   }
 
