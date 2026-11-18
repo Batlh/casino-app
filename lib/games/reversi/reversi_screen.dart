@@ -105,7 +105,7 @@ class _ReversiScreenState extends State<ReversiScreen> with NetDuelScreen {
   List<String> get duelSides => const ['Schwarz', 'Weiß'];
 
   @override
-  void duelStart(List<String> names, int mySeat) {
+  void duelStart(List<String> names, int mySeat, Map<String, Object?> options) {
     _token++;
     setState(() {
       _seats = [Seat(names[0], human: mySeat == 0), Seat(names[1], human: mySeat == 1)];

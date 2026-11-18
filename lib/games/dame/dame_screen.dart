@@ -9,6 +9,7 @@ import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_duel_mixin.dart';
 import '../../ui/tap_catcher.dart';
 import '../../ui/widgets.dart';
 import '../board/seats.dart';
@@ -54,7 +55,7 @@ class DameScreen extends StatefulWidget {
   State<DameScreen> createState() => _DameScreenState();
 }
 
-class _DameScreenState extends State<DameScreen> {
+class _DameScreenState extends State<DameScreen> with NetDuelScreen {
   static const _saveId = 'dame';
   late final Settings _store;
   DameGame? _g;
@@ -98,10 +99,67 @@ class _DameScreenState extends State<DameScreen> {
   void dispose() {
     _token++;
     _persist();
+    duelDispose();
     super.dispose();
   }
 
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get duelGame => 'dame';
+  @override
+  String get duelTitle => 'Dame';
+  @override
+  List<String> get duelSides => const ['Weiß', 'Schwarz'];
+
+  int _netVariant = 0;
+
+  @override
+  Map<String, Object?> get duelOptions => {'v': _netVariant};
+
+  @override
+  List<Widget> duelLobbyExtras() => [
+        const SizedBox(height: 12),
+        Wrap(alignment: WrapAlignment.center, spacing: 8, children: [
+          ChoiceChip(label: const Text('Deutsch 8×8'), selected: _netVariant == 0, onSelected: (_) => setState(() => _netVariant = 0)),
+          ChoiceChip(label: const Text('International 10×10'), selected: _netVariant == 1, onSelected: (_) => setState(() => _netVariant = 1)),
+        ]),
+      ];
+
+  @override
+  void duelStart(List<String> names, int mySeat, Map<String, Object?> options) {
+    _token++;
+    setState(() {
+      _seats = [Seat(names[0], human: mySeat == 0), Seat(names[1], human: mySeat == 1)];
+      _paid = true;
+      _busy = false;
+      _g = DameGame(DameVariant.values[((options['v'] as num?)?.toInt() ?? 0).clamp(0, DameVariant.values.length - 1)]);
+      _sel = null;
+      _msg = '${names[0]} (Weiß) beginnt';
+    });
+  }
+
+  @override
+  bool duelApply(Object? move) {
+    final g = _g;
+    if (g == null || g.over || move is! List) return false;
+    final DameMove m;
+    try {
+      m = DameMove.fromJson(move);
+    } catch (_) {
+      return false;
+    }
+    final legal = g.moves().where((x) => x.path.join(',') == m.path.join(',') && x.captured.join(',') == m.captured.join(',')).firstOrNull;
+    if (legal == null) return false;
+    _play(legal, remote: true);
+    return true;
+  }
+
+  @override
+  void duelClosed() => _newGame();
+
   void _persist() {
+    if (duelActive) return;
     final g = _g;
     if (g == null || g.over) {
       _store.clearGame(_saveId);
@@ -204,13 +262,14 @@ class _DameScreenState extends State<DameScreen> {
     _play(options.first);
   }
 
-  void _play(DameMove m) {
+  void _play(DameMove m, {bool remote = false}) {
     final g = _g!;
     final who = g.current;
     if (!g.play(m)) {
       debugLog.warn('dame', 'Ungültiger Zug $m');
       return;
     }
+    if (!remote) duelSendMove(m.toJson());
     final sfx = AppScope.of(context).sfx;
     sfx.play(m.captured.isNotEmpty ? Sound.lose : Sound.chip);
     var text = m.captured.isEmpty
@@ -221,7 +280,7 @@ class _DameScreenState extends State<DameScreen> {
       if (w == 0) {
         text = 'Unentschieden: 50 Damenzüge ohne Schlagen';
       } else {
-        final reward = seatReward(_seats, _seatOf(w), dameRewards[_level]);
+        final reward = duelPlaying ? 0 : seatReward(_seats, _seatOf(w), dameRewards[_level]);
         if (reward > 0 && !_paid) {
           _paid = true;
           AppScope.of(context).wallet.credit(reward);
@@ -239,7 +298,7 @@ class _DameScreenState extends State<DameScreen> {
 
   Future<void> _bot() async {
     final g = _g;
-    if (g == null || g.over || _seats[_seatOf(g.current)].human) return;
+    if (g == null || g.over || _seats[_seatOf(g.current)].human || duelRemote(_seatOf(g.current))) return;
     final token = ++_token;
     setState(() => _busy = true);
     final copy = g.copy();
@@ -266,7 +325,8 @@ class _DameScreenState extends State<DameScreen> {
     return GameFrame(
       title: 'Dame',
       guide: dameGuide,
-      child: g == null
+      actions: duelActions(context),
+      child: duelScreen() ?? (g == null
           ? const SizedBox.shrink()
           : Column(
               children: [
@@ -315,10 +375,17 @@ class _DameScreenState extends State<DameScreen> {
                 ResultBanner(text: _busy ? '${_name(g.current)} überlegt …' : _msg, highlight: g.over, maxLines: 2),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 2, 8, 8),
-                  child: ActionButton(primary: g.over, label: 'Neues Spiel', onPressed: _newGame),
+                  child: Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
+                    if (duelPlaying)
+                      ...duelButtons(over: g.over)
+                    else ...[
+                      ActionButton(primary: g.over, label: 'Neues Spiel', onPressed: _newGame),
+                      if (g.over || MediaQuery.sizeOf(context).width < 420) ActionButton(label: 'Im Netzwerk', onPressed: duelOpenPanel),
+                    ],
+                  ]),
                 ),
               ],
-            ),
+            )),
     );
   }
 }

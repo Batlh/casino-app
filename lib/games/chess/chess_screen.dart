@@ -9,6 +9,7 @@ import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guides.dart';
+import '../../ui/net_duel_mixin.dart';
 import '../../ui/widgets.dart';
 import '../board/board_setup.dart';
 import '../cards/card_widgets.dart';
@@ -28,7 +29,7 @@ class ChessScreen extends StatefulWidget {
   State<ChessScreen> createState() => _ChessScreenState();
 }
 
-class _ChessScreenState extends State<ChessScreen> {
+class _ChessScreenState extends State<ChessScreen> with NetDuelScreen {
   ChessGame _g = ChessGame();
   BoardSetup _setup = const BoardSetup(level: 1);
   int? _selected;
@@ -44,12 +45,14 @@ class _ChessScreenState extends State<ChessScreen> {
 
   AppScope get _app => AppScope.of(context);
   ChessLevel? get _level => _setup.level == null ? null : ChessLevel.values[_setup.level!];
-  int get _humanColor => _setup.humanFirst ? white : black;
+  int get _humanColor => duelPlaying ? (duelSeat == 0 ? white : black) : (_setup.humanFirst ? white : black);
   bool get _over => _g.result != ChessResult.none;
-  bool get _humanTurn => !_over && !_thinking && (_level == null || _g.side == _humanColor);
+  bool get _humanTurn => !_over && !_thinking && (duelPlaying ? _g.side == _humanColor : (_level == null || _g.side == _humanColor));
 
-  /// Schwarz unten: gegen den Computer mit Schwarz, zu zweit wahlweise mitdrehen.
-  bool get _flipped => _level != null ? _humanColor == black : (_turnBoard && _g.side == black);
+  /// Schwarz unten: gegen den Computer oder im Netz mit Schwarz, zu zweit wahlweise mitdrehen.
+  bool get _flipped => duelPlaying || _level != null ? _humanColor == black : (_turnBoard && _g.side == black);
+
+  List<String> _netNames = const ['Weiß', 'Schwarz'];
 
   static const _saveId = 'chess';
 
@@ -89,10 +92,48 @@ class _ChessScreenState extends State<ChessScreen> {
   @override
   void dispose() {
     _persist();
+    duelDispose();
     super.dispose();
   }
 
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get duelGame => 'chess';
+  @override
+  String get duelTitle => 'Schach';
+  @override
+  List<String> get duelSides => const ['Weiß', 'Schwarz'];
+
+  @override
+  void duelStart(List<String> names, int mySeat, Map<String, Object?> options) {
+    setState(() {
+      _token++;
+      _netNames = names;
+      _g = ChessGame();
+      _selected = null;
+      _targets = [];
+      _thinking = false;
+      _rewarded = false;
+      _reward = 0;
+    });
+    _app.sfx.play(Sound.card);
+  }
+
+  @override
+  bool duelApply(Object? move) {
+    if (_over || move is! String) return false;
+    final m = _g.legalMoves().where((x) => x.uci == move).firstOrNull;
+    if (m == null) return false;
+    _play(m, remote: true);
+    return true;
+  }
+
+  @override
+  void duelClosed() => _newGame();
+
   void _persist() {
+    if (duelActive) return;
     final s = _store;
     if (_over || _g.moves.isEmpty) {
       s.clearGame(_saveId);
@@ -166,9 +207,11 @@ class _ChessScreenState extends State<ChessScreen> {
     _maybeComputer();
   }
 
-  void _play(ChessMove m) {
+  void _play(ChessMove m, {bool remote = false}) {
     final capture = _g.board[m.to] != 0 || m.enPassant;
+    final uci = m.uci;
     _g.make(m);
+    if (!remote) duelSendMove(uci);
     _app.sfx.play(capture ? Sound.chip : Sound.card);
     setState(() {
       _selected = null;
@@ -179,7 +222,7 @@ class _ChessScreenState extends State<ChessScreen> {
 
   Future<void> _maybeComputer() async {
     final level = _level;
-    if (level == null || _over || _g.side == _humanColor || _thinking) return;
+    if (level == null || duelPlaying || _over || _g.side == _humanColor || _thinking) return;
     setState(() => _thinking = true);
     final token = _token;
     final fen = _g.fen;
@@ -203,7 +246,7 @@ class _ChessScreenState extends State<ChessScreen> {
     _rewarded = true;
     final r = _g.result;
     final level = _level;
-    if (level == null) {
+    if (level == null || duelPlaying) {
       _app.sfx.play(Sound.win);
       return;
     }
@@ -240,6 +283,10 @@ class _ChessScreenState extends State<ChessScreen> {
     final who = _g.side == white ? 'Weiß' : 'Schwarz';
     final check = _g.inCheck() ? 'Schach! ' : '';
     if (_thinking) return '${check}Der Computer überlegt …';
+    if (duelPlaying) {
+      if (_g.side == _humanColor) return _g.inCheck() ? 'Schach! Schütze deinen König' : 'Du bist am Zug';
+      return '$check${_netNames[_g.side == white ? 0 : 1]} ist am Zug';
+    }
     if (_level != null) {
       return _g.inCheck() ? 'Schach! Schütze deinen König' : 'Du bist am Zug${_selected == null ? ', tipp eine Figur an' : ''}';
     }
@@ -252,7 +299,8 @@ class _ChessScreenState extends State<ChessScreen> {
       title: 'Schach',
       guide: chessGuide,
       background: const BoxDecoration(color: Color(0xFF2A1A12)),
-      child: LayoutBuilder(builder: (context, box) => _layout(box)),
+      actions: duelActions(context),
+      child: duelScreen() ?? LayoutBuilder(builder: (context, box) => _layout(box)),
     );
   }
 
@@ -292,9 +340,12 @@ class _ChessScreenState extends State<ChessScreen> {
       spacing: 8,
       runSpacing: 8,
       alignment: WrapAlignment.center,
-      children: [
+      children: duelPlaying
+          ? duelButtons(over: _over)
+          : [
         ActionButton(primary: _over, label: 'Neues Spiel', onPressed: _thinking ? null : _newGame),
         ActionButton(label: 'Rückgängig', onPressed: _g.canUndo && !_thinking ? _undo : null),
+        if (_over || MediaQuery.sizeOf(context).width < 420) ActionButton(label: 'Im Netzwerk', onPressed: duelOpenPanel),
         if (_level == null)
           ActionButton(
             label: _turnBoard ? 'Brett fest' : 'Brett mitdrehen',
@@ -303,7 +354,9 @@ class _ChessScreenState extends State<ChessScreen> {
       ],
     );
     final info = Text(
-      _level == null ? 'Zu zweit an einem Gerät' : 'Gegen den Computer: ${_level!.label}',
+      duelPlaying
+          ? '${_netNames[0]} (Weiß) gegen ${_netNames[1]} (Schwarz) im Netz'
+          : (_level == null ? 'Zu zweit an einem Gerät' : 'Gegen den Computer: ${_level!.label}'),
       textAlign: TextAlign.center,
       style: TextStyle(color: p.onFelt, fontSize: 14),
     );

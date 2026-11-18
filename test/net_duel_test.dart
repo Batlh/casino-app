@@ -17,7 +17,7 @@ void main() {
     final hostMoves = <Object?>[];
     var hostStart = <String>[];
     hostLink
-      ..onStart = (n, s) {
+      ..onStart = (n, s, o) {
         hostStart = n;
         hostMoves.clear();
       }
@@ -33,7 +33,7 @@ void main() {
     var guestSeat = -1;
     var refuse = false;
     guestLink
-      ..onStart = (n, s) {
+      ..onStart = (n, s, o) {
         guestSeat = s;
         guestMoves.clear();
       }
@@ -49,10 +49,11 @@ void main() {
     await guest.join('127.0.0.1', host.lan.port);
     await _until(() => host.seats.length == 1);
 
-    expect(hostLink.start('Anna', 0), isTrue);
+    expect(hostLink.start('Anna', 0, options: {'v': 1}), isTrue);
     expect(hostStart, ['Anna', 'Ben']);
     expect(hostLink.seat, 0);
     await _until(() => guestSeat == 1);
+    expect(guestLink.options, {'v': 1});
 
     hostLink.sendMove(19);
     await _until(() => guestMoves.length == 1);

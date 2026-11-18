@@ -23,8 +23,14 @@ mixin NetDuelScreen<T extends StatefulWidget> on State<T> {
   /// Namen der beiden Seiten, z. B. Schwarz und Weiß. Seite 0 beginnt.
   List<String> get duelSides;
 
-  /// Neue Partie im Netz: Namen je Platz, dein Platz.
-  void duelStart(List<String> names, int mySeat);
+  /// Neue Partie im Netz: Namen je Platz, dein Platz, Einstellungen vom Gastgeber.
+  void duelStart(List<String> names, int mySeat, Map<String, Object?> options);
+
+  /// Einstellungen, die der Gastgeber mitschickt (z. B. Variante).
+  Map<String, Object?> get duelOptions => const {};
+
+  /// Zusätzliche Auswahl im Warteraum des Gastgebers.
+  List<Widget> duelLobbyExtras() => const [];
 
   /// Zug der anderen Seite ausführen (auch beim Nachspielen eigener Züge). false, wenn er nicht passt.
   bool duelApply(Object? move);
@@ -131,6 +137,7 @@ mixin NetDuelScreen<T extends StatefulWidget> on State<T> {
               ChoiceChip(label: Text(duelSides[1]), selected: _side == 1, onSelected: (_) => setState(() => _side = 1)),
               ChoiceChip(label: const Text('Zufällig'), selected: _side == 2, onSelected: (_) => setState(() => _side = 2)),
             ]),
+            ...duelLobbyExtras(),
             const SizedBox(height: 14),
             Wrap(alignment: WrapAlignment.center, spacing: 8, runSpacing: 8, children: [
               ActionButton(primary: true, label: 'Partie starten', onPressed: opponent == null ? null : _startGame),
@@ -143,15 +150,15 @@ mixin NetDuelScreen<T extends StatefulWidget> on State<T> {
   }
 
   void _startGame() {
-    _link?.start(_displayName, _side);
+    _link?.start(_displayName, _side, options: duelOptions);
   }
 
   void _wire(NetDuelLink link) {
     link
-      ..onStart = (names, seat) {
+      ..onStart = (names, seat, options) {
         if (!mounted) return;
         setState(() => _netMsg = '');
-        duelStart(names, seat);
+        duelStart(names, seat, options);
       }
       ..onMove = ((m) => mounted && duelApply(m))
       ..onGone = () {

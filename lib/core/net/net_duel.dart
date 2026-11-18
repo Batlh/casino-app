@@ -22,8 +22,8 @@ class NetDuelLink {
   final NetTableGuest? guest;
   final Random _rng;
 
-  /// Neues Spiel: Namen je Platz und dein Platz.
-  void Function(List<String> names, int seat)? onStart;
+  /// Neues Spiel: Namen je Platz, dein Platz und Einstellungen des Spiels (z. B. Variante).
+  void Function(List<String> names, int seat, Map<String, Object?> options)? onStart;
 
   /// Zug der anderen Seite; false, wenn er nicht passt.
   bool Function(Object? move)? onMove;
@@ -33,6 +33,7 @@ class NetDuelLink {
 
   final List<Object?> moves = [];
   List<String> names = const [];
+  Map<String, Object?> options = const {};
   int seat = -1;
   NetSeat? _opponent;
   bool get playing => seat >= 0;
@@ -67,17 +68,18 @@ class NetDuelLink {
   }
 
   /// Gastgeber: Spiel starten. side 0 = du beginnst, 1 = Gegner beginnt, sonst zufällig.
-  bool start(String hostName, int side) {
+  bool start(String hostName, int side, {Map<String, Object?> options = const {}}) {
     final o = opponent;
     if (host == null || o == null) return false;
     _opponent = o;
     final mine = side == 0 || side == 1 ? side : _rng.nextInt(2);
     names = mine == 0 ? [hostName, o.name] : [o.name, hostName];
     seat = mine;
+    this.options = options;
     moves.clear();
     debugLog.info('netz', 'Zweierspiel: ${names[0]} gegen ${names[1]}');
-    _send({'t': 'start', 'names': names, 'seat': 1 - mine});
-    onStart?.call(names, seat);
+    _send({'t': 'start', 'names': names, 'seat': 1 - mine, 'opt': options});
+    onStart?.call(names, seat, options);
     return true;
   }
 
@@ -90,7 +92,7 @@ class NetDuelLink {
 
   void _resync() {
     if (host != null) {
-      _send({'t': 'moves', 'names': names, 'seat': 1 - seat, 'list': moves});
+      _send({'t': 'moves', 'names': names, 'seat': 1 - seat, 'opt': options, 'list': moves});
     } else {
       _send({'t': 'sync'});
     }
@@ -98,16 +100,13 @@ class NetDuelLink {
 
   void _receive(LanMessage m) {
     switch (m['t']) {
-      case 'start':
+      case 'start' || 'moves':
         names = [for (final n in m['names'] as List) '$n'];
         seat = (m['seat'] as num).toInt();
+        options = ((m['opt'] as Map?) ?? const {}).cast<String, Object?>();
         moves.clear();
-        onStart?.call(names, seat);
-      case 'moves':
-        names = [for (final n in m['names'] as List) '$n'];
-        seat = (m['seat'] as num).toInt();
-        moves.clear();
-        onStart?.call(names, seat);
+        onStart?.call(names, seat, options);
+        if (m['t'] == 'start') return;
         for (final mv in m['list'] as List) {
           moves.add(mv);
           if (onMove?.call(mv) != true) {

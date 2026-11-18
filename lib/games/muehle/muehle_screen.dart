@@ -8,6 +8,7 @@ import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_duel_mixin.dart';
 import '../../ui/tap_catcher.dart';
 import '../../ui/widgets.dart';
 import '../board/seats.dart';
@@ -50,7 +51,7 @@ class MuehleScreen extends StatefulWidget {
   State<MuehleScreen> createState() => _MuehleScreenState();
 }
 
-class _MuehleScreenState extends State<MuehleScreen> {
+class _MuehleScreenState extends State<MuehleScreen> with NetDuelScreen {
   static const _saveId = 'muehle';
   late final Settings _store;
   MuehleGame? _g;
@@ -98,10 +99,48 @@ class _MuehleScreenState extends State<MuehleScreen> {
   void dispose() {
     _token++;
     _persist();
+    duelDispose();
     super.dispose();
   }
 
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get duelGame => 'muehle';
+  @override
+  String get duelTitle => 'Mühle';
+  @override
+  List<String> get duelSides => const ['Weiß', 'Schwarz'];
+
+  @override
+  void duelStart(List<String> names, int mySeat, Map<String, Object?> options) {
+    _token++;
+    setState(() {
+      _seats = [Seat(names[0], human: mySeat == 0), Seat(names[1], human: mySeat == 1)];
+      _paid = true;
+      _busy = false;
+      _g = MuehleGame();
+      _sel = null;
+      _pending = null;
+      _msg = '${names[0]} (Weiß) setzt den ersten Stein';
+    });
+  }
+
+  @override
+  bool duelApply(Object? move) {
+    final g = _g;
+    if (g == null || g.over || move is! List || move.length != 3) return false;
+    final m = MuehleMove(move[0] as int?, move[1] as int, move[2] as int?);
+    if (!g.moves().any((x) => x.from == m.from && x.to == m.to && x.remove == m.remove)) return false;
+    _play(m, remote: true);
+    return true;
+  }
+
+  @override
+  void duelClosed() => _newGame();
+
   void _persist() {
+    if (duelActive) return;
     final g = _g;
     if (g == null || g.over) {
       _store.clearGame(_saveId);
@@ -228,7 +267,7 @@ class _MuehleScreenState extends State<MuehleScreen> {
     _play(MuehleMove(from, to));
   }
 
-  void _play(MuehleMove m) {
+  void _play(MuehleMove m, {bool remote = false}) {
     final g = _g!;
     final who = g.current;
     if (!g.play(m)) {
@@ -239,6 +278,7 @@ class _MuehleScreenState extends State<MuehleScreen> {
       });
       return;
     }
+    if (!remote) duelSendMove([m.from, m.to, m.remove]);
     final sfx = AppScope.of(context).sfx;
     sfx.play(m.remove != null ? Sound.lose : Sound.chip);
     var text = m.remove != null ? '${_name(who)} schließt eine Mühle und schlägt einen Stein' : '${_name(g.current)} ist dran';
@@ -247,7 +287,7 @@ class _MuehleScreenState extends State<MuehleScreen> {
       if (w == 0) {
         text = 'Unentschieden: 60 Züge ohne Schlagen';
       } else {
-        final reward = seatReward(_seats, _seatOf(w), muehleRewards[_level]);
+        final reward = duelPlaying ? 0 : seatReward(_seats, _seatOf(w), muehleRewards[_level]);
         if (reward > 0 && !_paid) {
           _paid = true;
           AppScope.of(context).wallet.credit(reward);
@@ -268,7 +308,7 @@ class _MuehleScreenState extends State<MuehleScreen> {
 
   Future<void> _bot() async {
     final g = _g;
-    if (g == null || g.over || _seats[_seatOf(g.current)].human) return;
+    if (g == null || g.over || _seats[_seatOf(g.current)].human || duelRemote(_seatOf(g.current))) return;
     final token = ++_token;
     setState(() => _busy = true);
     await Future<void>.delayed(_store.botDelay(600));
@@ -285,7 +325,8 @@ class _MuehleScreenState extends State<MuehleScreen> {
     return GameFrame(
       title: 'Mühle',
       guide: muehleGuide,
-      child: g == null
+      actions: duelActions(context),
+      child: duelScreen() ?? (g == null
           ? const SizedBox.shrink()
           : Column(
               children: [
@@ -348,10 +389,17 @@ class _MuehleScreenState extends State<MuehleScreen> {
                 ResultBanner(text: _msg, highlight: g.over, maxLines: 2),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 2, 8, 8),
-                  child: ActionButton(primary: g.over, label: 'Neues Spiel', onPressed: _newGame),
+                  child: Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
+                    if (duelPlaying)
+                      ...duelButtons(over: g.over)
+                    else ...[
+                      ActionButton(primary: g.over, label: 'Neues Spiel', onPressed: _newGame),
+                      if (g.over || MediaQuery.sizeOf(context).width < 420) ActionButton(label: 'Im Netzwerk', onPressed: duelOpenPanel),
+                    ],
+                  ]),
                 ),
               ],
-            ),
+            )),
     );
   }
 }
