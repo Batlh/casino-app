@@ -23,7 +23,10 @@ void main() {
     await tester.pump();
     showSlotPayTable(tester.element(find.byType(Navigator).first), tiefsee, 100);
     await tester.pump(const Duration(milliseconds: 600));
-    await tester.drag(find.descendant(of: find.byType(BottomSheet), matching: find.byType(Scrollable)).first, const Offset(0, -1500));
+    final pos = tester
+        .state<ScrollableState>(find.descendant(of: find.byType(BottomSheet), matching: find.byType(Scrollable)).first)
+        .position;
+    pos.jumpTo(pos.maxScrollExtent);
     await tester.pump(const Duration(milliseconds: 600));
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/gewinnplan_tiefsee.png'));
   });
