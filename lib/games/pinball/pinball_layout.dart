@@ -89,7 +89,7 @@ class SpinnerSpec {
 
 /// Kickout-Loch: fängt die Kugel, hält sie kurz und wirft sie in Richtung (ex, ey) wieder aus.
 class SaucerSpec {
-  const SaucerSpec(this.id, this.x, this.y, this.ex, this.ey, {this.points = 500, this.lock = false});
+  const SaucerSpec(this.id, this.x, this.y, this.ex, this.ey, {this.points = 500, this.lock = false, this.wheel = false});
   final String id;
   final double x;
   final double y;
@@ -99,6 +99,51 @@ class SaucerSpec {
 
   /// Fängt Kugeln für den Multiball.
   final bool lock;
+
+  /// Dreht beim Fangen ein kleines Glücksrad mit Zufallspreis.
+  final bool wheel;
+}
+
+/// Rückschuss in einer Auslaufbahn: Liegt die Kugel bei (x, y) und ist er scharf, schießt er sie mit (vx, vy)
+/// zurück. Danach muss die Zielbank [armBank] wieder ganz getroffen werden.
+class KickbackSpec {
+  const KickbackSpec(this.id, this.x, this.y, this.vx, this.vy, {required this.armBank, this.points = 500});
+  final String id;
+  final double x;
+  final double y;
+  final double vx;
+  final double vy;
+  final String armBank;
+  final int points;
+}
+
+/// Tor (Weiche): eine Bande a–b, die aufgeht, wenn die Fallziele [opensWith] abgeräumt sind, und wieder
+/// zugeht, wenn eine Kugel im Loch [closesOn] landet oder nach [openSeconds].
+class GateSpec {
+  const GateSpec(this.id, this.a, this.b, {required this.opensWith, this.closesOn, this.openSeconds = 25, this.points = 1000});
+  final String id;
+  final Pt a;
+  final Pt b;
+  final String opensWith;
+  final String? closesOn;
+  final double openSeconds;
+  final int points;
+}
+
+/// Gefangene Kugel: liegt bei [home] in einer Gasse und lässt sich um [travel] in Richtung (dx, dy) schieben.
+/// Jeder kräftige Stoß zählt, alle [hitsForBonus] Stöße gibt es [bonus].
+class CaptiveSpec {
+  const CaptiveSpec(this.id, this.home, this.dx, this.dy,
+      {this.travel = 0.9, this.points = 750, this.hitsForBonus = 5, this.bonus = 15000, this.name = ''});
+  final String id;
+  final Pt home;
+  final double dx;
+  final double dy;
+  final double travel;
+  final int points;
+  final int hitsForBonus;
+  final int bonus;
+  final String name;
 }
 
 /// Rampe: Eingang ist die Linie a–b, die Kugel muss in Richtung (dx, dy) schnell genug sein.
@@ -130,7 +175,7 @@ class RampSpec {
   final String name;
 }
 
-enum MissionKind { bumper, sling, lanes, drops, targets, spinner, saucer, ramp, anyRamp, lock }
+enum MissionKind { bumper, sling, lanes, drops, targets, spinner, saucer, ramp, anyRamp, lock, captive, gate, kickback }
 
 /// Eine Aufgabe auf der Anzeige, zum Beispiel „Linke Rampe 3 mal“.
 class MissionSpec {
@@ -174,7 +219,7 @@ class TableTheme {
   /// Farbe der Punktanzeige.
   final Color dmd;
 
-  /// Welches Hintergrundbild gemalt wird (neon, space, pirate, haunted, racing, city).
+  /// Welches Hintergrundbild gemalt wird (neon, space, pirate, haunted, racing, city, lake, jungle, circus).
   final String art;
 }
 
@@ -194,6 +239,9 @@ class TableSpec {
     this.spinners = const [],
     this.saucers = const [],
     this.ramps = const [],
+    this.kickbacks = const [],
+    this.gates = const [],
+    this.captives = const [],
     this.missions = const [],
     this.locksForMultiball = 3,
     this.jackpot = 25000,
@@ -213,6 +261,9 @@ class TableSpec {
   final List<SpinnerSpec> spinners;
   final List<SaucerSpec> saucers;
   final List<RampSpec> ramps;
+  final List<KickbackSpec> kickbacks;
+  final List<GateSpec> gates;
+  final List<CaptiveSpec> captives;
   final List<MissionSpec> missions;
   final int locksForMultiball;
   final int jackpot;

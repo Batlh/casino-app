@@ -35,6 +35,13 @@ enum PinballEventKind {
   mission,
   missionsDone,
   extraBall,
+  kickback,
+  kickbackLit,
+  gateOpen,
+  gateClosed,
+  captive,
+  captiveBonus,
+  wheel,
 }
 
 class PinballEvent {
@@ -125,7 +132,50 @@ class Saucer {
   double hold = 0;
   double cooldown = 0;
   double flash = 0;
+
+  /// Glücksrad: Drehwinkel und zuletzt gewonnenes Feld (Index in [wheelPrizes]).
+  double wheelAngle = 0;
+  int wheelPrize = -1;
 }
+
+class Kickback {
+  Kickback(this.spec);
+  final KickbackSpec spec;
+  bool armed = true;
+  double flash = 0;
+  double cooldown = 0;
+}
+
+class Gate {
+  Gate(this.spec);
+  final GateSpec spec;
+  Fixture? fixture;
+  bool get open => fixture == null;
+  double openLeft = 0;
+  double flash = 0;
+}
+
+class Captive {
+  Captive(this.spec, this.body, this.joint);
+  final CaptiveSpec spec;
+  final Body body;
+  final PrismaticJoint joint;
+  int hits = 0;
+  double cooldown = 0;
+  double flash = 0;
+  Pt get pos => Pt(body.position.x, body.position.y);
+}
+
+/// Preise des kleinen Glücksrads im Loch: Text, Gewicht.
+const wheelPrizes = [
+  ('5.000', 6),
+  ('15.000', 4),
+  ('Ballrettung', 3),
+  ('Mission +1', 3),
+  ('Multiplikator +1', 2),
+  ('50.000', 1),
+  ('Extra-Kugel', 1),
+];
 
 class Ramp {
   Ramp(this.spec) {
@@ -220,6 +270,9 @@ class PinballTable {
   final List<Spinner> spinners = [];
   final List<Saucer> saucers = [];
   final List<Ramp> ramps = [];
+  final List<Kickback> kickbacks = [];
+  final List<Gate> gates = [];
+  final List<Captive> captives = [];
   final List<Flipper> flippers = [];
   final List<Ball> balls = [];
   final List<PinballEvent> events = [];
@@ -345,6 +398,29 @@ class PinballTable {
     for (final r in spec.ramps) {
       ramps.add(Ramp(r));
     }
+    for (final k in spec.kickbacks) {
+      kickbacks.add(Kickback(k));
+    }
+    for (final g in spec.gates) {
+      final gate = Gate(g);
+      _closeGate(gate);
+      gates.add(gate);
+    }
+    for (final c in spec.captives) {
+      final body = _ballBody(c.home.x, c.home.y);
+      final len = sqrt(c.dx * c.dx + c.dy * c.dy);
+      final def = PrismaticJointDef()
+        ..initialize(_ground, body, Vector2(c.home.x, c.home.y), Vector2(c.dx / len, c.dy / len))
+        ..enableLimit = true
+        ..lowerTranslation = 0
+        ..upperTranslation = c.travel
+        ..enableMotor = true
+        ..maxMotorForce = 2.5
+        ..motorSpeed = -1.5;
+      final j = PrismaticJoint(def);
+      _world.createJoint(j);
+      captives.add(Captive(c, body, j));
+    }
     for (final f in spec.flippers) {
       final body = _flipperBody(f);
       final rest = f.dir > 0 ? f.rest : -f.rest;
@@ -395,6 +471,12 @@ class PinballTable {
     _openGate();
     ballInLane = true;
     charge = 0;
+  }
+
+  void _closeGate(Gate g) {
+    if (g.fixture != null) return;
+    final shape = EdgeShape()..set(Vector2(g.spec.a.x, g.spec.a.y), Vector2(g.spec.b.x, g.spec.b.y));
+    g.fixture = _ground.createFixture(FixtureDef(shape, friction: 0.1, restitution: 0.4));
   }
 
   void _openGate() {
@@ -498,6 +580,8 @@ class PinballTable {
     _updateGate();
     _updateHeld(dt);
     _updateDrops(dt);
+    _updateGates(dt);
+    _updateCaptives();
 
     for (final ball in [...balls]) {
       if (ball.ramp != null) {
@@ -519,6 +603,7 @@ class PinballTable {
       _hitLanes(x, y);
       _hitDrops(x, y);
       _hitTargets(x, y);
+      _hitKickbacks(b, x, y);
       _crossSpinners(ball, b, x, y);
       if (_crossRamps(ball, b, x, y)) continue;
       if (_catchSaucer(ball, b, x, y)) continue;
@@ -589,6 +674,20 @@ class PinballTable {
     }
     for (final r in ramps) {
       r.flash = max(0, r.flash - dt * 1.5);
+    }
+    for (final k in kickbacks) {
+      k.flash = max(0, k.flash - dt * 2);
+      if (k.cooldown > 0) k.cooldown -= dt;
+    }
+    for (final g in gates) {
+      g.flash = max(0, g.flash - dt * 2);
+    }
+    for (final c in captives) {
+      c.flash = max(0, c.flash - dt * 2);
+      if (c.cooldown > 0) c.cooldown -= dt;
+    }
+    for (final s in saucers) {
+      if (s.spec.wheel && s.held != null) s.wheelAngle += dt * 9 * (s.hold.clamp(0.0, 1.6) + 0.2);
     }
   }
 
@@ -749,6 +848,16 @@ class PinballTable {
             bank.resetIn = 1.6;
             _add(bank.spec.bonus, PinballEventKind.dropBank, t.c.x, t.c.y);
             _progress(MissionKind.drops, bank.spec.id);
+            for (final g in gates) {
+              if (g.spec.opensWith == bank.spec.id && !g.open) {
+                _ground.destroyFixture(g.fixture!);
+                g.fixture = null;
+                g.openLeft = g.spec.openSeconds;
+                g.flash = 1;
+                _add(g.spec.points, PinballEventKind.gateOpen, (g.spec.a.x + g.spec.b.x) / 2, (g.spec.a.y + g.spec.b.y) / 2);
+                _progress(MissionKind.gate, g.spec.id);
+              }
+            }
           }
         }
       }
@@ -795,6 +904,13 @@ class PinballTable {
               o.lit = false;
             }
             _add(bank.spec.bonus, PinballEventKind.targetBank, t.c.x, t.c.y);
+            for (final k in kickbacks) {
+              if (k.spec.armBank == bank.spec.id && !k.armed) {
+                k.armed = true;
+                k.flash = 1;
+                events.add(PinballEvent(PinballEventKind.kickbackLit, 0, k.spec.x, k.spec.y));
+              }
+            }
           }
         }
       }
@@ -879,6 +995,13 @@ class PinballTable {
       s.flash = 1;
       _add(s.spec.points, PinballEventKind.saucer, s.spec.x, s.spec.y);
       _progress(MissionKind.saucer, s.spec.id);
+      if (s.spec.wheel) {
+        s.hold = 1.8;
+        s.wheelPrize = -1;
+      }
+      for (final g in gates) {
+        if (g.spec.closesOn == s.spec.id && g.open) g.openLeft = min(g.openLeft, 0.01);
+      }
       if (s.spec.lock && !multiball) {
         locks++;
         _progress(MissionKind.lock, s.spec.id);
@@ -901,14 +1024,111 @@ class PinballTable {
       if (ball == null) continue;
       s.hold -= dt;
       if (s.hold > 0) continue;
+      if (s.spec.wheel) _spinWheel(s);
       final len = sqrt(s.spec.ex * s.spec.ex + s.spec.ey * s.spec.ey);
       final ox = s.spec.ex / len * 0.15;
       final oy = s.spec.ey / len * 0.15;
+      // Ein Tor vor dem Loch geht kurz auf, damit die Kugel herauskommt
+      for (final g in gates) {
+        if (g.spec.closesOn == s.spec.id && !g.open) {
+          _ground.destroyFixture(g.fixture!);
+          g.fixture = null;
+          g.openLeft = 1.5;
+        }
+      }
       ball.saucer = null;
       ball.body = _ballBody(s.spec.x + ox, s.spec.y + oy)..linearVelocity = Vector2(s.spec.ex, s.spec.ey);
       ball.still = 0;
       s.held = null;
       s.cooldown = 0.8;
+    }
+  }
+
+  void _hitKickbacks(Body b, double x, double y) {
+    for (final k in kickbacks) {
+      if (!k.armed || k.cooldown > 0) continue;
+      final dx = x - k.spec.x;
+      final dy = y - k.spec.y;
+      if (dx * dx + dy * dy > 0.45 * 0.45) continue;
+      b.linearVelocity = Vector2(k.spec.vx, k.spec.vy);
+      k.armed = false;
+      k.cooldown = 1;
+      k.flash = 1;
+      _add(k.spec.points, PinballEventKind.kickback, k.spec.x, k.spec.y);
+      _progress(MissionKind.kickback, k.spec.id);
+    }
+  }
+
+  void _updateGates(double dt) {
+    for (final g in gates) {
+      if (!g.open) continue;
+      g.openLeft -= dt;
+      if (g.openLeft > 0) continue;
+      // Nur zumachen, wenn keine Kugel im Weg liegt
+      final c = Pt((g.spec.a.x + g.spec.b.x) / 2, (g.spec.a.y + g.spec.b.y) / 2);
+      final ang = atan2(g.spec.b.y - g.spec.a.y, g.spec.b.x - g.spec.a.x);
+      final len = sqrt(pow(g.spec.b.x - g.spec.a.x, 2) + pow(g.spec.b.y - g.spec.a.y, 2)).toDouble();
+      final blocked = balls.any((ball) {
+        final body = ball.body;
+        return body != null && _segDist(c, ang, len, body.position.x, body.position.y) < ballRadius + 0.2;
+      });
+      if (blocked) {
+        g.openLeft = 0.2;
+        continue;
+      }
+      _closeGate(g);
+      g.flash = 1;
+      events.add(PinballEvent(PinballEventKind.gateClosed, 0, c.x, c.y));
+    }
+  }
+
+  void _updateCaptives() {
+    for (final c in captives) {
+      final t = c.joint.getJointTranslation();
+      if (t > c.spec.travel * 0.55 && c.cooldown <= 0) {
+        c.cooldown = 0.6;
+        c.flash = 1;
+        c.hits++;
+        _add(c.spec.points, PinballEventKind.captive, c.body.position.x, c.body.position.y);
+        _progress(MissionKind.captive, c.spec.id);
+        if (c.hits % c.spec.hitsForBonus == 0) {
+          _add(c.spec.bonus, PinballEventKind.captiveBonus, c.body.position.x, c.body.position.y, c.spec.name);
+        }
+      }
+    }
+  }
+
+  void _spinWheel(Saucer s) {
+    final total = wheelPrizes.fold(0, (a, p) => a + p.$2);
+    var r = _rng.nextInt(total);
+    var i = 0;
+    while (r >= wheelPrizes[i].$2) {
+      r -= wheelPrizes[i].$2;
+      i++;
+    }
+    s.wheelPrize = i;
+    final name = wheelPrizes[i].$1;
+    switch (i) {
+      case 0:
+        _add(5000, PinballEventKind.wheel, s.spec.x, s.spec.y, name);
+      case 1:
+        _add(15000, PinballEventKind.wheel, s.spec.x, s.spec.y, name);
+      case 2:
+        _saveLeft = max(_saveLeft, 10);
+        _add(0, PinballEventKind.wheel, s.spec.x, s.spec.y, name);
+      case 3:
+        _add(0, PinballEventKind.wheel, s.spec.x, s.spec.y, name);
+        final m = mission;
+        if (m != null) _progress(m.kind, m.id);
+      case 4:
+        multiplier = min(5, multiplier + 1);
+        _add(0, PinballEventKind.wheel, s.spec.x, s.spec.y, name);
+      case 5:
+        _add(50000, PinballEventKind.wheel, s.spec.x, s.spec.y, name);
+      default:
+        ballsLeft++;
+        _add(0, PinballEventKind.wheel, s.spec.x, s.spec.y, name);
+        events.add(const PinballEvent(PinballEventKind.extraBall));
     }
   }
 

@@ -218,6 +218,52 @@ class TablePainter extends CustomPainter {
           ..color = Color.lerp(th.wall, Colors.white, sc.flash)!,
       );
       if (sc.spec.lock) _text(canvas, 'LOCK', c + const Offset(0, 0.72), 0.22, th.accent.withValues(alpha: 0.8));
+      if (sc.spec.wheel) _wheel(canvas, sc, th, now);
+    }
+
+    // Rückschuss: Pfeil in der Auslaufbahn, hell wenn scharf
+    for (final k in t.kickbacks) {
+      final c = Offset(k.spec.x, k.spec.y);
+      final on = k.armed && (idle || (now * 3).floor().isEven || k.flash > 0);
+      _arrow(canvas, c, math.atan2(k.spec.vy, k.spec.vx), on ? th.light : th.light.withValues(alpha: 0.18), size: 0.3);
+      canvas.drawRect(
+        Rect.fromCenter(center: c + const Offset(0, 0.5), width: 0.55, height: 0.12),
+        Paint()..color = Color.lerp(th.wall.withValues(alpha: 0.5), Colors.white, k.flash)!,
+      );
+    }
+
+    // Tore: zu als Balken, offen nur angedeutet
+    for (final g in t.gates) {
+      final a = Offset(g.spec.a.x, g.spec.a.y);
+      final b = Offset(g.spec.b.x, g.spec.b.y);
+      if (g.open) {
+        canvas.drawLine(a, b, Paint()
+          ..color = th.accent.withValues(alpha: 0.25 + 0.25 * math.sin(now * 6).abs())
+          ..strokeWidth = 0.05);
+      } else {
+        canvas.drawLine(a, b, Paint()
+          ..color = Color.lerp(th.accent, Colors.white, g.flash)!
+          ..strokeWidth = 0.18
+          ..strokeCap = StrokeCap.round);
+        canvas.drawCircle(a, 0.1, Paint()..color = th.wall);
+        canvas.drawCircle(b, 0.1, Paint()..color = th.wall);
+      }
+    }
+
+    // Gefangene Kugeln mit ihrer Gasse
+    for (final cp in t.captives) {
+      final h = cp.spec.home;
+      final len = math.sqrt(cp.spec.dx * cp.spec.dx + cp.spec.dy * cp.spec.dy);
+      final d = Offset(cp.spec.dx / len, cp.spec.dy / len);
+      final start = Offset(h.x, h.y);
+      final end = start + d * (cp.spec.travel + PinballTable.ballRadius);
+      canvas.drawLine(start, end, Paint()
+        ..color = th.light.withValues(alpha: 0.25 + 0.6 * cp.flash)
+        ..strokeWidth = PinballTable.ballRadius * 2
+        ..strokeCap = StrokeCap.round);
+      final p = cp.pos;
+      canvas.drawCircle(Offset(p.x, p.y), PinballTable.ballRadius + 0.08 * cp.flash, Paint()..color = th.accent.withValues(alpha: 0.4 * cp.flash));
+      _ball(canvas, Offset(p.x, p.y), PinballTable.ballRadius);
     }
 
     // Spinner
@@ -332,6 +378,24 @@ class TablePainter extends CustomPainter {
     }
     canvas.restore();
     canvas.restore();
+  }
+
+  /// Kleines Glücksrad um das Loch; dreht, solange die Kugel drinliegt, und zeigt dann den Preis.
+  void _wheel(Canvas canvas, Saucer sc, TableTheme th, double now) {
+    final c = Offset(sc.spec.x, sc.spec.y);
+    const n = 7;
+    final colors = [th.accent, th.light, th.wall, th.bumper, th.sling, th.ramp, Colors.white];
+    final rect = Rect.fromCircle(center: c, radius: 0.78);
+    final turn = sc.held != null ? sc.wheelAngle : 0.0;
+    for (var i = 0; i < n; i++) {
+      canvas.drawArc(rect, turn + i * 2 * math.pi / n, 2 * math.pi / n - 0.06, false, Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.16
+        ..color = colors[i].withValues(alpha: sc.held != null ? 0.9 : 0.45));
+    }
+    if (sc.wheelPrize >= 0 && sc.flash > 0) {
+      _text(canvas, wheelPrizes[sc.wheelPrize].$1, c + const Offset(0, -1.05), 0.26, Colors.white);
+    }
   }
 
   void _ball(Canvas canvas, Offset c, double r) {
@@ -483,6 +547,12 @@ void paintArt(Canvas canvas, TableTheme th, double now) {
       _racing(canvas, th, now);
     case 'city':
       _city(canvas, th, now);
+    case 'lake':
+      _lake(canvas, th, now);
+    case 'jungle':
+      _jungle(canvas, th, now);
+    case 'circus':
+      _circus(canvas, th, now);
     default:
       _neon(canvas, th, now);
   }
@@ -703,5 +773,92 @@ void _city(Canvas canvas, TableTheme th, double now) {
       }
     }
     x += w + 0.08;
+  }
+}
+
+void _lake(Canvas canvas, TableTheme th, double now) {
+  // Wellenlinien und ein paar Fische, die langsam durchs Wasser ziehen
+  final wave = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 0.04
+    ..color = th.wall.withValues(alpha: 0.12);
+  for (var y = 1.5; y < 17; y += 1.1) {
+    final path = Path()..moveTo(0, y);
+    for (var x = 0.0; x <= 10; x += 0.25) {
+      path.lineTo(x, y + 0.12 * math.sin(x * 1.6 + y + now * 0.8));
+    }
+    canvas.drawPath(path, wave);
+  }
+  for (var i = 0; i < 5; i++) {
+    final y = 3.5 + i * 2.4;
+    final x = (i.isEven ? 1 : -1) * ((now * 0.25 + i * 0.37) % 1.0) * 11.5 + (i.isEven ? -1 : 10.5);
+    final dir = i.isEven ? 1.0 : -1.0;
+    final body = Path()
+      ..moveTo(x + 0.45 * dir, y)
+      ..quadraticBezierTo(x, y - 0.25, x - 0.35 * dir, y)
+      ..quadraticBezierTo(x, y + 0.25, x + 0.45 * dir, y)
+      ..moveTo(x - 0.3 * dir, y)
+      ..lineTo(x - 0.6 * dir, y - 0.2)
+      ..lineTo(x - 0.6 * dir, y + 0.2)
+      ..close();
+    canvas.drawPath(body, Paint()..color = th.accent.withValues(alpha: 0.13));
+  }
+  // Seerosen
+  for (final (x, y) in [(1.2, 10.2), (8.3, 11.0), (4.0, 13.0)]) {
+    canvas.drawCircle(Offset(x, y), 0.45, Paint()..color = th.sling.withValues(alpha: 0.18));
+  }
+}
+
+void _jungle(Canvas canvas, TableTheme th, double now) {
+  final leaf = Paint()..color = th.sling.withValues(alpha: 0.12);
+  final rng = math.Random(11);
+  for (var i = 0; i < 26; i++) {
+    final x = rng.nextDouble() * 9.95;
+    final y = rng.nextDouble() * 17;
+    final a = rng.nextDouble() * math.pi * 2 + 0.08 * math.sin(now + i);
+    canvas.save();
+    canvas.translate(x, y);
+    canvas.rotate(a);
+    canvas.drawPath(
+      Path()
+        ..moveTo(0, 0)
+        ..quadraticBezierTo(0.5, -0.35, 1.1, 0)
+        ..quadraticBezierTo(0.5, 0.35, 0, 0)
+        ..close(),
+      leaf,
+    );
+    canvas.restore();
+  }
+  // Stufen eines Tempels in der Mitte
+  for (var k = 0; k < 4; k++) {
+    final w = 4.6 - k * 0.9;
+    canvas.drawRect(
+      Rect.fromCenter(center: Offset(4.6, 11.6 - k * 0.45), width: w, height: 0.4),
+      Paint()..color = th.wall.withValues(alpha: 0.07 + k * 0.02),
+    );
+  }
+}
+
+void _circus(Canvas canvas, TableTheme th, double now) {
+  // Zeltbahnen von oben, Manege unten
+  for (var i = 0; i < 12; i++) {
+    final path = Path()
+      ..moveTo(4.6, -1)
+      ..lineTo(i * 0.95 - 0.6, 18)
+      ..lineTo(i * 0.95 + 0.35, 18)
+      ..close();
+    if (i.isEven) canvas.drawPath(path, Paint()..color = th.bumper.withValues(alpha: 0.08));
+  }
+  final ring = Rect.fromCenter(center: const Offset(4.6, 11.4), width: 6.4, height: 2.2);
+  canvas.drawOval(ring, Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 0.12
+    ..color = th.accent.withValues(alpha: 0.2));
+  // Lichterkette
+  for (var i = 0; i < 16; i++) {
+    final x = 0.4 + i * 0.58;
+    final y = 1.2 + 0.35 * math.sin(i * 0.8);
+    final on = ((now * 4).floor() + i) % 3 == 0;
+    canvas.drawCircle(Offset(x, y), 0.07, Paint()..color = th.light.withValues(alpha: on ? 0.6 : 0.15));
   }
 }

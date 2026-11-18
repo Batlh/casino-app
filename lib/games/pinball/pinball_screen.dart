@@ -253,6 +253,34 @@ class _PinballScreenState extends State<PinballScreen> with SingleTickerProvider
           _app.sfx.play(Sound.lose);
         case PinballEventKind.nudge:
           break;
+        case PinballEventKind.kickback:
+          text = 'Rückschuss! Die Kugel ist wieder im Spiel';
+          _say('RÜCKSCHUSS', '', 1.8);
+          _app.sfx.play(Sound.coin);
+          _burst(e.x, e.y, th.light, 12);
+        case PinballEventKind.kickbackLit:
+          _say('RÜCKSCHUSS BEREIT', '', 1.8);
+          _app.sfx.play(Sound.win);
+        case PinballEventKind.gateOpen:
+          text = 'Das Tor ist offen!';
+          _say('TOR OFFEN', '+${formatCoins(e.points)}', 2.2, true);
+          _app.sfx.play(Sound.win);
+          _burst(e.x, e.y, th.accent, 14);
+        case PinballEventKind.gateClosed:
+          _say('TOR ZU', '', 1.4);
+        case PinballEventKind.captive:
+          _app.sfx.play(Sound.chip);
+          _burst(e.x, e.y, th.light, 8);
+        case PinballEventKind.captiveBonus:
+          text = '${e.text.isEmpty ? 'Volltreffer' : e.text}! +${formatCoins(e.points)}';
+          _say(e.text.isEmpty ? 'VOLLTREFFER' : e.text.toUpperCase(), '+${formatCoins(e.points)}', 2.6, true);
+          _app.sfx.play(Sound.bigWin);
+          _burst(e.x, e.y, th.accent, 20);
+        case PinballEventKind.wheel:
+          text = 'Glücksrad: ${e.text}';
+          _say('GLÜCKSRAD', e.text, 2.6, true);
+          _app.sfx.play(Sound.win);
+          _burst(e.x, e.y, th.accent, 16);
         case PinballEventKind.gameOver:
           _finish(t);
       }
