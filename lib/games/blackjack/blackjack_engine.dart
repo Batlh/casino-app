@@ -71,14 +71,24 @@ class BlackjackEngine {
 
   PlayingCard _draw() => _shoe.removeLast();
 
-  void deal(int bet) {
+  /// Karten des Gebers am Netztisch: für alle gleich, vom Gastgeber vorgegeben.
+  List<PlayingCard>? _dealerQueue;
+
+  PlayingCard _dealerDraw() {
+    final q = _dealerQueue;
+    return q != null && q.isNotEmpty ? q.removeAt(0) : _draw();
+  }
+
+  /// Neue Runde. [dealerCards]: feste Reihenfolge der Geberkarten (Netztisch), sonst aus dem eigenen Schuh.
+  void deal(int bet, {List<PlayingCard>? dealerCards}) {
     if (!_stacked && _shoe.length < 52) {
       _shoe = shuffledDeck(_rng, decks: 6);
     }
+    _dealerQueue = dealerCards?.toList();
     final first = _draw();
-    final hole = _draw();
+    final hole = _dealerDraw();
     final second = _draw();
-    final up = _draw();
+    final up = _dealerDraw();
     hands = [BjHand([first, second], bet)];
     dealer = [hole, up];
     activeIndex = 0;
@@ -154,7 +164,7 @@ class BlackjackEngine {
   bool dealerStep() {
     if (phase != BjPhase.dealerTurn) return false;
     if (dealerScore.total < 17) {
-      dealer.add(_draw());
+      dealer.add(_dealerDraw());
       return true;
     }
     _settle();
@@ -189,3 +199,6 @@ class BlackjackEngine {
     phase = BjPhase.settled;
   }
 }
+
+/// Geberkarten einer Netzrunde aus dem Startwert des Gastgebers (reicht für jede Geberhand).
+List<PlayingCard> bjDealerCards(int seed) => shuffledDeck(Random(seed), decks: 6).sublist(0, 16);

@@ -8,6 +8,7 @@ import '../../core/settings.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/net_replay_mixin.dart';
 import '../../ui/tap_catcher.dart';
 import '../../ui/widgets.dart';
 import '../board/seats.dart';
@@ -50,7 +51,7 @@ class MemoryScreen extends StatefulWidget {
   State<MemoryScreen> createState() => _MemoryScreenState();
 }
 
-class _MemoryScreenState extends State<MemoryScreen> {
+class _MemoryScreenState extends State<MemoryScreen> with NetReplayScreen {
   static const _saveId = 'memory';
   late final Settings _store;
   MemoryGame? _g;
@@ -93,11 +94,103 @@ class _MemoryScreenState extends State<MemoryScreen> {
   void dispose() {
     _token++;
     _persist();
+    replayDispose();
     super.dispose();
   }
 
+  // ---------------------------------------------------------------- Netzwerk
+
+  final List<List<Object?>> _log = [];
+
+  @override
+  String get replayGame => 'memory';
+  @override
+  String get replayTitle => 'Memory';
+  @override
+  int get replaySeats => 4;
+  @override
+  List<String> get replayBotNames => const [];
+  @override
+  List<List<Object?>> get replayLog => _log;
+  @override
+  Map<String, Object?> get replayOptions => {'pairs': _g?.pairs ?? 12, 'motif': _motif.index};
+
+  @override
+  void replayNewGame(int seed, List<String> names, int me, Map<String, Object?> options) {
+    _token++;
+    _log.clear();
+    final pairs = ((options['pairs'] as num?)?.toInt() ?? 12).clamp(4, 18);
+    _seats = [for (final (i, n) in names.indexed) Seat(n, human: replayHumans.contains(i))];
+    _motif = MemoryMotif.values[((options['motif'] as num?)?.toInt() ?? 0).clamp(0, MemoryMotif.values.length - 1)];
+    _g = MemoryGame(pairs, names.length, rng: math.Random(seed));
+    _paid = false;
+    _busy = false;
+    _msg = '${names[0]} beginnt';
+  }
+
+  @override
+  void replayApply(List<dynamic> a) => _apply(a);
+
+  @override
+  bool replayAllowed(int seat, List<dynamic> a) {
+    final g = _g;
+    if (g == null || g.over || seat != g.current || a[0] != 'f') return false;
+    return g.canFlip((a[1] as num).toInt());
+  }
+
+  @override
+  void replayAfterRemote(List<List<dynamic>> acts) {
+    if (acts.any((a) => a[0] == 'f')) AppScope.of(context).sfx.play(Sound.card);
+    setState(() {});
+    final g = _g;
+    if (g == null || replayIsGuest) return;
+    if (g.waiting && !_busy) {
+      _afterPair();
+    } else {
+      _botLoop();
+    }
+  }
+
+  @override
+  void replayClosed() => _newGame();
+
+  /// Zug ausführen: allein und beim Gastgeber sofort, als Mitspieler über den Gastgeber.
+  void _do(List<Object?> a) {
+    if (replaySend(a)) return;
+    _apply(a);
+    replayBroadcast();
+  }
+
+  void _apply(List<dynamic> a) {
+    final g = _g!;
+    switch (a[0]) {
+      case 'f':
+        if (!g.flip((a[1] as num).toInt(), bots: _bots)) throw StateError('Karte nicht frei');
+      case 'r':
+        if (!g.waiting) throw StateError('Nichts aufgedeckt');
+        final match = g.cards[g.open[0]] == g.cards[g.open[1]];
+        final who = g.current;
+        g.resolve();
+        if (match) AppScope.of(context).sfx.play(Sound.chip);
+        _msg = match
+            ? (_seats.length == 1 ? 'Paar gefunden!' : '${_seats[who].name} findet ein Paar und ist nochmal dran')
+            : (_seats.length == 1 ? 'Leider kein Paar' : '${_seats[g.current].name} ist dran');
+        if (g.over) _msg = _finish(g);
+      default:
+        throw StateError('Unbekannter Zug $a');
+    }
+    _log.add(a);
+  }
+
+  /// Ist dieser Platz am Zug und wird hier bedient (Mensch an diesem Gerät)?
+  bool _mineToPlay(int seat) => replayActive ? seat == replayMe : _seats[seat].human;
+
+  /// Spielt hier der Computer (im Netz nur beim Gastgeber)?
+  bool _botHere(int seat) => replayActive ? replayIsHost && replayIsBot(seat) : !_seats[seat].human;
+
   void _persist() {
     final g = _g;
+    if (replayActive) return;
     if (g == null || g.over) {
       _store.clearGame(_saveId);
       return;
@@ -150,11 +243,11 @@ class _MemoryScreenState extends State<MemoryScreen> {
 
   void _tap(int i) {
     final g = _g;
-    if (g == null || g.over || _busy || !_seats[g.current].human) return;
-    if (!g.flip(i, bots: _bots)) return;
+    if (g == null || g.over || _busy || !_mineToPlay(g.current) || !g.canFlip(i)) return;
+    _do(['f', i]);
     AppScope.of(context).sfx.play(Sound.card);
     setState(() {});
-    if (g.waiting) _afterPair();
+    if (g.waiting && !replayIsGuest) _afterPair();
   }
 
   Future<void> _afterPair() async {
@@ -163,19 +256,9 @@ class _MemoryScreenState extends State<MemoryScreen> {
     setState(() => _busy = true);
     final match = g.cards[g.open[0]] == g.cards[g.open[1]];
     await Future<void>.delayed(Duration(milliseconds: match ? 600 : 1100));
-    if (!mounted || token != _token) return;
-    final who = g.current;
-    g.resolve();
-    final sfx = AppScope.of(context).sfx;
-    if (match) sfx.play(Sound.chip);
-    var text = match
-        ? (_seats.length == 1 ? 'Paar gefunden!' : '${_seats[who].name} findet ein Paar und ist nochmal dran')
-        : (_seats.length == 1 ? 'Leider kein Paar' : '${_seats[g.current].name} ist dran');
-    if (g.over) text = _finish(g);
-    setState(() {
-      _msg = text;
-      _busy = false;
-    });
+    if (!mounted || token != _token || !identical(g, _g)) return;
+    _do(['r']);
+    setState(() => _busy = false);
     _botLoop();
   }
 
@@ -196,25 +279,25 @@ class _MemoryScreenState extends State<MemoryScreen> {
     final winners = [for (var i = 0; i < g.players; i++) if (g.scores[i] == best) i];
     if (winners.length > 1) return 'Unentschieden: ${winners.map((w) => _seats[w].name).join(' und ')}';
     final w = winners.first;
-    final reward = seatReward(_seats, w, memoryWinReward);
+    final reward = replayActive ? (w == replayMe ? memoryWinReward : 0) : seatReward(_seats, w, memoryWinReward);
     if (reward > 0 && !_paid) {
       _paid = true;
       wallet.credit(reward);
     }
-    sfx.play(_seats[w].human ? Sound.win : Sound.lose);
+    sfx.play((replayActive ? w == replayMe : _seats[w].human) ? Sound.win : Sound.lose);
     return '${_seats[w].name} gewinnt mit $best Paaren!${reward > 0 ? ' +$reward Münzen' : ''}';
   }
 
   Future<void> _botLoop() async {
     final g = _g;
-    if (g == null || g.over || _seats[g.current].human || _busy) return;
+    if (g == null || g.over || !_botHere(g.current) || _busy) return;
     final token = ++_token;
     setState(() => _busy = true);
     final p = g.current;
     for (var k = 0; k < 2; k++) {
       await Future<void>.delayed(_store.botDelay(650));
       if (!mounted || token != _token) return;
-      g.flip(g.botPick(p), bots: _bots);
+      _do(['f', g.botPick(p)]);
       AppScope.of(context).sfx.play(Sound.card);
       setState(() {});
     }
@@ -229,7 +312,9 @@ class _MemoryScreenState extends State<MemoryScreen> {
     return GameFrame(
       title: 'Memory',
       guide: memoryGuide,
-      child: g == null
+      actions: replayActions(context),
+      network: replayActive ? null : replayOpenPanel,
+      child: replayScreen() ?? (g == null
           ? const SizedBox.shrink()
           : Column(
               children: [
@@ -266,10 +351,12 @@ class _MemoryScreenState extends State<MemoryScreen> {
                 ResultBanner(text: _msg, highlight: g.over, maxLines: 2),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 2, 8, 8),
-                  child: ActionButton(primary: g.over, label: 'Neues Spiel', onPressed: _newGame),
+                  child: replayActive
+                      ? Wrap(spacing: 8, alignment: WrapAlignment.center, children: replayButtons(label: 'Neues Spiel', next: replayHostStart))
+                      : ActionButton(primary: g.over, label: 'Neues Spiel', onPressed: _newGame),
                 ),
               ],
-            ),
+            )),
     );
   }
 

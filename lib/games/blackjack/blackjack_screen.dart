@@ -6,6 +6,7 @@ import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guides.dart';
+import '../../ui/net_shared_mixin.dart';
 import '../../ui/widgets.dart';
 import '../cards/playing_card.dart';
 import 'blackjack_engine.dart';
@@ -17,7 +18,7 @@ class BlackjackScreen extends StatefulWidget {
   State<BlackjackScreen> createState() => _BlackjackScreenState();
 }
 
-class _BlackjackScreenState extends State<BlackjackScreen> {
+class _BlackjackScreenState extends State<BlackjackScreen> with NetSharedTable {
   final _engine = BlackjackEngine();
   int _bet = 50;
   bool _busy = false;
@@ -26,17 +27,66 @@ class _BlackjackScreenState extends State<BlackjackScreen> {
   bool _big = false;
 
   AppScope get _app => AppScope.of(context);
+  bool get _inRound => _busy || _engine.phase == BjPhase.playerTurn || _engine.phase == BjPhase.dealerTurn;
+
+  @override
+  void dispose() {
+    sharedDispose();
+    super.dispose();
+  }
+
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get sharedGame => 'blackjack';
+  @override
+  String get sharedTitle => 'Black Jack';
+  int? _pending;
+
+  /// Neue Runde vom Gastgeber: Der Geber hat bei allen dieselben Karten, jeder spielt seine Hand selbst.
+  @override
+  void sharedResult(Object? outcome) {
+    final seed = (outcome as num?)?.toInt();
+    if (seed == null) return;
+    if (_inRound) {
+      _pending = seed;
+      return;
+    }
+    _dealRound(seed);
+  }
 
   void _deal() {
-    if (!_app.wallet.spend(_bet)) return;
+    if (sharedGuest) return;
+    if (!_app.wallet.canAfford(_bet)) return;
+    if (sharedHost) {
+      final seed = Random.secure().nextInt(1 << 31);
+      sharedSend(seed);
+      _dealRound(seed);
+      return;
+    }
+    _dealRound(null);
+  }
+
+  void _dealRound(int? seed) {
+    if (!_app.wallet.spend(_bet)) {
+      setState(() => _message = 'Zu wenig Münzen, du setzt diese Runde aus');
+      return;
+    }
     _round++;
-    _engine.deal(_bet);
+    _engine.deal(_bet, dealerCards: seed == null ? null : bjDealerCards(seed));
+    sharedStake(_bet);
     _app.sfx.play(Sound.card);
     setState(() {
       _message = '';
       _big = false;
     });
     if (_engine.phase == BjPhase.settled) _finish();
+  }
+
+  void _nextPending() {
+    final next = _pending;
+    _pending = null;
+    if (next != null && mounted) _dealRound(next);
   }
 
   void _act(void Function() action) {
@@ -109,6 +159,7 @@ class _BlackjackScreenState extends State<BlackjackScreen> {
     if (!_app.wallet.canAfford(_bet)) {
       setState(() => _bet = 10);
     }
+    _nextPending();
   }
 
   @override
@@ -116,7 +167,9 @@ class _BlackjackScreenState extends State<BlackjackScreen> {
     return GameFrame(
       guide: blackjackGuide,
       title: 'Black Jack',
-      child: LayoutBuilder(
+      actions: sharedActions(context),
+      network: sharedActive ? null : sharedOpenPanel,
+      child: sharedScreen() ?? LayoutBuilder(
         builder: (context, box) {
           final wide = box.maxWidth > box.maxHeight * 1.15;
           final cardWidth = wide
@@ -161,17 +214,21 @@ class _BlackjackScreenState extends State<BlackjackScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         ResultBanner(text: _message, highlight: _big),
+        sharedStakesBar(),
         const SizedBox(height: 4),
         if (idle) ...[
           BetPicker(
             value: _bet,
-            onChanged: (v) => setState(() => _bet = v),
+            onChanged: (v) {
+              setState(() => _bet = v);
+              sharedStake(_bet);
+            },
           ),
           const SizedBox(height: 10),
           ActionButton(
             primary: true,
-            label: 'Austeilen: ${formatCoins(_bet)}',
-            onPressed: _app.wallet.canAfford(_bet) ? _deal : null,
+            label: sharedGuest ? 'Der Gastgeber teilt aus' : 'Austeilen: ${formatCoins(_bet)}',
+            onPressed: !sharedGuest && _app.wallet.canAfford(_bet) ? _deal : null,
           ),
         ] else
           Wrap(
