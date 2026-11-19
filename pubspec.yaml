@@ -1,7 +1,7 @@
 name: gluckspfennig
 description: Privates Offline-Casino zum Zeitvertreib. Spielmünzen ohne jeden Geldwert.
 publish_to: none
-version: 0.9.51+46
+version: 0.9.52+47
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
