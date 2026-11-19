@@ -20,13 +20,13 @@ permissions:
 
 jobs:
   android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -42,7 +42,7 @@ jobs:
         if: always()
         continue-on-error: true
         run: flutter test --update-goldens test_golden
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: bilder
@@ -61,7 +61,7 @@ jobs:
             (cd test_golden/goldens && zip -q -r "$GITHUB_WORKSPACE/bilder.zip" .)
             gh release upload latest bilder.zip --clobber
           fi
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: ~/gradle-dist
           key: gradle-dist-${{ hashFiles('pubspec.lock') }}
@@ -122,7 +122,7 @@ jobs:
           "$SIGNER" verify --print-certs gluckspfennig.apk | tee signatur.txt
           # Fingerabdruck des eigenen Schlüssels (seit 0.9.3; davor der öffentliche Debug-Schlüssel)
           grep -qi "51c72022026bb67a144045b265980cf487e66ffc135e1dd486066dfd8e81bfff" signatur.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: android-apk
           path: gluckspfennig.apk
@@ -173,9 +173,9 @@ jobs:
     needs: android
     # Auch wenn nur die APK scheitert, etwa an einem Downloadfehler
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -188,7 +188,7 @@ jobs:
       - run: |
           mkdir out
           tar -czf out/gluckspfennig-linux.tar.gz -C build/linux/x64/release bundle
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: linux
           path: out/*
@@ -218,7 +218,7 @@ jobs:
         target: ${{ fromJSON(inputs.macos && '["windows","macos"]' || '["windows"]') }}
     runs-on: ${{ matrix.target == 'macos' && 'macos-latest' || 'windows-latest' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -234,7 +234,7 @@ jobs:
             windows) 7z a out/gluckspfennig-windows.zip ./build/windows/x64/runner/Release/* ;;
             macos)   ditto -c -k --keepParent build/macos/Build/Products/Release/*.app out/gluckspfennig-macos.zip ;;
           esac
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.target }}
           path: out/*
