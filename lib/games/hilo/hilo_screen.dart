@@ -10,6 +10,7 @@ import '../../core/theme.dart';
 import '../../ui/guide.dart';
 import '../../ui/widgets.dart';
 import '../cards/playing_card.dart';
+import '../maumau/maumau_engine.dart' show suitName;
 import 'hilo_engine.dart';
 
 const hiloGuide = GameGuide('Höher oder Tiefer', [
@@ -119,12 +120,7 @@ class _HiloScreenState extends State<HiloScreen> {
     });
   }
 
-  String _name(PlayingCard c) => c.rankLabel(_app.settings.cardNames) + switch (c.suit) {
-        Suit.hearts => '♥',
-        Suit.diamonds => '♦',
-        Suit.spades => '♠',
-        Suit.clubs => '♣',
-      };
+  String _name(PlayingCard c) => '${suitName(c.suit)} ${c.rankLabel(_app.settings.cardNames)}';
 
   @override
   Widget build(BuildContext context) {
