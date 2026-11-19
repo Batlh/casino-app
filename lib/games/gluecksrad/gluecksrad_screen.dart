@@ -75,7 +75,7 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
 
   /// Bewegungsunschärfe: Ab etwa einem halben Feld pro Bild würden die Felder flackern (Stroboskop-Effekt),
   /// darum verschwimmen sie dann zu einer Mischfarbe. Wichtig für Menschen, die auf Flackern empfindlich sind.
-  double get _blur => ((_speed - 3) / 7).clamp(0.0, 0.92);
+  double get _blur => ((_speed - 2) / 6).clamp(0.0, 0.92);
 
   @override
   void dispose() {

@@ -52,5 +52,7 @@ void main() {
     await snap('bewegung_rad_mittel');
     await tester.pump(const Duration(seconds: 3));
     await snap('bewegung_rad_steht');
+    // Meldungen und Zeitgeber auslaufen lassen
+    await tester.pump(const Duration(seconds: 10));
   });
 }

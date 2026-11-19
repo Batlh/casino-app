@@ -217,7 +217,7 @@ class _RouletteScreenState extends State<RouletteScreen>
               ballAngle: ball,
               ballRadius: radius,
               showBall: _ballVisible,
-              blur: ((speed - 2.5) / 6).clamp(0.0, 0.85),
+              blur: ((speed - 2) / 6).clamp(0.0, 0.85),
             ),
           );
         },
