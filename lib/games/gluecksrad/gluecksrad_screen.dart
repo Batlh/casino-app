@@ -51,7 +51,7 @@ class GluecksradScreen extends StatefulWidget {
 
 class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerProviderStateMixin, NetSharedTable {
   late final math.Random _rng = widget.seed == null ? math.Random.secure() : math.Random(widget.seed);
-  late final AnimationController _turn = AnimationController(vsync: this, duration: const Duration(milliseconds: 4500));
+  late final AnimationController _turn = AnimationController(vsync: this, duration: const Duration(milliseconds: 5200));
   final Map<int, int> _bets = {};
   Map<int, int> _lastBets = {};
   int _chip = 10;
@@ -63,7 +63,19 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
 
   AppScope get _app => AppScope.of(context);
   int get _total => _bets.values.fold(0, (a, b) => a + b);
-  double get _angle => _from + (_to - _from) * Curves.easeOutQuart.transform(_turn.value);
+  double get _angle => _from + (_to - _from) * Curves.easeOutCubic.transform(_turn.value);
+
+  /// Drehgeschwindigkeit in Bogenmaß pro Sekunde (Ableitung von easeOutCubic: 3·(1−t)²).
+  double get _speed {
+    final ms = _turn.duration!.inMilliseconds;
+    if (!_turn.isAnimating || ms == 0) return 0;
+    final u = 1 - _turn.value;
+    return (_to - _from).abs() * 3 * u * u / (ms / 1000);
+  }
+
+  /// Bewegungsunschärfe: Ab etwa einem halben Feld pro Bild würden die Felder flackern (Stroboskop-Effekt),
+  /// darum verschwimmen sie dann zu einer Mischfarbe. Wichtig für Menschen, die auf Flackern empfindlich sind.
+  double get _blur => ((_speed - 3) / 7).clamp(0.0, 0.92);
 
   @override
   void dispose() {
@@ -120,10 +132,13 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
     if (_bets.isNotEmpty && !_app.wallet.spend(_total)) _bets.clear();
     final n = radReihe.length;
     final seg = 2 * math.pi / n;
-    // Feld index unter den Zeiger oben drehen, mindestens vier volle Umdrehungen
+    // Feld index unter den Zeiger oben drehen, mindestens drei volle Umdrehungen. Ist in den Systemeinstellungen
+    // „Animationen reduzieren“ an, nur kurz und ohne volle Umdrehungen.
+    final calm = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    _turn.duration = Duration(milliseconds: calm ? 1200 : 5200);
     final base = _angle % (2 * math.pi);
     var target = -(index + 0.5) * seg;
-    while (target < base + 8 * math.pi) {
+    while (target < base + (calm ? 0 : 6 * math.pi)) {
       target += 2 * math.pi;
     }
     setState(() {
@@ -174,7 +189,7 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
                 padding: const EdgeInsets.all(12),
                 child: AnimatedBuilder(
                   animation: _turn,
-                  builder: (context, _) => CustomPaint(size: Size.infinite, painter: _RadPainter(_angle)),
+                  builder: (context, _) => CustomPaint(size: Size.infinite, painter: _RadPainter(_angle, _blur)),
                 ),
               ),
             ),
@@ -241,9 +256,25 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
   }
 }
 
+/// Mischfarbe aller Felder, gewichtet nach Anzahl (für die Bewegungsunschärfe).
+final Color _mischfarbe = () {
+  var r = 0.0, g = 0.0, b = 0.0;
+  for (final v in radReihe) {
+    final c = _farben[v]!;
+    r += c.r;
+    g += c.g;
+    b += c.b;
+  }
+  final n = radReihe.length;
+  return Color.from(alpha: 1, red: r / n, green: g / n, blue: b / n);
+}();
+
 class _RadPainter extends CustomPainter {
-  _RadPainter(this.angle);
+  _RadPainter(this.angle, [this.blur = 0]);
   final double angle;
+
+  /// 0 = scharf, bis 1 = ganz verschwommen.
+  final double blur;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -285,6 +316,17 @@ class _RadPainter extends CustomPainter {
       canvas.restore();
     }
     canvas.restore();
+    if (blur > 0) {
+      // Felder verschwimmen zur Mischfarbe, damit beim schnellen Drehen nichts flackert
+      canvas.drawCircle(c, r, Paint()..color = _mischfarbe.withValues(alpha: blur));
+      // Leichte Ringe als Bewegungsandeutung, ohne harte Kanten
+      for (final f in const [0.45, 0.7, 0.86]) {
+        canvas.drawCircle(c, r * f, Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = r * 0.06
+          ..color = const Color(0xFFFFFFFF).withValues(alpha: 0.08 * blur));
+      }
+    }
     canvas.drawCircle(c, r * 0.18, Paint()..color = const Color(0xFFFFC95C));
     canvas.drawCircle(c, r * 0.18, Paint()
       ..style = PaintingStyle.stroke
@@ -299,5 +341,5 @@ class _RadPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_RadPainter old) => old.angle != angle;
+  bool shouldRepaint(_RadPainter old) => old.angle != angle || old.blur != blur;
 }

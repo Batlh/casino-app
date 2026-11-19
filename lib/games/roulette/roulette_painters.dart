@@ -128,7 +128,12 @@ class WheelPainter extends CustomPainter {
     required this.ballAngle,
     required this.ballRadius,
     required this.showBall,
+    this.blur = 0,
   });
+
+  /// Bewegungsunschärfe 0..1: Bei schneller Drehung verschwimmen die roten und schwarzen Fächer,
+  /// statt zu flackern (Stroboskop-Effekt).
+  final double blur;
 
   final double wheelAngle;
   final double ballAngle;
@@ -142,6 +147,9 @@ class WheelPainter extends CustomPainter {
     final c = size.center(Offset.zero);
     final r = math.min(size.width, size.height) / 2;
     paintWheel(canvas, c, r, wheelAngle);
+    if (blur > 0) {
+      canvas.drawCircle(c, r * 0.93, Paint()..color = const Color(0xFF4A1512).withValues(alpha: blur));
+    }
     if (showBall) {
       final pos = c +
           Offset(math.cos(ballAngle), math.sin(ballAngle)) * (r * ballRadius);
@@ -167,5 +175,6 @@ class WheelPainter extends CustomPainter {
       old.wheelAngle != wheelAngle ||
       old.ballAngle != ballAngle ||
       old.ballRadius != ballRadius ||
-      old.showBall != showBall;
+      old.showBall != showBall ||
+      old.blur != blur;
 }

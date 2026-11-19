@@ -7,6 +7,7 @@ import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
+import '../../ui/settings_sheet.dart';
 import '../../ui/widgets.dart';
 import '../lose/lose_engine.dart';
 
@@ -45,7 +46,21 @@ class EntenScreen extends StatefulWidget {
 
 class _EntenScreenState extends State<EntenScreen> with TickerProviderStateMixin {
   late final math.Random _rng = widget.seed == null ? math.Random.secure() : math.Random(widget.seed);
-  late final AnimationController _swim = AnimationController(vsync: this, duration: const Duration(seconds: 12))..repeat();
+  late final AnimationController _swim = AnimationController(vsync: this, duration: Duration(seconds: _tempoSeconds[_tempo]))..repeat();
+  late int _tempo = (AppScope.of(context).settings.loadGame('ente')?['tempo'] as num?)?.toInt().clamp(0, 2) ?? 1;
+
+  /// Sekunden für eine Runde im Becken: langsam, normal, schnell.
+  static const _tempoSeconds = [26, 18, 12];
+  static const _tempoNames = ['Langsam', 'Normal', 'Schnell'];
+
+  void _setTempo(int v) {
+    _tempo = v;
+    AppScope.of(context).settings.saveGame('ente', {'tempo': v});
+    _swim.duration = Duration(seconds: _tempoSeconds[v]);
+    // Weiter ab der aktuellen Stelle, nur mit neuem Tempo
+    if (_swim.isAnimating) _swim.repeat();
+    setState(() {});
+  }
   late final AnimationController _lift = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
   int _price = entenPreise.first;
   int _caught = -1;
@@ -102,6 +117,26 @@ class _EntenScreenState extends State<EntenScreen> with TickerProviderStateMixin
       minStake: entenPreise.first,
       title: 'Entchen angeln',
       guide: entenGuide,
+      settings: GameSettings(
+        'Entchen angeln',
+        (context) => StatefulBuilder(
+          builder: (context, set) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Wie schnell die Entchen schwimmen'),
+              const SizedBox(height: 6),
+              SegmentedButton<int>(
+                segments: [for (var i = 0; i < 3; i++) ButtonSegment(value: i, label: Text(_tempoNames[i]))],
+                selected: {_tempo},
+                onSelectionChanged: (v) {
+                  _setTempo(v.first);
+                  set(() {});
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
       child: SafeArea(
         child: Column(
           children: [
@@ -179,7 +214,17 @@ class _PondPainter extends CustomPainter {
       final bob = math.sin(2 * math.pi * (t * 12 + i * 0.37)) * 2;
       final caught = i == s._caught;
       if (caught) c = Offset(c.dx, c.dy - lift * size.height * 0.25);
-      _duck(canvas, c.translate(0, bob), dw);
+      // Blickrichtung = Schwimmrichtung; beim Wenden wird das Entchen kurz schmal, als drehe es sich
+      final a = 2 * math.pi * (t + i / _EntenScreenState._ducks);
+      final vx = -math.sin(a);
+      var turn = (vx * 3).clamp(-1.0, 1.0);
+      if (turn.abs() < 0.15) turn = turn.isNegative ? -0.15 : 0.15;
+      final at = c.translate(0, bob);
+      canvas.save();
+      canvas.translate(at.dx, at.dy);
+      canvas.scale(turn, 1);
+      _duck(canvas, Offset.zero, dw);
+      canvas.restore();
       if (caught && lift > 0.6) {
         // Unterseite mit Gewinn
         final m = s._multiple;

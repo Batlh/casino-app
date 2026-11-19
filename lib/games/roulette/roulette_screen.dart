@@ -208,12 +208,16 @@ class _RouletteScreenState extends State<RouletteScreen>
           // Kugel läuft außen, fällt ab 70 Prozent der Zeit in die Tasche
           final fall = Curves.easeIn.transform(((t - 0.7) / 0.3).clamp(0.0, 1.0));
           final radius = 0.95 + (0.72 - 0.95) * fall;
+          // Drehgeschwindigkeit des Kessels (Ableitung von easeOutCubic), daraus die Unschärfe
+          final secs = _spin.duration!.inMilliseconds / 1000;
+          final speed = _spin.isAnimating ? (_wheelEnd - _wheelStart).abs() * 3 * (1 - t) * (1 - t) / secs : 0.0;
           return CustomPaint(
             painter: WheelPainter(
               wheelAngle: wheel,
               ballAngle: ball,
               ballRadius: radius,
               showBall: _ballVisible,
+              blur: ((speed - 2.5) / 6).clamp(0.0, 0.85),
             ),
           );
         },
