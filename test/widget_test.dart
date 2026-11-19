@@ -23,6 +23,7 @@ import 'package:gluckspfennig/games/solitaire/spider_screen.dart';
 import 'package:gluckspfennig/games/videopoker/video_poker_screen.dart';
 import 'package:gluckspfennig/main.dart';
 import 'package:gluckspfennig/ui/widgets.dart';
+import 'package:gluckspfennig/ui/help_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const sizes = <String, Size>{
@@ -96,6 +97,7 @@ void main() {
         EinsScreen(mode: EinsMode.flex),
         HeartsScreen(),
         QuatroScreen(),
+        HelpScreen(),
       ]) {
         await pumpApp(tester, size, screen: screen);
         expect(tester.takeException(), isNull, reason: '$screen bei $name');

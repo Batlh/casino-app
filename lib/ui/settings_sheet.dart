@@ -11,6 +11,7 @@ import '../core/version.dart';
 import '../games/cards/playing_card.dart';
 import 'backup_section.dart';
 import 'debug_screen.dart';
+import 'help_screen.dart';
 
 /// Einstellungen öffnen. Aus einem Spiel heraus zeigt [game] zuerst die Einstellungen dieses Spiels,
 /// die allgemeinen Einstellungen stehen eingeklappt darunter. Aus der Lobby nur die allgemeinen.
@@ -318,6 +319,13 @@ Widget _general(BuildContext context) {
         ),
       ),
       const SizedBox(height: 8),
+      ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text('Hilfe', style: TextStyle(color: p.ink, fontSize: 17)),
+        subtitle: Text('Münzen, Netzwerk, Einstellungen und Probleme erklärt', style: TextStyle(color: p.inkSoft, fontSize: 14)),
+        trailing: Icon(Icons.chevron_right, color: p.ink),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const HelpScreen())),
+      ),
       ListTile(
         contentPadding: EdgeInsets.zero,
         title: Text('Lizenzen', style: TextStyle(color: p.ink, fontSize: 17)),

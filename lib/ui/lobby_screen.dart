@@ -64,6 +64,7 @@ import '../games/reversi/reversi_screen.dart';
 import '../games/solitaire/klondike_screen.dart';
 import '../games/solitaire/spider_screen.dart';
 import '../games/videopoker/video_poker_screen.dart';
+import 'help_screen.dart';
 import 'settings_sheet.dart';
 import 'widgets.dart';
 
@@ -551,6 +552,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               icon: Icon(Icons.settings, color: p.ink),
                               onPressed: () => showSettingsSheet(context),
                             ),
+                            IconButton(
+                              tooltip: 'Hilfe',
+                              icon: Icon(Icons.help_outline, color: p.ink),
+                              onPressed: () => _open(const HelpScreen()),
+                            ),
                             const Spacer(),
                             const BalanceBadge(),
                           ],
@@ -572,6 +578,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 side: BorderSide(color: p.panelEdge, width: 2),
                                 onPressed: () => _jump(s),
                               ),
+                            ActionChip(
+                              avatar: Icon(Icons.help_outline, size: 18, color: p.ink),
+                              label: Text('Hilfe', style: TextStyle(color: p.ink, fontWeight: FontWeight.w700)),
+                              backgroundColor: p.panel,
+                              side: BorderSide(color: p.accent, width: 2),
+                              onPressed: () => _open(const HelpScreen()),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 6),
