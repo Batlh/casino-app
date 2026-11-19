@@ -24,7 +24,10 @@ void main() {
     await tester.pumpWidget(GluckspfennigApp(wallet: Wallet(prefs), sfx: Sfx(prefs, silent: true), settings: Settings(prefs)));
     await tester.pump();
     tester.state<NavigatorState>(find.byType(Navigator).first).push(MaterialPageRoute<void>(builder: (_) => screen));
-    await tester.pump(const Duration(milliseconds: 600));
+    // Übergang Bild für Bild laufen lassen (pumpAndSettle endet bei schwimmenden Entchen nie)
+    for (var i = 0; i < 12; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
   }
 
   Future<void> snap(String name) => expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/$name.png'));
