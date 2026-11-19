@@ -68,6 +68,7 @@ import '../games/muehle/muehle_screen.dart';
 import '../games/reversi/reversi_screen.dart';
 import '../games/solitaire/klondike_screen.dart';
 import '../games/solitaire/spider_screen.dart';
+import '../games/threecard/three_card_screen.dart';
 import '../games/videopoker/video_poker_screen.dart';
 import 'backup_section.dart';
 import 'help_screen.dart';
@@ -398,6 +399,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF2E4A2A),
         _HiloArt.new,
         () => _open(const HiloScreen()),
+      ),
+      _Game(
+        'Three Card Poker',
+        'Drei Karten gegen die Bank, mit Paar Plus',
+        const Color(0xFF5B1E3C),
+        _ThreeCardArt.new,
+        () => _open(const ThreeCardScreen()),
       ),
     ];
     final cardGames = <_Game>[
@@ -2271,6 +2279,20 @@ class _VideoPokerArt extends CustomPainter {
             : const Color(0xFF241410),
       );
     }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _ThreeCardArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width * 0.2;
+    final c = size.center(const Offset(0, 10));
+    _miniCard(canvas, c.translate(-w * 0.8, 4), w, -0.2, 'Q', Suit.spades);
+    _miniCard(canvas, c, w, 0, 'K', Suit.spades);
+    _miniCard(canvas, c.translate(w * 0.8, 4), w, 0.2, 'A', Suit.spades);
   }
 
   @override

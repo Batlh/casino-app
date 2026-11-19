@@ -25,6 +25,7 @@ import 'package:gluckspfennig/main.dart';
 import 'package:gluckspfennig/ui/widgets.dart';
 import 'package:gluckspfennig/ui/help_screen.dart';
 import 'package:gluckspfennig/games/hilo/hilo_screen.dart';
+import 'package:gluckspfennig/games/threecard/three_card_screen.dart';
 import 'package:gluckspfennig/ui/progress_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -101,6 +102,7 @@ void main() {
         QuatroScreen(),
         HelpScreen(),
         HiloScreen(seed: 1),
+        ThreeCardScreen(seed: 1),
         ProgressScreen(),
       ]) {
         await pumpApp(tester, size, screen: screen);
