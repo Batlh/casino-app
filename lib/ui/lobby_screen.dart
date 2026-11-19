@@ -125,17 +125,38 @@ class _LobbyScreenState extends State<LobbyScreen> {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
   }
 
-  final _sectionKeys = {for (final s in const ['Zuletzt gespielt', 'Casino', 'Kartenspiele', 'Brettspiele', 'Mahjong']) s: GlobalKey()};
+  final _sectionKeys = {
+    for (final s in const ['Favoriten', 'Zuletzt gespielt', 'Casino', 'Kartenspiele', 'Brettspiele', 'Mahjong']) s: GlobalKey(),
+  };
+  final _search = TextEditingController();
+  String _query = '';
 
-  /// Zuletzt geöffnete Spiele, neuestes zuerst.
-  List<String> _recent() {
-    final r = AppScope.of(context).settings.loadGame('lobby')?['recent'];
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  Map<String, Object?> get _lobby => AppScope.of(context).settings.loadGame('lobby') ?? const {};
+  void _saveLobby(String key, Object? value) => AppScope.of(context).settings.saveGame('lobby', {..._lobby, key: value});
+
+  List<String> _list(String key) {
+    final r = _lobby[key];
     return r is List ? [for (final x in r) '$x'] : const [];
   }
 
-  void _remember(String name) {
-    final list = [name, ..._recent().where((x) => x != name)].take(4).toList();
-    AppScope.of(context).settings.saveGame('lobby', {'recent': list});
+  /// Zuletzt geöffnete Spiele, neuestes zuerst.
+  List<String> _recent() => _list('recent');
+
+  void _remember(String name) => _saveLobby('recent', [name, ..._recent().where((x) => x != name)].take(4).toList());
+
+  /// Favoriten in der Reihenfolge, in der sie markiert wurden.
+  List<String> _favorites() => _list('fav');
+
+  void _toggleFavorite(String name) {
+    final f = _favorites();
+    _saveLobby('fav', f.contains(name) ? [for (final x in f) if (x != name) x] : [...f, name]);
+    setState(() {});
   }
 
   _Game _tracked(_Game g) => _Game(g.name, g.blurb, g.color, g.art, () {
@@ -566,6 +587,12 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
     final all = {for (final g in [...games, ...cardGames, ...boardGames, ...mahjongGames]) g.name: g};
     final recent = [for (final n in _recent()) if (all[n] != null) _tracked(all[n]!)];
+    final favNames = _favorites();
+    final favs = [for (final n in favNames) if (all[n] != null) _tracked(all[n]!)];
+    final found = _query.isEmpty ? const <_Game>[] : [for (final g in all.values) if (lobbyMatches(g.name, g.blurb, _query)) _tracked(g)];
+    final fav = favNames.toSet();
+    List<Widget> section(String title, List<_Game> list) =>
+        _section(context, title, list, key: _sectionKeys[title], favorites: fav, onFavorite: _toggleFavorite);
 
     return Scaffold(
       backgroundColor: p.bg,
@@ -607,7 +634,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            for (final s in const ['Casino', 'Kartenspiele', 'Brettspiele', 'Mahjong'])
+                            for (final s in [if (favs.isNotEmpty) 'Favoriten', 'Casino', 'Kartenspiele', 'Brettspiele', 'Mahjong'])
                               ActionChip(
                                 label: Text(s, style: TextStyle(color: p.ink, fontWeight: FontWeight.w700)),
                                 backgroundColor: p.panel,
@@ -623,6 +650,32 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 10),
+                        Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 520),
+                            child: TextField(
+                              controller: _search,
+                              style: TextStyle(color: p.ink),
+                              decoration: InputDecoration(
+                                isDense: true,
+                                prefixIcon: Icon(Icons.search, color: p.inkSoft),
+                                hintText: 'Spiel suchen',
+                                suffixIcon: _query.isEmpty
+                                    ? null
+                                    : IconButton(
+                                        tooltip: 'Suche löschen',
+                                        icon: const Icon(Icons.clear),
+                                        onPressed: () => setState(() {
+                                          _search.clear();
+                                          _query = '';
+                                        }),
+                                      ),
+                              ),
+                              onChanged: (v) => setState(() => _query = v.trim()),
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 6),
                       ],
                     ),
@@ -630,11 +683,24 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
               ),
             ),
-            if (recent.isNotEmpty) ..._section(context, 'Zuletzt gespielt', recent, key: _sectionKeys['Zuletzt gespielt']),
-            ..._section(context, 'Casino', [for (final g in games) _tracked(g)], key: _sectionKeys['Casino']),
-            ..._section(context, 'Kartenspiele', [for (final g in cardGames) _tracked(g)], key: _sectionKeys['Kartenspiele']),
-            ..._section(context, 'Brettspiele', [for (final g in boardGames) _tracked(g)], key: _sectionKeys['Brettspiele']),
-            ..._section(context, 'Mahjong', [for (final g in mahjongGames) _tracked(g)], key: _sectionKeys['Mahjong']),
+            if (_query.isNotEmpty) ...[
+              if (found.isEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Text('Kein Spiel gefunden', textAlign: TextAlign.center, style: TextStyle(color: p.inkSoft, fontSize: 17)),
+                  ),
+                )
+              else
+                ...section('Gefunden', found),
+            ] else ...[
+              if (favs.isNotEmpty) ...section('Favoriten', favs),
+              if (recent.isNotEmpty) ...section('Zuletzt gespielt', recent),
+              ...section('Casino', [for (final g in games) _tracked(g)]),
+              ...section('Kartenspiele', [for (final g in cardGames) _tracked(g)]),
+              ...section('Brettspiele', [for (final g in boardGames) _tracked(g)]),
+              ...section('Mahjong', [for (final g in mahjongGames) _tracked(g)]),
+            ],
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
@@ -643,7 +709,29 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 }
 
-List<Widget> _section(BuildContext context, String title, List<_Game> games, {Key? key}) => [
+/// Passt ein Spiel zur Suche? Groß- und Kleinschreibung und Umlaute egal, alle Wörter müssen vorkommen.
+bool lobbyMatches(String name, String blurb, String query) {
+  String norm(String s) => s
+      .toLowerCase()
+      .replaceAll('ä', 'ae')
+      .replaceAll('ö', 'oe')
+      .replaceAll('ü', 'ue')
+      .replaceAll('ß', 'ss')
+      .replaceAll(RegExp(r'[^a-z0-9 ]'), ' ');
+  final text = norm('$name $blurb');
+  final words = norm(query).split(' ').where((w) => w.isNotEmpty);
+  return words.isNotEmpty && words.every(text.contains);
+}
+
+List<Widget> _section(
+  BuildContext context,
+  String title,
+  List<_Game> games, {
+  Key? key,
+  Set<String> favorites = const {},
+  void Function(String name)? onFavorite,
+}) =>
+    [
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(20, 10, 16, 10),
         sliver: SliverToBoxAdapter(
@@ -665,7 +753,11 @@ List<Widget> _section(BuildContext context, String title, List<_Game> games, {Ke
                 mainAxisExtent: columns == 1 ? 250 : 300,
               ),
               delegate: SliverChildBuilderDelegate(
-                (context, i) => _Cabinet(game: games[i]),
+                (context, i) => _Cabinet(
+                  game: games[i],
+                  favorite: favorites.contains(games[i].name),
+                  onFavorite: onFavorite == null ? null : () => onFavorite(games[i].name),
+                ),
                 childCount: games.length,
               ),
             );
@@ -1531,8 +1623,10 @@ class _Game {
 /// Spielgerät in der Lobby: oben das Motiv hinter gewölbtem Glas, unten das Schild.
 /// Unter der Maus wächst es ein wenig, beim Drücken gibt es nach.
 class _Cabinet extends StatefulWidget {
-  const _Cabinet({required this.game});
+  const _Cabinet({required this.game, this.favorite = false, this.onFavorite});
   final _Game game;
+  final bool favorite;
+  final VoidCallback? onFavorite;
 
   @override
   State<_Cabinet> createState() => _CabinetState();
@@ -1556,7 +1650,25 @@ class _CabinetState extends State<_Cabinet> {
           scale: scale,
           duration: const Duration(milliseconds: 140),
           curve: Curves.easeOut,
-          child: _cabinet(context),
+          child: Stack(
+            children: [
+              Positioned.fill(child: _cabinet(context)),
+              if (widget.onFavorite != null)
+                Positioned(
+                  top: 52,
+                  right: 18,
+                  child: Material(
+                    color: const Color(0x99000000),
+                    shape: const CircleBorder(),
+                    child: IconButton(
+                      tooltip: widget.favorite ? 'Aus den Favoriten nehmen' : 'Zu den Favoriten',
+                      icon: Icon(widget.favorite ? Icons.star : Icons.star_border, color: const Color(0xFFFFC95C)),
+                      onPressed: widget.onFavorite,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
