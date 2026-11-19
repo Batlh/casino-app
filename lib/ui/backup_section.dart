@@ -66,19 +66,15 @@ Future<void> backupExport(BuildContext context) async {
   final text = exportBackup(prefs);
   final bytes = Uint8List.fromList(utf8.encode(text));
   try {
-    final path = await FilePicker.platform.saveFile(
+    // Der Dialog schreibt die Datei auf allen Plattformen selbst
+    final uri = await FilePicker.saveFile(
       dialogTitle: 'Spielstand sichern',
       fileName: backupFileName(),
-      type: FileType.custom,
-      allowedExtensions: const ['json'],
+      mimeType: 'application/json',
       bytes: bytes,
     );
-    if (path == null) return;
-    // Am PC schreibt der Dialog die Datei nicht immer selbst
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      await File(path).writeAsBytes(bytes, flush: true);
-    }
-    debugLog.info('spielstand', 'Gesichert: $path');
+    if (uri == null) return;
+    debugLog.info('spielstand', 'Gesichert: $uri');
     if (context.mounted) _say(context, 'Spielstand gesichert');
   } catch (e, st) {
     debugLog.error('spielstand.export', e, st);
@@ -92,12 +88,9 @@ Future<void> backupExport(BuildContext context) async {
 Future<void> backupImportFile(BuildContext context) async {
   String text;
   try {
-    final r = await FilePicker.platform.pickFiles(dialogTitle: 'Spielstand laden', withData: true);
-    if (r == null || r.files.isEmpty) return;
-    final f = r.files.single;
-    final bytes = f.bytes ?? (f.path == null ? null : await File(f.path!).readAsBytes());
-    if (bytes == null) throw const FormatException('Datei nicht lesbar');
-    text = utf8.decode(bytes, allowMalformed: true);
+    final f = await FilePicker.pickFile(dialogTitle: 'Spielstand laden');
+    if (f == null) return;
+    text = utf8.decode(await f.readAsBytes(), allowMalformed: true);
   } catch (e, st) {
     debugLog.error('spielstand.import', e, st);
     if (context.mounted) _say(context, 'Die Datei ließ sich nicht öffnen');

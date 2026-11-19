@@ -11,7 +11,7 @@ dependencies:
     sdk: flutter
   audioplayers: ^6.1.0
   # Spielstand als Datei sichern und laden (Android über das System-Dateifenster, PC über den Dateidialog)
-  file_picker: ^8.1.2
+  file_picker: ^13.4.0
   # 0.15 ersetzt die reine Dart-Engine durch native Bindungen, darum bei 0.14 bleiben
   forge2d: ">=0.14.2 <0.15.0"
   # Speicherort am PC, um beim Umzug auf den neuen Paketnamen die alten Daten zu finden
@@ -20,7 +20,8 @@ dependencies:
   # Link zum Quellcode auf GitHub im Browser öffnen
   url_launcher: ^6.3.0
   # Bildschirm anlassen (Einstellung)
-  wakelock_plus: ^1.2.8
+  # Ab 1.7 mit eingebautem Kotlin (ohne Kotlin-Gradle-Plugin), braucht package_info_plus 10
+  wakelock_plus: ^1.8.2
 
 dev_dependencies:
   flutter_test:
