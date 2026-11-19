@@ -102,7 +102,16 @@ class SlotRules {
     this.expandingInFree = false,
     this.expandingChoices = const [0, 1, 2, 3, 4, 5],
     this.clusterMin = 5,
+    this.walkingWilds = false,
+    this.giantInFree = 0,
   });
+
+  /// Grundspiel: Joker rücken nach jeder Drehung eine Walze nach links, die übrigen Felder drehen gratis neu,
+  /// bis kein Joker mehr im Bild ist.
+  final bool walkingWilds;
+
+  /// Freispiele: Riesensymbol dieser Größe (z. B. 3 für 3 × 3) auf den mittleren Walzen, 0 ohne.
+  final int giantInFree;
 
   /// Gruppen: kleinste Gruppe, die zahlt. linePays[Symbol][0] gilt für diese Größe, der letzte Eintrag für alle größeren.
   final int clusterMin;
@@ -301,7 +310,22 @@ class SpinResult {
 
 /// Eine Stufe einer Drehung: Raster, Gewinne und Multiplikator. Ohne Kaskaden gibt es genau eine Stufe.
 class CascadeStep {
-  const CascadeStep({required this.grid, required this.wins, required this.multiplier, required this.win, this.falls, this.expanded = false});
+  const CascadeStep({
+    required this.grid,
+    required this.wins,
+    required this.multiplier,
+    required this.win,
+    this.falls,
+    this.expanded = false,
+    this.respin = false,
+    this.giant,
+  });
+
+  /// Gratis-Nachdrehung mit wandernden Jokern, keine Kaskade.
+  final bool respin;
+
+  /// Riesensymbol: erste Walze, erste Reihe und Größe des Blocks.
+  final (int, int, int)? giant;
 
   /// Bild nach dem Ausbreiten des Sondersymbols (Buch-Freispiele), keine Kaskade.
   final bool expanded;
@@ -586,6 +610,7 @@ class SlotEngine {
       stops.add(stop);
       grid.add([for (var row = 0; row < h; row++) strip[(stop + row) % strip.length]]);
     }
+    if (free && rules.giantInFree > 0) _placeGiant(grid);
     if (!free) {
       stickyWilds.clear();
       expandSymbol = null;
@@ -601,6 +626,27 @@ class SlotEngine {
       }
     }
     return playGrid(grid, stake, free: free, stops: stops);
+  }
+
+  /// Block des Riesensymbols in Freispielen: mittig auf den Walzen, ganze Höhe.
+  (int, int, int) get giantBlock {
+    final n = rules.giantInFree;
+    return ((rules.reels - n) ~/ 2, (rules.rows - n) ~/ 2, n);
+  }
+
+  /// Füllt den Riesenblock mit einem Symbol vom Band der mittleren Walze (ohne Streu- und Sondersymbole).
+  void _placeGiant(List<List<int>> grid) {
+    final (r0, row0, n) = giantBlock;
+    final strip = rules.strips[r0 + n ~/ 2];
+    int sym;
+    do {
+      sym = strip[_rng.nextInt(strip.length)];
+    } while (sym == symScatter || sym == symCoin || sym == symBonus);
+    for (var r = r0; r < r0 + n; r++) {
+      for (var row = row0; row < row0 + n; row++) {
+        grid[r][row] = sym;
+      }
+    }
   }
 
   /// Wertet ein vorgegebenes Raster mit allen Funktionen aus (für Tests und die Drehung selbst).
@@ -631,11 +677,12 @@ class SlotEngine {
     final steps = <CascadeStep>[];
     var shown = _expand(grid, free);
     List<List<int>>? falls;
+    final giant = free && rules.giantInFree > 0 ? giantBlock : null;
     while (true) {
       final mult = ladder.isEmpty ? baseMult : baseMult * ladder[min(steps.length, ladder.length - 1)];
       final wins = winsOf(shown, stake, mult, wildMults: steps.isEmpty ? wildMults : const {});
       final win = wins.fold(0, (a, w) => a + w.payout);
-      steps.add(CascadeStep(grid: shown, wins: wins, multiplier: mult, win: win, falls: falls));
+      steps.add(CascadeStep(grid: shown, wins: wins, multiplier: mult, win: win, falls: falls, giant: steps.isEmpty ? giant : null));
       if (ladder.isEmpty || wins.isEmpty || steps.length > 50) break;
       final hit = {for (final w in wins) ...w.cells};
       final next = <List<int>>[];
@@ -669,6 +716,54 @@ class SlotEngine {
       }
       shown = _expand(next, free);
       falls = fall;
+    }
+
+    // Wandernde Joker: jeder Joker rückt eine Walze nach links, alle anderen Felder drehen neu
+    if (rules.walkingWilds && !free) {
+      var walking = <(int, int)>[
+        for (var r = 0; r < reels; r++)
+          for (var row = 0; row < grid[r].length; row++)
+            if (steps.last.grid[r][row] == symWild) (r, row),
+      ];
+      while (steps.length < 20) {
+        walking = [for (final (r, row) in walking) if (r > 0) (r - 1, row)];
+        if (walking.isEmpty) break;
+        final next = <List<int>>[];
+        for (var r = 0; r < reels; r++) {
+          final strip = rules.strips[r];
+          final stop = _rng.nextInt(strip.length);
+          // Streusymbole drehen in Nachdrehungen nicht mit, sonst gäbe es Freispiele ohne Einsatz
+          final col = <int>[];
+          var i = stop;
+          while (col.length < grid[r].length) {
+            final x = strip[i % strip.length];
+            i++;
+            if (x != symScatter) col.add(x);
+          }
+          next.add(col);
+        }
+        for (final (r, row) in walking) {
+          next[r][row] = symWild;
+        }
+        // Neu gelandete Joker wandern ab der nächsten Nachdrehung mit
+        final held = walking.toSet();
+        for (var r = 0; r < reels; r++) {
+          for (var row = 0; row < next[r].length; row++) {
+            if (next[r][row] == symWild && !held.contains((r, row))) walking.add((r, row));
+          }
+        }
+        final wins = winsOf(next, stake, baseMult);
+        steps.add(CascadeStep(
+          grid: next,
+          wins: wins,
+          multiplier: baseMult,
+          win: wins.fold(0, (a, w) => a + w.payout),
+          falls: [
+            for (var r = 0; r < reels; r++) [for (var row = 0; row < next[r].length; row++) held.contains((r, row)) ? 0 : next[r].length],
+          ],
+          respin: true,
+        ));
+      }
     }
 
     // Buch-Freispiele: Sondersymbol breitet sich über alle Walzen aus, auf denen es liegt

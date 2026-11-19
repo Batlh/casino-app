@@ -94,14 +94,14 @@ String holdText(SlotGame g, {int? stake}) {
 
 String wheelText(SlotGame g, {int? stake}) {
   final w = g.rules.wheel!;
-  final fields = [
+  final fields = {
     for (final s in w.segments)
       switch (s.kind) {
         WheelKind.coins => stake == null ? '${s.amount}-facher Einsatz' : formatCoins(s.amount * stake),
         WheelKind.freeSpins => '${s.amount} Freispiele',
         WheelKind.holdSpin => 'Hold & Spin mit ${s.amount} Startmünzen',
       },
-  ].toSet().join(', ');
+  }.join(', ');
   return '${w.trigger} oder mehr ${_sym(g, symBonus)} drehen das Glücksrad auf eigenem Bildschirm. Wo der Zeiger '
       'stehen bleibt, gibt es den Gewinn. Felder: $fields.';
 }
@@ -113,6 +113,10 @@ String freeSpinsText(SlotGame g) {
     if (r.expandWildInFree) 'Ein Joker auf den inneren Walzen füllt dort die ganze Walze.',
     if (r.stickyWildsInFree) 'Jeder Joker, der landet, bleibt bis zum Ende der Freispiele an seinem Platz liegen.',
     if (r.freeCascade.isNotEmpty) 'Die Kaskaden zählen mehr (siehe Kaskaden).',
+    if (r.giantInFree > 0)
+      'In jedem Freispiel landet auf den mittleren ${r.giantInFree} Walzen ein Riesensymbol, ${r.giantInFree} × ${r.giantInFree} '
+          'Felder groß. Es zählt wie ${r.giantInFree * r.giantInFree} einzelne gleiche Symbole, auf jeder dieser Walzen also '
+          '${r.giantInFree}-mal. Ist es ein Joker, ersetzt der ganze Block.',
     if (r.expandingInFree)
       'Vor den Freispielen wird ein Sondersymbol gezogen. Liegt es in einem Freispiel auf mindestens drei Walzen, füllt es '
           'diese Walzen ganz und zahlt auf allen ${r.lineCount} Linien, auch wenn die Walzen nicht nebeneinander liegen. '
@@ -146,6 +150,14 @@ GameGuide slotGuide(SlotGame g) {
             'auf Walze 3 zwei Kirschen, sind das 1 × 3 × 2 = 6 Wege.',
       ),
     GuideSection('Joker', g.wildText),
+    if (r.walkingWilds)
+      const GuideSection(
+        'Wandernde Joker',
+        'Landet im Grundspiel ein Joker, gibt es nach der Drehung eine Nachdrehung gratis: Der Joker rückt eine Walze nach '
+            'links, alle anderen Felder drehen neu. Das geht so weiter, bis der Joker links aus dem Bild wandert. Joker, die in '
+            'einer Nachdrehung neu landen, wandern ab dann mit. Jede Nachdrehung wird gewertet. Streusymbole drehen in '
+            'Nachdrehungen nicht mit.',
+      ),
     if (r.hasScatter) GuideSection('Freispiele', freeSpinsText(g)),
     if (r.cascades) GuideSection('Kaskaden', cascadeText(r)),
     if (r.holdSpin != null) GuideSection('Hold & Spin', holdText(g)),
@@ -245,7 +257,7 @@ List<String> winBreakdown(SlotGame game, List<List<int>> grid, LineWin w,
   if (w.kind == WinKind.expand) {
     final lineBet = stake ~/ r.lineCount;
     final pay = r.linePays[w.symbol]![w.count - 3];
-    final reels = [for (final (c, _) in w.cells) c + 1].toSet().toList()..sort();
+    final reels = {for (final (c, _) in w.cells) c + 1}.toList()..sort();
     lines.add('Sondersymbol $name liegt auf ${w.count} Walzen (${reels.join(', ')}) und füllt sie ganz.');
     lines.add('Es zahlt auf allen ${r.lineCount} Linien, auch wenn die Walzen nicht nebeneinander liegen.');
     lines.add('Laut Gewinnplan: ${w.count} gleiche = $pay × Linieneinsatz (${formatCoins(lineBet)}).');
@@ -255,7 +267,7 @@ List<String> winBreakdown(SlotGame game, List<List<int>> grid, LineWin w,
   if (w.kind == WinKind.cluster) {
     final pay = r.payFor(w.symbol, w.count);
     final per = pay * stake / r.waysDivisor;
-    final reels = [for (final (c, _) in w.cells) c + 1].toSet().toList()..sort();
+    final reels = {for (final (c, _) in w.cells) c + 1}.toList()..sort();
     lines.add('Gruppe aus ${w.count} × $name, die aneinandergrenzen (Walzen ${reels.first} bis ${reels.last}).');
     final wilds = [for (final (c, row) in w.cells) if (grid[c][row] == symWild) 1].length;
     if (wilds > 0) lines.add('Davon $wilds Joker.');

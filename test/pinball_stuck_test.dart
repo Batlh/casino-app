@@ -68,8 +68,10 @@ void main() {
       }
       // ignore: avoid_print
       print('${spec.name}: Rampen $ramps, Löcher $saucers, Spinner $spinners, hängen ${stuck.length}, raus ${escaped.length}');
-      // ignore: avoid_print
-      for (final s in [...stuck.take(15), ...escaped.take(10)]) print(s);
+      for (final s in [...stuck.take(15), ...escaped.take(10)]) {
+        // ignore: avoid_print
+        print(s);
+      }
       expect(escaped, isEmpty, reason: '${escaped.length} Kugeln außerhalb');
       expect(stuck, isEmpty, reason: '${stuck.length} Kugeln hängen fest');
     });

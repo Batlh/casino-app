@@ -170,6 +170,17 @@ def play(g, rng, stake, free=False):
         s = rng.randrange(len(st))
         stops.append(s)
         grid.append([st[(s + row) % len(st)] for row in range(h)])
+    if free and g.get("giant"):
+        n = g["giant"]
+        r0, row0 = (reels - n) // 2, (g["rows"] - n) // 2
+        st = strips[r0 + n // 2]
+        while True:
+            sym = rng.choice(st)
+            if sym not in (SCATTER, COIN, BONUS):
+                break
+        for r in range(r0, r0 + n):
+            for row in range(row0, row0 + n):
+                grid[r][row] = sym
     if not free:
         g["_sticky"] = set()
         g["_book"] = None
@@ -225,6 +236,35 @@ def play(g, rng, stake, free=False):
             nxt.append(fresh + kept)
         shown = expand(g, nxt, free)
     info["steps"] = steps
+    # Wandernde Joker im Grundspiel: Joker rücken nach links, der Rest dreht neu (ohne Streusymbole)
+    if g.get("walking") and not free:
+        walking = [(r, row) for r in range(reels) for row in range(len(shown[r])) if shown[r][row] == WILD]
+        n = 1
+        while n < 20:
+            walking = [(r - 1, row) for r, row in walking if r > 0]
+            if not walking:
+                break
+            nxt = []
+            for r in range(reels):
+                st = strips[r]
+                i = rng.randrange(len(st))
+                col = []
+                while len(col) < len(grid[r]):
+                    x = st[i % len(st)]
+                    i += 1
+                    if x != SCATTER:
+                        col.append(x)
+                nxt.append(col)
+            held = set(walking)
+            for r, row in walking:
+                nxt[r][row] = WILD
+            for r in range(reels):
+                for row in range(len(nxt[r])):
+                    if nxt[r][row] == WILD and (r, row) not in held:
+                        walking.append((r, row))
+            total += sum(w[0] for w in wins(g, nxt, stake, base))
+            n += 1
+        info["respins"] = n - 1
     # Buch-Freispiele: Sondersymbol füllt alle Walzen, auf denen es liegt, und zahlt auf allen Linien
     book = g.get("_book")
     if free and g.get("book") and book is not None:

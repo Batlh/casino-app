@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gluckspfennig/games/pachinko/pachinko_board.dart';
-import 'package:gluckspfennig/games/pachinko/pachinko_machines.dart';
 
 void main() {
   for (final m in pachinkoMachines) {

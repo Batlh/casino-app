@@ -49,12 +49,15 @@ String describeSlotOutcome(SlotGame game, SpinOutcome o, {required int stake, re
   if (balance != null) b.write(' · Stand $balance');
   for (var i = 0; i < o.steps.length; i++) {
     final s = o.steps[i];
-    if (s.expanded) {
+    if (s.respin) {
+      b.write('\n  Nachdrehung (wandernde Joker):');
+    } else if (s.expanded) {
       b.write('\n  Ausgebreitet:');
     } else if (i > 0) {
       b.write('\n  Kaskade ${i + 1} ×${s.multiplier}:');
     }
     b.write(_gridText(game, s.grid));
+    if (s.giant != null) b.write('\n  Riesensymbol ${s.giant!.$3} × ${s.giant!.$3} ab Walze ${s.giant!.$1 + 1}');
     if (i == 0 && o.coins.isNotEmpty) {
       b.write('\n  Münzen: ${[for (final v in o.coins.values) coinText(rules, v, stake)].join(', ')}');
     }

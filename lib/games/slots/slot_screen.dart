@@ -37,8 +37,12 @@ class _Shown {
     this.multiplier = 1,
     this.sticky = const {},
     this.wildMults = const {},
+    this.giant,
   });
   final List<List<int>> grid;
+
+  /// Riesensymbol: erste Walze, erste Reihe, Größe.
+  final (int, int, int)? giant;
 
   /// Multiplikatoren der Joker (Feld = Walze * rows + Reihe), nur im ersten Bild.
   final Map<int, int> wildMults;
@@ -219,6 +223,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
             wildMults: i == 0 ? out.wildMults : const {},
             multiplier: s.multiplier,
             sticky: free && _rules.stickyWildsInFree ? {..._engine.stickyWilds} : const {},
+            giant: s.giant,
           );
         });
         if (i > 0) {
@@ -226,9 +231,17 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
           _app.sfx.play(Sound.reelStop);
         }
         running += s.win;
-        if (s.expanded) {
+        if (s.respin) {
+          final n = out.steps.take(i + 1).where((x) => x.respin).length;
           setState(() {
-            _message = '${widget.game.symbolNames[s.wins.first.symbol]} breitet sich aus: +${formatCoins(s.win)}';
+            _message = 'Joker wandert, Nachdrehung $n${running > 0 ? ': +${formatCoins(running)}' : ''}';
+            _big = running > 0;
+          });
+          if (s.win > 0) _app.sfx.play(Sound.win);
+          if (i < out.steps.length - 1) await _pause(s.win > 0 ? 1100 : 700);
+        } else if (s.expanded) {
+          setState(() {
+            _message = 'Ausgebreitet! +${formatCoins(s.win)}';
             _big = true;
           });
           _app.sfx.play(Sound.bigWin);
@@ -242,6 +255,8 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
           });
           _app.sfx.play(Sound.win);
           if (i < out.steps.length - 1) await _pause(1100);
+        } else if (i < out.steps.length - 1 && out.steps[i + 1].respin) {
+          await _pause(500);
         }
       }
 
@@ -684,7 +699,10 @@ class _ReelPainter extends CustomPainter {
         }
       } else {
         final t = Curves.easeIn.transform(drop.value);
+        final g = s.giant;
         for (var row = 0; row < rows; row++) {
+          // Felder des Riesensymbols werden unten am Stück gemalt
+          if (g != null && r >= g.$1 && r < g.$1 + g.$3 && row >= g.$2 && row < g.$2 + g.$3) continue;
           final fall = s.falls?[r][row] ?? 0;
           final y = (row - fall * (1 - t)) * ch;
           final box = _cell(r * cw, y, cw, ch);
@@ -707,6 +725,23 @@ class _ReelPainter extends CustomPainter {
       }
     }
 
+    final g = s?.giant;
+    if (s != null && g != null) {
+      final ch = size.height / rules.rows;
+      final block = Rect.fromLTWH(g.$1 * cw, g.$2 * ch, g.$3 * cw, g.$3 * ch);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(block.deflate(4), const Radius.circular(16)),
+        Paint()..color = const Color(0x55000000),
+      );
+      game.paintSymbol(canvas, _cell(block.left, block.top, block.width, block.height), s.grid[g.$1][g.$2]);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(block.deflate(4), const Radius.circular(16)),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..color = const Color(0xCCFFE9A8),
+      );
+    }
     if (s == null || drop.value < 1) return;
     if (s.wins.isNotEmpty) {
       final index = winIndex.value % s.wins.length;

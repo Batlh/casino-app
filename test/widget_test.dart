@@ -86,6 +86,7 @@ void main() {
         SlotScreen(game: pharaonengold),
         SlotScreen(game: zauberbibliothek),
         SlotScreen(game: bonbonfabrik),
+        SlotScreen(game: goldgraeber),
         HoldemScreen(),
         HoldemScreen(draw: true),
         BingoScreen(),

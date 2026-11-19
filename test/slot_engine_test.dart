@@ -436,4 +436,51 @@ void main() {
       }
     });
   });
+
+  group('Goldgräber (wandernde Joker, Riesensymbol)', () {
+    final rules = goldgraeber.rules;
+
+    test('Joker wandert bis links hinaus, jede Nachdrehung wird gewertet', () {
+      final e = SlotEngine(rules, rng: Random(5));
+      final o = e.playGrid([
+        [0, 1, 2],
+        [10, 11, 3],
+        [4, 5, 0],
+        [1, symWild, 2],
+        [3, 4, 10],
+      ], 100, stops: const [0, 0, 0, 0, 0]);
+      final respins = o.steps.where((s) => s.respin).toList();
+      expect(respins.length, greaterThanOrEqualTo(3), reason: 'Walze 4 → 3 → 2 → 1');
+      expect(respins[0].grid[2][1], symWild);
+      expect(respins[1].grid[1][1], symWild);
+      expect(respins[2].grid[0][1], symWild);
+      for (final s in respins) {
+        expect(s.grid.expand((c) => c).contains(symScatter), isFalse, reason: 'keine Streusymbole in Nachdrehungen');
+        expect(s.win, s.wins.fold(0, (a, w) => a + w.payout));
+      }
+      expect(o.total, o.steps.fold(0, (a, s) => a + s.win));
+    });
+
+    test('Ohne Joker keine Nachdrehung, in Freispielen nie', () {
+      final e = SlotEngine(rules, rng: Random(6));
+      for (var i = 0; i < 400; i++) {
+        final o = e.play(100, free: true);
+        expect(o.steps.any((s) => s.respin), isFalse);
+      }
+    });
+
+    test('Freispiele: 3 × 3 Riesensymbol auf den mittleren Walzen', () {
+      final e = SlotEngine(rules, rng: Random(7));
+      for (var i = 0; i < 200; i++) {
+        final o = e.play(100, free: true);
+        final g = o.steps.first.giant!;
+        expect(g, (1, 0, 3));
+        final sym = o.firstGrid[1][0];
+        expect(sym, isNot(symScatter));
+        for (var r = 1; r < 4; r++) {
+          expect(o.firstGrid[r], [sym, sym, sym]);
+        }
+      }
+    });
+  });
 }

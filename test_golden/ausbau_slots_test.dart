@@ -15,7 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens_test.dart' show loadFonts;
 
-final _games = [zauberbibliothek, bonbonfabrik];
+final _games = [zauberbibliothek, bonbonfabrik, goldgraeber];
 
 class _Sheet extends CustomPainter {
   @override
@@ -76,11 +76,11 @@ void main() {
   }
 
   testWidgets('Symbole Ausbau', (tester) async {
-    tester.view.physicalSize = const Size(1650, 300);
+    tester.view.physicalSize = const Size(1650, 450);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.runAsync(loadFonts);
-    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1650, 300), painter: _Sheet()))));
+    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1650, 450), painter: _Sheet()))));
     await expectLater(find.byType(RepaintBoundary).first, matchesGoldenFile('goldens/symbole_ausbau.png'));
   });
 
@@ -101,7 +101,7 @@ void main() {
     await spin(tester);
     await tester.pump(const Duration(milliseconds: 300));
     await snap('buch_ausloeser');
-    await until(tester, 'breitet sich aus');
+    await until(tester, 'Ausgebreitet');
     await tester.pump(const Duration(milliseconds: 500));
     await snap('buch_ausgebreitet');
     await finish(tester);
@@ -123,6 +123,34 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1100));
     await tester.pump(const Duration(milliseconds: 500));
     await snap('bonbon_kaskade');
+    await finish(tester);
+  });
+
+  testWidgets('Goldgräber: wandernde Joker und Riesensymbol', (tester) async {
+    await tester.runAsync(loadFonts);
+    final game = goldgraeber;
+    final stake = game.stakes[2];
+    var seed = 1;
+    while (SlotEngine(game.rules, rng: Random(seed)).play(stake).steps.where((s) => s.respin).length < 2) {
+      seed++;
+    }
+    await start(tester, SlotScreen(game: game, seed: seed));
+    await spin(tester);
+    await tester.pump(const Duration(milliseconds: 100));
+    await snap('gold_joker');
+    await until(tester, 'Nachdrehung 1');
+    await tester.pump(const Duration(milliseconds: 450));
+    await snap('gold_nachdrehung');
+    // Erste Drehung startet Freispiele: Riesensymbol
+    var free = 1;
+    for (; free < 400000; free++) {
+      if (SlotEngine(game.rules, rng: Random(free)).play(stake).freeSpinsWon > 0) break;
+    }
+    await start(tester, SlotScreen(game: game, seed: free));
+    await spin(tester);
+    await until(tester, 'Noch 7 Freispiele');
+    await tester.pump(const Duration(milliseconds: 2400));
+    await snap('gold_riese');
     await finish(tester);
   });
 }

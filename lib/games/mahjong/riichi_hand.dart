@@ -247,7 +247,7 @@ class HandScore {
   }
 
   String get limitName {
-    if (yakuman > 0) return yakuman > 1 ? '${yakuman}-faches Yakuman' : 'Yakuman';
+    if (yakuman > 0) return yakuman > 1 ? '$yakuman-faches Yakuman' : 'Yakuman';
     if (han >= 13) return 'Gezähltes Yakuman';
     if (han >= 11) return 'Sanbaiman';
     if (han >= 8) return 'Baiman';

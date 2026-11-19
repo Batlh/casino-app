@@ -149,7 +149,7 @@ class _ThreeCardScreenState extends State<ThreeCardScreen> with NetSharedTable {
       _message = folded
           ? 'Ausgestiegen. Die Bank hatte ${tcRankNames[round.dealer.rank]}.$pp'
           : '${r.text}: ${tcRankNames[round.player.rank]} gegen ${tcRankNames[round.dealer.rank]}'
-              '${r.dealerQualifies ? '' : ' (spielt nicht)'}. ${net > 0 ? '+${formatCoins(net)}' : (net == 0 ? 'Einsatz zurück' : '${formatCoins(net)}')}.$pp';
+              '${r.dealerQualifies ? '' : ' (spielt nicht)'}. ${net > 0 ? '+${formatCoins(net)}' : (net == 0 ? 'Einsatz zurück' : formatCoins(net))}.$pp';
     });
     _app.wallet.refillIfBroke();
     final next = _pending;

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'bonbon_art.dart';
 import 'buch_art.dart';
 import 'drachen_art.dart';
+import 'gold_art.dart';
 import 'frucht_art.dart';
 import 'garten_art.dart';
 import 'jahrmarkt_art.dart';
@@ -798,4 +799,50 @@ const bonbonfabrik = SlotGame(
   freeSpinLine: 'Freispiel, Kaskaden ab ×2',
 );
 
-const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb, fruchtlawine, pharaonengold, zauberbibliothek, bonbonfabrik];
+/// Wandernde Joker im Grundspiel, Riesensymbol 3 × 3 in Freispielen.
+const goldgraeber = SlotGame(
+  name: 'Goldgräber',
+  blurb: '243 Wege, wandernde Joker, Riesensymbole',
+  rules: SlotRules(
+    rows: 3,
+    mode: PayMode.ways,
+    waysDivisor: 20,
+    strips: goldStrips,
+    linePays: {
+      0: [2, 5, 15],
+      1: [2, 5, 15],
+      10: [2, 6, 18],
+      11: [2, 6, 18],
+      2: [3, 8, 25],
+      3: [4, 12, 40],
+      4: [6, 16, 60],
+      5: [12, 35, 125],
+    },
+    walkingWilds: true,
+    giantInFree: 3,
+    scatterPays: [2, 10, 50],
+    freeSpins: 8,
+  ),
+  stakes: [20, 40, 100, 200, 400, 1000],
+  symbolNames: ['Hufeisen', 'Laterne', 'Kaktus', 'Sheriffstern', 'Goldsack', 'Goldklumpen', 'Hut', 'Schatzkarte', '', '', 'Spitzhacke', 'Waschpfanne'],
+  paintSymbol: paintGoldSymbol,
+  paintBackdrop: paintGoldBackdrop,
+  background: BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF2B1433), Color(0xFF3A1A0C), Color(0xFF1A0B05)],
+    ),
+  ),
+  frame: [Color(0xFFFFE0B2), Color(0xFFD2691E), Color(0xFF5A2410)],
+  lobbyColor: Color(0xFF9C4A1A),
+  featureText:
+      'Fünf Walzen, 243 Wege. Landet im Grundspiel ein Hut, rückt er nach der Drehung eine Walze nach links und alle anderen '
+      'Felder drehen gratis neu, bis er links hinauswandert. Drei Schatzkarten auf den Walzen 1, 3 und 5 zahlen das 2-Fache '
+      'des Einsatzes und starten 8 Freispiele. Dort landet auf den drei mittleren Walzen in jedem Freispiel ein '
+      'Riesensymbol, 3 × 3 Felder groß.',
+  wildText: 'Der Hut ersetzt jedes Symbol außer der Schatzkarte und wandert im Grundspiel nach links.',
+  freeSpinLine: 'Freispiel mit Riesensymbol',
+);
+
+const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb, fruchtlawine, pharaonengold, zauberbibliothek, bonbonfabrik, goldgraeber];

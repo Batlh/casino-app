@@ -156,7 +156,7 @@ class _ArcadeScreenState extends State<ArcadeScreen> with SingleTickerProviderSt
       setState(() => _flash = i);
     }
     final up = _rng.nextBool();
-    debugLog.info('spielhalle', 'Risiko bei ${_ladder}: ${up ? 'hoch' : 'weg'}');
+    debugLog.info('spielhalle', 'Risiko bei $_ladder: ${up ? 'hoch' : 'weg'}');
     setState(() {
       _gambling = false;
       _flash = 0;
