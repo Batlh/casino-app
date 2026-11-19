@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/debug_log.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
+import '../../core/wallet.dart';
 import '../../core/theme.dart';
 import '../../ui/guide.dart';
 import '../../ui/widgets.dart';
@@ -44,12 +45,21 @@ class _HiloScreenState extends State<HiloScreen> {
 
   AppScope get _app => AppScope.of(context);
 
+  /// Für dispose gemerkt (dort darf nicht mehr nach AppScope gesucht werden).
+  Wallet? _wallet;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _wallet ??= _app.wallet;
+  }
+
   @override
   void dispose() {
     // Wer mitten in der Leiter geht, nimmt den bisherigen Gewinn mit
     if (_g.canCashOut) {
       final w = _g.cashOut();
-      if (w > 0) _app.wallet.credit(w);
+      if (w > 0) _wallet?.credit(w);
     }
     super.dispose();
   }

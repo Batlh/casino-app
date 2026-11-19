@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/debug_log.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
+import '../../core/wallet.dart';
 import '../../ui/guide.dart';
 import '../../ui/widgets.dart';
 import '../lose/lose_art.dart';
@@ -58,10 +59,19 @@ class _ArcadeScreenState extends State<ArcadeScreen> with SingleTickerProviderSt
 
   AppScope get _app => AppScope.of(context);
 
+  /// Für dispose gemerkt (dort darf nicht mehr nach AppScope gesucht werden).
+  Wallet? _wallet;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _wallet ??= _app.wallet;
+  }
+
   @override
   void dispose() {
     // Offene Leiter wird beim Gehen angenommen
-    if (_ladder > 0) _app.wallet.credit(_ladder);
+    if (_ladder > 0) _wallet?.credit(_ladder);
     _spin.dispose();
     super.dispose();
   }
@@ -178,7 +188,7 @@ class _ArcadeScreenState extends State<ArcadeScreen> with SingleTickerProviderSt
         gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF3A0D2E), Color(0xFF12030F)]),
       ),
       child: LayoutBuilder(builder: (context, box) {
-        final reelW = math.min(120.0, (box.maxWidth - 120) / 3);
+        final reelW = math.min(120.0, (box.maxWidth - 150) / 3);
         return SingleChildScrollView(
           padding: const EdgeInsets.all(12),
           child: Column(

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/debug_log.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
+import '../../core/wallet.dart';
 import '../../ui/guide.dart';
 import '../../ui/net_shared_mixin.dart';
 import '../../ui/widgets.dart';
@@ -57,12 +58,21 @@ class _ThreeCardScreenState extends State<ThreeCardScreen> with NetSharedTable {
   AppScope get _app => AppScope.of(context);
   int get _pp => _pairPlusOn ? _ante : 0;
 
+  /// Für dispose gemerkt (dort darf nicht mehr nach AppScope gesucht werden).
+  Wallet? _wallet;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _wallet ??= _app.wallet;
+  }
+
   @override
   void dispose() {
     // Mitten in der Entscheidung gehen gilt als Aussteigen
     if (_deciding) {
       final r = _round!.fold();
-      if (r.paid > 0) _app.wallet.credit(r.paid);
+      if (r.paid > 0) _wallet?.credit(r.paid);
     }
     sharedDispose();
     super.dispose();
