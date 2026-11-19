@@ -1,4 +1,4 @@
-package de.privat.gluckspfennig
+package io.github.batlh.gluckspfennig
 
 import android.content.Context
 import android.content.Intent

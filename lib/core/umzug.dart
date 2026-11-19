@@ -14,7 +14,7 @@ const newOrg = 'io.github.batlh';
 const prefsFile = 'shared_preferences.json';
 
 /// Läuft die App schon unter dem neuen Namen? Erst dann fragt die Lobby nach einer Sicherung aus der alten App.
-const packageRenamed = false;
+const packageRenamed = true;
 
 /// Beim Start nichts gespeichert gefunden (setzt main.dart).
 bool freshInstall = false;
