@@ -2,6 +2,31 @@
 
 Ideen und offene Vorhaben, Stand 19.11.2026. Reihenfolge ist noch offen. Erledigt: Glücksrad, Entchen angeln, Fruchtlawine, Mega-Slot (Pharaonengold), Flippertische Angelsee, Dschungeltempel, Zirkus.
 
+## Ausbau (Zweig ausbau, Stand 19.11.2026)
+Abarbeitung nach und nach, jeder Schritt mit Tests und eigenem Commit. Nach main nur mit OK.
+
+1. Lobby: Favoriten (Stern auf jedem Automaten, eigener Bereich oben) und Suche
+2. Statistik je Spiel (Runden, größter Gewinn, Einsatz/Auszahlung) als Grundlage für 3 und 4
+3. Erfolge und Abzeichen
+4. Tagesaufgaben mit Bonusmünzen
+5. Höher oder Tiefer (Kartenleiter), auch als Risikoleiter für Slots nutzbar
+6. Three Card Poker (gegen die Bank, später gemeinsamer Geber im Netz)
+7. Roulette-Ausbau: französisch mit Kesselansagen (Nachbarn, Tiers, Orphelins), amerikanisch mit Doppelnull
+8. Slot „Spielhalle“: Retro-Geldspielautomat mit Risikoleiter, Sonderspielen, Halten und Nachschieben
+9. Slot mit Buch-Mechanik (sich ausdehnendes Sondersymbol in Freispielen), eigenes Thema
+10. Slot mit Cluster-Gewinnen (7 × 7, ab 5 zusammenhängenden, Kaskaden)
+11. Slot mit wandernden Jokern und Riesensymbolen
+12. Slot mit endlosen Walzen
+13. Pachislo (Walzen selbst stoppen, Geschick)
+14. Münzschieber (Forge2D, Draufsicht mit Schräge, Sonderteile)
+15. Greifautomat (Forge2D)
+16. Pferderennen vom Jahrmarkt (Kugeln rollen, im Netz gemeinsam)
+17. Turniere im Netz (feste Zeit oder feste Chips, Rangliste)
+18. Schnellnachrichten am Netztisch (feste Knöpfe)
+19. Hilfe: Liste aller Spiele mit Kurzbeschreibung, Bilder in den Kapiteln
+
+Nur durch dich möglich: Test im echten WLAN mit mehreren Geräten.
+
 ## Neue Spiele
 
 ### Fruchtlawine (Slot)
