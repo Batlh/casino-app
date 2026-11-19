@@ -108,8 +108,8 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
     for (var r = 0; r < _rules.reels; r++) _rules.strips[r].take(_rules.rows).toList(),
   ];
 
-  /// Reihen je Walze im Ergebnis (bei wechselnder Höhe verschieden).
-  late List<int> _heights = List.filled(_rules.reels, _rules.rows);
+  /// Reihen je Walze im Ergebnis (bei wechselnder Höhe verschieden, 0 für geschlossene endlose Walzen).
+  late List<int> _heights = [for (var r = 0; r < _rules.reels; r++) _rules.growing && r >= _rules.startReels ? 0 : _rules.rows];
 
   SlotRules get _rules => widget.game.rules;
   List<int> get _stakes => widget.game.stakes;
@@ -233,8 +233,11 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
         running += s.win;
         if (s.respin) {
           final n = out.steps.take(i + 1).where((x) => x.respin).length;
+          final open = s.grid.where((c) => c.isNotEmpty).length;
           setState(() {
-            _message = 'Joker wandert, Nachdrehung $n${running > 0 ? ': +${formatCoins(running)}' : ''}';
+            _message = _rules.growing
+                ? '$open Walzen${s.multiplier > 1 ? ' ×${s.multiplier}' : ''}${running > 0 ? ': +${formatCoins(running)}' : ''}'
+                : 'Joker wandert, Nachdrehung $n${running > 0 ? ': +${formatCoins(running)}' : ''}';
             _big = running > 0;
           });
           if (s.win > 0) _app.sfx.play(Sound.win);
@@ -682,6 +685,10 @@ class _ReelPainter extends CustomPainter {
     final s = shown;
     for (var r = 0; r < reels; r++) {
       final rows = s?.grid[r].length ?? heights[r];
+      if (rows == 0) {
+        _paintClosed(canvas, Rect.fromLTWH(r * cw, 0, cw, size.height));
+        continue;
+      }
       final ch = size.height / rows;
       canvas.save();
       canvas.clipRect(Rect.fromLTWH(r * cw, 0, cw, size.height));
@@ -777,6 +784,26 @@ class _ReelPainter extends CustomPainter {
         }
       }
     }
+  }
+
+  /// Geschlossene endlose Walze: abgedunkelt mit Schloss.
+  void _paintClosed(Canvas canvas, Rect col) {
+    canvas.drawRect(col, Paint()..color = const Color(0xAA000000));
+    final c = col.center;
+    final s = math.min(col.width, 60.0) * 0.4;
+    final lock = Paint()..color = const Color(0x88FFE9A8);
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: c.translate(0, s * 0.25), width: s, height: s * 0.8), Radius.circular(s * 0.12)), lock);
+    canvas.drawArc(
+      Rect.fromCenter(center: c.translate(0, -s * 0.15), width: s * 0.66, height: s * 0.8),
+      math.pi,
+      math.pi,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = s * 0.14
+        ..color = const Color(0x88FFE9A8),
+    );
+    canvas.drawLine(Offset(col.left, 0), Offset(col.left, col.bottom), Paint()..color = const Color(0x44FFE9A8));
   }
 
   /// Feld für ein Symbol: quadratisch in der Mitte der Zelle.

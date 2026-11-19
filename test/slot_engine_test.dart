@@ -483,4 +483,40 @@ void main() {
       }
     });
   });
+
+  group('Runenpfad (endlose Walzen)', () {
+    final rules = runenpfad.rules;
+
+    test('Start mit drei offenen Walzen, jeder Gewinn öffnet eine weitere', () {
+      final e = SlotEngine(rules, rng: Random(8));
+      var grown = 0;
+      for (var i = 0; i < 3000; i++) {
+        final o = e.play(100);
+        expect(o.firstGrid.where((c) => c.isNotEmpty).length, 3);
+        for (var k = 1; k < o.steps.length; k++) {
+          final prev = o.steps[k - 1];
+          final s = o.steps[k];
+          expect(s.respin, isTrue);
+          expect(prev.wins, isNotEmpty, reason: 'nur nach einem Gewinn');
+          expect(s.grid.where((c) => c.isNotEmpty).length, prev.grid.where((c) => c.isNotEmpty).length + 1);
+          expect(s.grid.expand((c) => c).contains(symScatter), isFalse);
+          grown++;
+        }
+        final last = o.steps.last;
+        expect(last.wins.isEmpty || last.grid.every((c) => c.isNotEmpty), isTrue, reason: 'Ende ohne Gewinn oder alle offen');
+        expect(o.total, o.steps.fold(0, (a, s) => a + s.win) + o.scatterWin);
+      }
+      expect(grown, greaterThan(100));
+    });
+
+    test('In Freispielen steigt der Multiplikator mit jeder neuen Walze', () {
+      final e = SlotEngine(rules, rng: Random(9));
+      for (var i = 0; i < 2000; i++) {
+        final o = e.play(100, free: true);
+        for (final s in o.steps) {
+          expect(s.multiplier, s.grid.where((c) => c.isNotEmpty).length - 2);
+        }
+      }
+    });
+  });
 }

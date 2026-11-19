@@ -165,8 +165,11 @@ def play(g, rng, stake, free=False):
     strips = g["strips"]
     reels = len(strips)
     grid, stops = [], []
-    for st in strips:
+    start = g.get("start_reels", 0)
+    for ri, st in enumerate(strips):
         h = rng.choice(g["heights"]) if g.get("heights") else g["rows"]
+        if start and ri >= start:
+            h = 0
         s = rng.randrange(len(st))
         stops.append(s)
         grid.append([st[(s + row) % len(st)] for row in range(h)])
@@ -236,6 +239,33 @@ def play(g, rng, stake, free=False):
             nxt.append(fresh + kept)
         shown = expand(g, nxt, free)
     info["steps"] = steps
+    # Endlose Walzen: jeder Gewinn öffnet rechts eine Walze, alle offenen drehen neu
+    if start:
+        open_ = start
+        last_win = total > 0
+        info["open"] = open_
+        while last_win and open_ < reels:
+            open_ += 1
+            nxt = []
+            for r in range(reels):
+                if r >= open_:
+                    nxt.append([])
+                    continue
+                st = strips[r]
+                i = rng.randrange(len(st))
+                col = []
+                while len(col) < g["rows"]:
+                    x = st[i % len(st)]
+                    i += 1
+                    if x != SCATTER:
+                        col.append(x)
+                nxt.append(col)
+            m = base * ((open_ - start + 1) if free else 1)
+            ws = wins(g, nxt, stake, m)
+            w = sum(x[0] for x in ws)
+            total += w
+            last_win = len(ws) > 0
+            info["open"] = open_
     # Wandernde Joker im Grundspiel: Joker rücken nach links, der Rest dreht neu (ohne Streusymbole)
     if g.get("walking") and not free:
         walking = [(r, row) for r in range(reels) for row in range(len(shown[r])) if shown[r][row] == WILD]

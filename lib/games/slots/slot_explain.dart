@@ -150,6 +150,15 @@ GameGuide slotGuide(SlotGame g) {
             'auf Walze 3 zwei Kirschen, sind das 1 × 3 × 2 = 6 Wege.',
       ),
     GuideSection('Joker', g.wildText),
+    if (r.growing)
+      GuideSection(
+        'Endlose Walzen',
+        'Zu Beginn sind ${r.startReels} Walzen offen, rechts daneben warten ${r.reels - r.startReels} geschlossene. Gewinnt eine '
+            'Drehung, öffnet sich die nächste Walze und alle offenen Walzen drehen gratis neu. Das geht weiter, bis eine '
+            'Drehung nichts gewinnt oder alle ${r.reels} Walzen offen sind. Mehr Walzen heißen mehr Wege und längere Gewinne. '
+            'In Freispielen zählt jede Nachdrehung so oft, wie Walzen dazugekommen sind, plus eins: ×2, ×3 und so weiter. '
+            'Streusymbole gibt es nur in der ersten Drehung.',
+      ),
     if (r.walkingWilds)
       const GuideSection(
         'Wandernde Joker',

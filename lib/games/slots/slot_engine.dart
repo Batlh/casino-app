@@ -104,7 +104,14 @@ class SlotRules {
     this.clusterMin = 5,
     this.walkingWilds = false,
     this.giantInFree = 0,
+    this.startReels = 0,
   });
+
+  /// Endlose Walzen: So viele Walzen sind zu Beginn offen (0 = alle). Jeder Gewinn öffnet rechts die nächste,
+  /// dann drehen alle offenen Walzen gratis neu. In Freispielen zählt jede Nachdrehung so oft, wie Walzen dazugekommen sind, plus eins.
+  final int startReels;
+
+  bool get growing => startReels > 0 && startReels < strips.length;
 
   /// Grundspiel: Joker rücken nach jeder Drehung eine Walze nach links, die übrigen Felder drehen gratis neu,
   /// bis kein Joker mehr im Bild ist.
@@ -602,9 +609,10 @@ class SlotEngine {
     final heights = <int>[];
     final stops = <int>[];
     final grid = <List<int>>[];
-    for (final strip in rules.strips) {
+    for (final (r, strip) in rules.strips.indexed) {
       final hs = rules.heights;
-      final h = hs == null ? rules.rows : hs[_rng.nextInt(hs.length)];
+      // Endlose Walzen: geschlossene Walzen haben keine Felder
+      final h = rules.growing && r >= rules.startReels ? 0 : (hs == null ? rules.rows : hs[_rng.nextInt(hs.length)]);
       final stop = _rng.nextInt(strip.length);
       heights.add(h);
       stops.add(stop);
@@ -761,6 +769,40 @@ class SlotEngine {
           falls: [
             for (var r = 0; r < reels; r++) [for (var row = 0; row < next[r].length; row++) held.contains((r, row)) ? 0 : next[r].length],
           ],
+          respin: true,
+        ));
+      }
+    }
+
+    // Endlose Walzen: nach jedem Gewinn rechts eine Walze mehr, alle offenen drehen neu
+    if (rules.growing) {
+      var open = grid.where((c) => c.isNotEmpty).length;
+      while (steps.last.wins.isNotEmpty && open < reels) {
+        open++;
+        final next = <List<int>>[];
+        for (var r = 0; r < reels; r++) {
+          if (r >= open) {
+            next.add(const []);
+            continue;
+          }
+          final strip = rules.strips[r];
+          var i = _rng.nextInt(strip.length);
+          final col = <int>[];
+          while (col.length < rules.rows) {
+            final x = strip[i % strip.length];
+            i++;
+            if (x != symScatter) col.add(x);
+          }
+          next.add(col);
+        }
+        final mult = baseMult * (free ? open - rules.startReels + 1 : 1);
+        final wins = winsOf(next, stake, mult);
+        steps.add(CascadeStep(
+          grid: next,
+          wins: wins,
+          multiplier: mult,
+          win: wins.fold(0, (a, w) => a + w.payout),
+          falls: [for (final c in next) List.filled(c.length, c.length)],
           respin: true,
         ));
       }

@@ -50,7 +50,7 @@ String describeSlotOutcome(SlotGame game, SpinOutcome o, {required int stake, re
   for (var i = 0; i < o.steps.length; i++) {
     final s = o.steps[i];
     if (s.respin) {
-      b.write('\n  Nachdrehung (wandernde Joker):');
+      b.write(rules.growing ? '\n  Nachdrehung mit ${s.grid.where((c) => c.isNotEmpty).length} Walzen ×${s.multiplier}:' : '\n  Nachdrehung (wandernde Joker):');
     } else if (s.expanded) {
       b.write('\n  Ausgebreitet:');
     } else if (i > 0) {

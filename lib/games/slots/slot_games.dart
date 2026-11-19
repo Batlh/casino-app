@@ -12,6 +12,7 @@ import 'lawine_art.dart';
 import 'jade_art.dart';
 import 'mine_art.dart';
 import 'pharao_art.dart';
+import 'runen_art.dart';
 import 'slot_data.dart';
 import 'slot_data_neu.dart';
 import 'sakura_art.dart';
@@ -845,4 +846,48 @@ const goldgraeber = SlotGame(
   freeSpinLine: 'Freispiel mit Riesensymbol',
 );
 
-const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb, fruchtlawine, pharaonengold, zauberbibliothek, bonbonfabrik, goldgraeber];
+/// Endlose Walzen: drei von acht offen, jeder Gewinn öffnet die nächste.
+const runenpfad = SlotGame(
+  name: 'Runenpfad',
+  blurb: 'Endlose Walzen: jeder Gewinn öffnet eine neue',
+  rules: SlotRules(
+    rows: 3,
+    mode: PayMode.ways,
+    waysDivisor: 10,
+    strips: runenStrips,
+    startReels: 3,
+    linePays: {
+      0: [4, 8, 16, 35, 65, 130],
+      1: [4, 8, 16, 35, 65, 130],
+      10: [4, 9, 20, 40, 85, 170],
+      11: [4, 9, 20, 40, 85, 170],
+      2: [8, 13, 25, 50, 105, 210],
+      3: [13, 21, 42, 105, 210, 425],
+      4: [17, 34, 64, 170, 340, 850],
+      5: [25, 50, 105, 255, 640, 1700],
+    },
+    scatterPays: [3],
+    freeSpins: 8,
+  ),
+  stakes: [10, 20, 50, 100, 200, 500],
+  symbolNames: ['Blauer Runenstein', 'Grüner Runenstein', 'Fackel', 'Schild', 'Trinkhorn', 'Hammer', 'Nordlicht', 'Kompass', '', '', 'Roter Runenstein', 'Violetter Runenstein'],
+  paintSymbol: paintRunenSymbol,
+  paintBackdrop: paintRunenBackdrop,
+  background: BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF06122A), Color(0xFF0A1C36), Color(0xFF050B16)],
+    ),
+  ),
+  frame: [Color(0xFFE0F7FA), Color(0xFF4DD0E1), Color(0xFF1A237E)],
+  lobbyColor: Color(0xFF1B4F72),
+  featureText:
+      'Drei Walzen sind offen, fünf weitere warten rechts. Jeder Gewinn öffnet die nächste Walze und alle offenen Walzen drehen '
+      'gratis neu, bis nichts mehr gewinnt oder alle acht offen sind: bis zu 6.561 Wege. Drei Kompasse zahlen das 3-Fache des '
+      'Einsatzes und starten 8 Freispiele. Dort zählt jede Nachdrehung mehr: mit vier Walzen ×2, mit fünf ×3 und so weiter.',
+  wildText: 'Das Nordlicht ersetzt jedes Symbol außer dem Kompass.',
+  freeSpinLine: 'Freispiel, jede neue Walze zählt mehr',
+);
+
+const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb, fruchtlawine, pharaonengold, zauberbibliothek, bonbonfabrik, goldgraeber, runenpfad];

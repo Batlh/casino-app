@@ -291,6 +291,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         () => _open(const SlotScreen(game: goldgraeber)),
       ),
       _Game(
+        runenpfad.name,
+        runenpfad.blurb,
+        runenpfad.lobbyColor,
+        () => _SlotArt(runenpfad, 5, 6),
+        () => _open(const SlotScreen(game: runenpfad)),
+      ),
+      _Game(
         "Texas Hold'em",
         'No-Limit gegen bis zu fünf Gegner',
         const Color(0xFF7A1F12),

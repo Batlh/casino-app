@@ -15,7 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens_test.dart' show loadFonts;
 
-final _games = [zauberbibliothek, bonbonfabrik, goldgraeber];
+final _games = [zauberbibliothek, bonbonfabrik, goldgraeber, runenpfad];
 
 class _Sheet extends CustomPainter {
   @override
@@ -76,11 +76,11 @@ void main() {
   }
 
   testWidgets('Symbole Ausbau', (tester) async {
-    tester.view.physicalSize = const Size(1650, 450);
+    tester.view.physicalSize = const Size(1650, 600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.runAsync(loadFonts);
-    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1650, 450), painter: _Sheet()))));
+    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1650, 600), painter: _Sheet()))));
     await expectLater(find.byType(RepaintBoundary).first, matchesGoldenFile('goldens/symbole_ausbau.png'));
   });
 
@@ -151,6 +151,26 @@ void main() {
     await until(tester, 'Noch 7 Freispiele');
     await tester.pump(const Duration(milliseconds: 2400));
     await snap('gold_riese');
+    await finish(tester);
+  });
+
+  testWidgets('Runenpfad: endlose Walzen', (tester) async {
+    await tester.runAsync(loadFonts);
+    final game = runenpfad;
+    final stake = game.stakes[2];
+    var seed = 1;
+    while (SlotEngine(game.rules, rng: Random(seed)).play(stake).steps.length < 4) {
+      seed++;
+    }
+    await start(tester, SlotScreen(game: game));
+    await snap('runen_ruhe');
+    await start(tester, SlotScreen(game: game, seed: seed));
+    await spin(tester);
+    await tester.pump(const Duration(milliseconds: 100));
+    await snap('runen_erster');
+    await until(tester, '5 Walzen');
+    await tester.pump(const Duration(milliseconds: 450));
+    await snap('runen_fuenf');
     await finish(tester);
   });
 }
