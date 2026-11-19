@@ -68,6 +68,27 @@ Suche. Noch offen: Bilder in den Kapiteln, Liste aller Spiele mit Kurzbeschreibu
   - Probleme: Tisch wird nicht gefunden (Firewall, Gast-WLAN), Update installieren, Protokoll für Fehlerberichte
 - Inhalte als Daten (eine Datei), damit neue Spiele und Funktionen leicht ergänzt werden.
 
+## Paketname umstellen auf io.github.batlh.gluckspfennig
+Ziel: Android-Apps heißen intern io.github.batlh.<Repo>. Die GitHub-Adresse gehört uns, das passt auch zur kommenden
+Entwicklerprüfung von Google (Paketname wird mit dem Signierschlüssel registriert). Bindestriche sind im Paketnamen nicht
+erlaubt: aus md-leser wird z. B. io.github.batlh.mdleser oder md_leser, für dieses Repo (casino-app) bleibt der App-Name
+gluckspfennig.
+
+Was sich ändert:
+- ci/prepare.sh: --org de.privat → io.github.batlh; ci/update/MainActivity.kt: package-Zeile. Signierschlüssel bleibt gleich.
+- Android sieht eine neue App: Die alte wird nicht ersetzt, das Update aus der App installiert die neue daneben.
+  Daten kommen nur über die Sicherung mit (Einstellungen → Spielstand sichern → als Datei oder Zwischenablage, in der neuen App laden).
+- Am PC und Mac hängt der Speicherort auch am Namen (Windows: Firmenname im AppData-Pfad, Linux: ~/.local/share/<id>,
+  macOS: Bundle-ID). Entweder dort beim ersten Start die alten Daten selbst übernehmen (geht, weil derselbe Benutzerordner),
+  oder den Namen nur unter Android ändern. Vorschlag: Android umstellen, am PC automatisch übernehmen.
+
+Ablauf:
+1. Letzte Version mit altem Namen: Hinweis im Update-Dialog und in den Release-Notes, vorher die Sicherung zu machen.
+   Optional Knopf „Jetzt sichern“ direkt im Update-Dialog.
+2. Version mit neuem Namen: Release-Notes erklären Sichern, Laden in der neuen App, alte App danach löschen.
+   Die neue App zeigt beim ersten Start „Sicherung laden?“, wenn noch keine Daten da sind.
+3. Updater: Erkennt die alte App, dass die neue einen anderen Paketnamen hat, sagt sie das vor dem Installieren.
+
 ## Mehrspieler im lokalen Netzwerk
 - Im Netz spielbar sind alle Mehrspielerspiele: Bingo, Poker (Hold'em, Omaha, Five Card Draw), Mau-Mau, Eins, Skat,
   Schwarze Dame, Pik Dame, Arschloch, Kniffel, Mensch ärgere dich nicht, Leiterspiel, Halma, Backgammon, Viererkette, Memory,
