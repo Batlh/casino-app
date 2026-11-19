@@ -120,7 +120,7 @@ void amStep(AmGame g, Random rng) {
   switch (g.phase) {
     case AmPhase.charleston:
       final p = [for (var i = 0; i < 4; i++) if (g.players[i].pass.length != 3) i].first;
-      g.submitPass(p, g.botPass(p));
+      g.submitPass(p, g.botPass(p, rng));
     case AmPhase.discard:
       final p = g.current;
       switch (amBotTurn(g, p, rng)) {

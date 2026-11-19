@@ -1,6 +1,6 @@
 # Planung
 
-Ideen und offene Vorhaben, Stand 18.11.2026. Reihenfolge ist noch offen. Erledigt: Glücksrad, Entchen angeln, Fruchtlawine, Mega-Slot (Pharaonengold), Flippertische Angelsee, Dschungeltempel, Zirkus.
+Ideen und offene Vorhaben, Stand 19.11.2026. Reihenfolge ist noch offen. Erledigt: Glücksrad, Entchen angeln, Fruchtlawine, Mega-Slot (Pharaonengold), Flippertische Angelsee, Dschungeltempel, Zirkus.
 
 ## Neue Spiele
 
@@ -54,17 +54,31 @@ Nachbauten echter Automaten (keine Namen, Figuren oder Spielelemente bekannter G
 
 Reihenfolge: Bauteile zuerst in der Physik (pinball_table.dart) mit Tests, dann die Tische.
 
+## Hilfeseite in der Lobby
+- Eigener Eintrag „Hilfe“ in der Lobby (gut sichtbar, z. B. Fragezeichen oben und ein Kärtchen unter den Spielen).
+- Kurze Kapitel mit Bildern oder Symbolen, durchsuchbar:
+  - Erste Schritte: Münzen ohne Geldwert, Tagesbonus, Nachfüllen (wann und wie viel)
+  - Im Netzwerk spielen: alle Geräte im selben WLAN, Tisch eröffnen oder beitreten, Name, Adresse von Hand eingeben,
+    was bei Verbindungsabbruch passiert, welche Spiele es gibt und wie sie im Netz laufen (Plätze, Computer, gemeinsamer Tisch)
+  - Einstellungen: Ton, Tempo, Kartennamen, Darstellung, Aktualisieren
+  - Spielstände: was gespeichert wird, Weiterspielen nach dem Schließen
+  - Spielregeln: Verweis auf das Fragezeichen in jedem Spiel, Liste aller Spiele mit Kurzbeschreibung
+  - Probleme: Tisch wird nicht gefunden (Firewall, Gast-WLAN), Update installieren, Protokoll für Fehlerberichte
+- Inhalte als Daten (eine Datei), damit neue Spiele und Funktionen leicht ergänzt werden.
+
 ## Mehrspieler im lokalen Netzwerk
-- Grundgerüst steht (core/net/lan.dart), Bingo, Poker (Hold'em, Omaha, Five Card Draw), Mau-Mau, Eins, Skat, Schwarze Dame, Pik Dame,
-  Arschloch, Kniffel, Mensch ärgere dich nicht, Leiterspiel, Halma, Backgammon und die Brettspiele Reversi,
-  Mühle, Dame, Schach, Go, Shogi und die gemeinsamen Tische Roulette, Glücksrad, Craps, Sic Bo, Keno, Baccarat laufen schon.
-  Einstieg überall auch über die Einstellungen („Im Netzwerk spielen“).
-  Für neue Spiele: core/net/lan_table.dart (Tisch, Warteraum) und ui/net_panels.dart (Bildschirme).
-- Drei Wege: Sicht schicken (Poker, Mau-Mau), Startwert plus Aktionen nachspielen (Eins; ActionLog-Spiele über ui/net_replay_mixin.dart),
+- Im Netz spielbar sind alle Mehrspielerspiele: Bingo, Poker (Hold'em, Omaha, Five Card Draw), Mau-Mau, Eins, Skat,
+  Schwarze Dame, Pik Dame, Arschloch, Kniffel, Mensch ärgere dich nicht, Leiterspiel, Halma, Backgammon, Viererkette, Memory,
+  Reversi, Mühle, Dame, Schach, Go, Shogi, Mahjong (klassische Varianten, Riichi, American) und die gemeinsamen Tische
+  Roulette, Glücksrad, Craps, Sic Bo, Keno, Baccarat, Black Jack und Caribbean Stud.
+  Einstieg überall auch über die Einstellungen („Im Netzwerk spielen“). Einzelautomaten (Slots, Flipper, Pachinko, Lose,
+  Entchen, Video-Poker, Solitär, Shisen-Sho) bleiben ohne Netz.
+- Für neue Spiele: core/net/lan_table.dart (Tisch, Warteraum) und ui/net_panels.dart (Bildschirme).
+- Vier Wege: Sicht schicken (Poker, Mau-Mau), Startwert plus Aktionen nachspielen (Eins; ActionLog-Spiele über ui/net_replay_mixin.dart),
   Züge austauschen (Brettspiele, core/net/net_duel.dart und ui/net_duel_mixin.dart),
-  gemeinsamer Tisch (Ergebnis vom Gastgeber, jeder rechnet selbst ab: ui/net_shared_mixin.dart).
-- Nächste Kandidaten: Viererkette (Zufallssteine), Mahjong (drei Varianten, Ansagen mit Wartefenster),
-  Blackjack (gemeinsamer Geber, jeder spielt seine Hand nacheinander).
+  gemeinsamer Tisch (Ergebnis oder Startwert vom Gastgeber, jeder rechnet selbst ab: ui/net_shared_mixin.dart).
+- Mahjong: Ansagen sammelt der Gastgeber („cl“ an ihn, nicht im Protokoll); erst wenn alle gewählt haben, entscheidet er.
+- Offen: Test im echten WLAN mit mehreren Geräten.
 - Pro Spiel: Züge als Nachrichten, jeder sieht nur seine eigenen Karten, Computer füllen freie Plätze.
 
 ## Sonstiges
