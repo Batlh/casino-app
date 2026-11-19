@@ -277,6 +277,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         () => _open(const SlotScreen(game: zauberbibliothek)),
       ),
       _Game(
+        bonbonfabrik.name,
+        bonbonfabrik.blurb,
+        bonbonfabrik.lobbyColor,
+        () => _SlotArt(bonbonfabrik, 5, 6),
+        () => _open(const SlotScreen(game: bonbonfabrik)),
+      ),
+      _Game(
         "Texas Hold'em",
         'No-Limit gegen bis zu fünf Gegner',
         const Color(0xFF7A1F12),

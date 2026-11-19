@@ -379,4 +379,61 @@ void main() {
       expect(o.steps.any((s) => s.expanded), isFalse);
     });
   });
+
+  group('Bonbonfabrik (Gruppen)', () {
+    final rules = bonbonfabrik.rules;
+    List<List<int>> filled() => [
+          for (var r = 0; r < 7; r++) [for (var row = 0; row < 7; row++) const [0, 1, 10, 2, 11, 4, 0][(r * 3 + row * 5) % 7]],
+        ];
+
+    test('Raster ohne Gruppe gewinnt nichts', () {
+      final o = SlotEngine(rules, rng: Random(1)).playGrid(filled(), 100);
+      expect(o.steps.first.wins, isEmpty);
+    });
+
+    test('Fünf zusammenhängende gleiche bilden eine Gruppe, schräg zählt nicht', () {
+      final g = filled();
+      // L-Form aus Lutschern: (0,0) (0,1) (0,2) (1,2) (2,2)
+      for (final (r, row) in [(0, 0), (0, 1), (0, 2), (1, 2), (2, 2)]) {
+        g[r][row] = 5;
+      }
+      g[3][3] = 5; // nur schräg daneben
+      final e = SlotEngine(rules, rng: Random(1));
+      final w = e.winsOf(g, 100, 1).where((w) => w.symbol == 5).single;
+      expect(w.kind, WinKind.cluster);
+      expect(w.count, 5);
+      expect(w.payout, 800);
+      expect(w.cells, isNot(contains((3, 3))));
+    });
+
+    test('Joker verbindet und zählt für zwei Symbole', () {
+      final g = filled();
+      for (final (r, row) in [(0, 0), (1, 0), (2, 0), (3, 0)]) {
+        g[r][row] = 5;
+      }
+      for (final (r, row) in [(4, 1), (5, 1), (6, 1), (6, 2)]) {
+        g[r][row] = 3;
+      }
+      g[4][0] = symWild;
+      final wins = SlotEngine(rules, rng: Random(1)).winsOf(g, 100, 1);
+      expect(wins.where((w) => w.symbol == 5).single.count, 5);
+      expect(wins.where((w) => w.symbol == 3).single.count, 5);
+    });
+
+    test('Große Gruppen zahlen den letzten Betrag', () {
+      expect(rules.payFor(5, 15), 80000);
+      expect(rules.payFor(5, 30), 80000);
+      expect(rules.payFor(5, 4), 0);
+    });
+
+    test('Kaskaden behalten 7 × 7', () {
+      final e = SlotEngine(rules, rng: Random(9));
+      for (var i = 0; i < 300; i++) {
+        for (final s in e.play(100).steps) {
+          expect(s.grid.length, 7);
+          expect(s.grid.every((c) => c.length == 7), isTrue);
+        }
+      }
+    });
+  });
 }

@@ -15,6 +15,9 @@ enum PayMode {
 
   /// Wege: gleiche Symbole auf nebeneinanderliegenden Walzen, egal in welcher Reihe.
   ways,
+
+  /// Gruppen: mindestens clusterMin gleiche Symbole, die waagrecht oder senkrecht aneinander grenzen.
+  cluster,
 }
 
 /// Hold & Spin: Münzen bleiben liegen, jede neue Münze setzt die Respins zurück.
@@ -98,7 +101,11 @@ class SlotRules {
     this.scatterWild = false,
     this.expandingInFree = false,
     this.expandingChoices = const [0, 1, 2, 3, 4, 5],
+    this.clusterMin = 5,
   });
+
+  /// Gruppen: kleinste Gruppe, die zahlt. linePays[Symbol][0] gilt für diese Größe, der letzte Eintrag für alle größeren.
+  final int clusterMin;
 
   /// Das Streusymbol ersetzt auf den Linien auch jedes andere Symbol (zahlt selbst aber nur als Streusymbol).
   final bool scatterWild;
@@ -166,16 +173,22 @@ class SlotRules {
   bool get hasScatter => scatterPays.isNotEmpty;
   bool get cascades => cascade.isNotEmpty;
 
-  /// Einsatzteiler: Linienzahl oder Wege-Teiler.
+  /// Einsatzteiler: Linienzahl oder Wege-Teiler (auch bei Gruppen).
   int get betDivisor => mode == PayMode.lines ? lines.length : waysDivisor;
+
+  /// Anzahl gleicher Symbole, für die linePays[Symbol][0] gilt.
+  int get payOffset => mode == PayMode.cluster ? clusterMin : 3;
 
   int payFor(int symbol, int count) => _pay(symbol, count);
 
   int _pay(int symbol, int count) {
     final pays = linePays[symbol];
     if (pays == null) return 0;
-    final i = count - 3;
-    return i >= 0 && i < pays.length ? pays[i] : 0;
+    final i = count - payOffset;
+    if (i < 0) return 0;
+    // Gruppen: Der letzte Betrag gilt auch für alle größeren
+    if (mode == PayMode.cluster) return pays[i < pays.length ? i : pays.length - 1];
+    return i < pays.length ? pays[i] : 0;
   }
 
   /// Bewertet eine Linie. Liefert Symbol, Anzahl und Vielfaches oder null.
@@ -230,14 +243,23 @@ enum WinKind {
 
   /// Ausgebreitetes Sondersymbol der Buch-Freispiele, zahlt auf allen Linien.
   expand,
+
+  /// Gruppe aneinandergrenzender gleicher Symbole.
+  cluster,
 }
 
-/// Ein Gewinn: auf einer Linie (line ≥ 0), über Wege (line = -1) oder als ausgebreitetes Sondersymbol (line = -2).
+/// Ein Gewinn: auf einer Linie (line ≥ 0), über Wege (line = -1), als ausgebreitetes Sondersymbol (line = -2)
+/// oder als Gruppe (line = -3, count ist die Größe der Gruppe).
 class LineWin {
   const LineWin(this.line, this.symbol, this.count, this.payout, {this.ways = 1, this.start = 0, this.cells = const []});
   final int line;
 
-  WinKind get kind => line >= 0 ? WinKind.line : (line == -2 ? WinKind.expand : WinKind.ways);
+  WinKind get kind => switch (line) {
+        -1 => WinKind.ways,
+        -2 => WinKind.expand,
+        -3 => WinKind.cluster,
+        _ => WinKind.line,
+      };
   final int symbol;
 
   /// Anzahl Walzen.
@@ -426,8 +448,50 @@ class SlotEngine {
   }
 
   /// Alle Gewinne eines Rasters, Multiplikator eingerechnet.
-  List<LineWin> winsOf(List<List<int>> shown, int stake, int multiplier, {Map<int, int> wildMults = const {}}) =>
-      rules.mode == PayMode.lines ? _lineWins(shown, stake, multiplier) : _wayWins(shown, stake, multiplier, wildMults);
+  List<LineWin> winsOf(List<List<int>> shown, int stake, int multiplier, {Map<int, int> wildMults = const {}}) => switch (rules.mode) {
+        PayMode.lines => _lineWins(shown, stake, multiplier),
+        PayMode.ways => _wayWins(shown, stake, multiplier, wildMults),
+        PayMode.cluster => _clusterWins(shown, stake, multiplier),
+      };
+
+  /// Gruppen: je Symbol alle zusammenhängenden Flächen (waagrecht und senkrecht) aus dem Symbol und Jokern,
+  /// die mindestens ein echtes Symbol enthalten. Ein Joker kann zu Gruppen verschiedener Symbole gehören.
+  List<LineWin> _clusterWins(List<List<int>> shown, int stake, int multiplier) {
+    final wins = <LineWin>[];
+    final reels = shown.length;
+    for (final sym in rules.linePays.keys) {
+      if (sym == symWild) continue;
+      final seen = <(int, int)>{};
+      for (var r = 0; r < reels; r++) {
+        for (var row = 0; row < shown[r].length; row++) {
+          if (shown[r][row] != sym || seen.contains((r, row))) continue;
+          final group = <(int, int)>[];
+          final todo = [(r, row)];
+          seen.add((r, row));
+          while (todo.isNotEmpty) {
+            final (cr, crow) = todo.removeLast();
+            group.add((cr, crow));
+            for (final (dr, drow) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
+              final nr = cr + dr;
+              final nrow = crow + drow;
+              if (nr < 0 || nr >= reels || nrow < 0 || nrow >= shown[nr].length) continue;
+              final x = shown[nr][nrow];
+              if ((x == sym || x == symWild) && seen.add((nr, nrow))) todo.add((nr, nrow));
+            }
+          }
+          // Joker gehören nur für dieses Symbol zur Gruppe, für das nächste Symbol wieder frei
+          seen.removeWhere((c) => shown[c.$1][c.$2] == symWild);
+          final pay = rules._pay(sym, group.length);
+          if (pay > 0) {
+            group.sort((a, b) => a.$1 != b.$1 ? a.$1 - b.$1 : a.$2 - b.$2);
+            final payout = pay * stake * multiplier ~/ rules.waysDivisor;
+            wins.add(LineWin(-3, sym, group.length, payout, start: group.first.$1, cells: group));
+          }
+        }
+      }
+    }
+    return wins;
+  }
 
   List<LineWin> _lineWins(List<List<int>> shown, int stake, int multiplier) {
     final lineBet = stake ~/ rules.lineCount;

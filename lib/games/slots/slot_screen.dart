@@ -232,6 +232,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
             _big = true;
           });
           _app.sfx.play(Sound.bigWin);
+          await _pause(1600);
         } else if (s.win > 0) {
           setState(() {
             _message = out.steps.where((x) => !x.expanded).length > 1
@@ -840,6 +841,9 @@ String winText(SlotGame game, LineWin w, {int multiplier = 1}) {
     return '${w.count} Walzen ${game.symbolNames[w.symbol]} auf allen ${game.rules.lineCount} Linien'
         '${multiplier > 1 ? ' ×$multiplier' : ''} = ${formatCoins(w.payout)}';
   }
+  if (w.kind == WinKind.cluster) {
+    return 'Gruppe ${w.count} × ${game.symbolNames[w.symbol]}${multiplier > 1 ? ' ×$multiplier' : ''} = ${formatCoins(w.payout)}';
+  }
   final head = w.line >= 0 ? 'Linie ${w.line + 1}: ' : '';
   final ways = w.line < 0 ? ', ${w.ways} ${w.ways == 1 ? 'Weg' : 'Wege'}' : '';
   final from = w.line < 0 && w.start > 0 ? ' ab Walze ${w.start + 1}' : '';
@@ -932,6 +936,7 @@ class _PayTableSheet extends StatelessWidget {
     final p = Palette.of(context);
     final rules = game.rules;
     final ways = rules.mode == PayMode.ways;
+    final cluster = rules.mode == PayMode.cluster;
     final style = TextStyle(color: p.ink, fontSize: 16);
     final soft = style.copyWith(fontSize: 14, color: p.inkSoft);
     String amount(int pay) {
@@ -975,7 +980,9 @@ class _PayTableSheet extends StatelessWidget {
             Text('Gewinnplan', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 4),
             Text(
-              ways
+              cluster
+                  ? 'Einsatz ${formatCoins(stake)}. Die Zahl ist die Größe der Gruppe, daneben steht der Gewinn.'
+                  : ways
                   ? 'Einsatz ${formatCoins(stake)}. Die Beträge gelten je Weg. Wie die Wege gezählt werden, steht unter der Tabelle.'
                   : 'Einsatz ${formatCoins(stake)} auf ${rules.lineCount} Linien. Gewertet wird von links nach rechts.',
               style: TextStyle(color: p.inkSoft, fontSize: 15),
@@ -991,7 +998,8 @@ class _PayTableSheet extends StatelessWidget {
                     Text(
                       [
                         for (var i = 0; i < rules.linePays[sym]!.length; i++)
-                          '${i + 3} gleiche: ${amount(rules.linePays[sym]![i])}',
+                          '${i + rules.payOffset}${cluster && i == rules.linePays[sym]!.length - 1 ? '+' : ''}'
+                              '${cluster ? '' : ' gleiche'}: ${amount(rules.linePays[sym]![i])}',
                       ].join(', '),
                       style: soft,
                     ),
@@ -1051,7 +1059,13 @@ class _PayTableSheet extends StatelessWidget {
                 ),
               ),
             ],
-            if (!ways) ...[
+            if (cluster) ...[
+              const SizedBox(height: 14),
+              Text('So zählen Gruppen', style: style.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text(clusterText(rules), style: soft),
+            ],
+            if (rules.mode == PayMode.lines) ...[
               const SizedBox(height: 16),
               Text('Gewinnlinien', style: style.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 4),

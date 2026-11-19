@@ -15,6 +15,9 @@ String _gridText(SlotGame game, List<List<int>> grid) {
 }
 
 String _winText(SlotGame game, SlotRules rules, List<List<int>> grid, LineWin w) {
+  if (w.kind == WinKind.cluster) {
+    return '\n  Gruppe ${w.count} × ${game.symbolNames[w.symbol]} = ${w.payout}';
+  }
   if (w.kind == WinKind.expand) {
     return '\n  Sondersymbol ${game.symbolNames[w.symbol]} auf ${w.count} Walzen, alle ${rules.lineCount} Linien = ${w.payout}';
   }
@@ -35,6 +38,8 @@ String describeSlotOutcome(SlotGame game, SpinOutcome o, {required int stake, re
   final b = StringBuffer('${game.name} ${free ? 'Freispiel' : 'Einsatz $stake'}');
   if (rules.mode == PayMode.lines) {
     b.write(' · ${rules.lineCount} Linien à ${stake ~/ rules.lineCount}');
+  } else if (rules.mode == PayMode.cluster) {
+    b.write(' · Gruppen ab ${rules.clusterMin}');
   } else {
     b.write(' · Wege${rules.waysAnywhere ? ' überall' : ''}');
   }

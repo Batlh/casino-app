@@ -51,6 +51,12 @@ String waysExampleText(SlotRules r) {
       'zählt für jedes Symbol mit, auch für mehrere Symbole gleichzeitig, und kann so mehrere Gewinne auf einmal auslösen.';
 }
 
+String clusterText(SlotRules r) =>
+    'Es gibt keine Linien und keine Walzenfolge. Ein Symbol gewinnt, wenn mindestens ${r.clusterMin} gleiche eine '
+    'zusammenhängende Gruppe bilden: Jedes Feld der Gruppe grenzt waagrecht oder senkrecht an ein anderes, schräg zählt '
+    'nicht. Je größer die Gruppe, desto mehr zahlt sie. Ein Joker gehört zu jeder Gruppe, an die er grenzt, auch zu '
+    'mehreren Symbolen gleichzeitig.';
+
 String linesText(SlotRules r) =>
     'Es zählen nur die ${r.lineCount} Gewinnlinien. Gleiche Symbole müssen auf der ersten Walze links beginnen und ohne '
     'Lücke auf der Linie weiterlaufen. Jede Linie bekommt den gleichen Teil des Einsatzes, der Betrag aus dem Gewinnplan '
@@ -122,7 +128,14 @@ GameGuide slotGuide(SlotGame g) {
   final r = g.rules;
   final ways = r.mode == PayMode.ways;
   return GameGuide(g.name, [
-    GuideSection('So wird gewonnen', ways ? waysText(r) : linesText(r)),
+    GuideSection(
+      'So wird gewonnen',
+      switch (r.mode) {
+        PayMode.ways => waysText(r),
+        PayMode.lines => linesText(r),
+        PayMode.cluster => clusterText(r),
+      },
+    ),
     if (ways) GuideSection('Wege zählen', waysExampleText(r), picture: (_) => WaysExample(game: g)),
     if (r.heights != null) GuideSection('Wechselnde Walzen', heightsText(r)),
     if (r.wildMultipliers.isNotEmpty)
@@ -237,6 +250,22 @@ List<String> winBreakdown(SlotGame game, List<List<int>> grid, LineWin w,
     lines.add('Es zahlt auf allen ${r.lineCount} Linien, auch wenn die Walzen nicht nebeneinander liegen.');
     lines.add('Laut Gewinnplan: ${w.count} gleiche = $pay × Linieneinsatz (${formatCoins(lineBet)}).');
     lines.add('$pay × ${formatCoins(lineBet)} × ${r.lineCount} Linien${multiplier > 1 ? ' × $multiplier' : ''} = ${formatCoins(w.payout)}');
+    return lines;
+  }
+  if (w.kind == WinKind.cluster) {
+    final pay = r.payFor(w.symbol, w.count);
+    final per = pay * stake / r.waysDivisor;
+    final reels = [for (final (c, _) in w.cells) c + 1].toSet().toList()..sort();
+    lines.add('Gruppe aus ${w.count} × $name, die aneinandergrenzen (Walzen ${reels.first} bis ${reels.last}).');
+    final wilds = [for (final (c, row) in w.cells) if (grid[c][row] == symWild) 1].length;
+    if (wilds > 0) lines.add('Davon $wilds Joker.');
+    final pays = r.linePays[w.symbol]!;
+    final top = r.clusterMin + pays.length - 1;
+    lines.add('Laut Gewinnplan für ${w.count >= top ? '$top oder mehr' : '${w.count}'}: ${_amount(per)} (bei Einsatz ${formatCoins(stake)}).');
+    final exact = per * multiplier;
+    lines.add('${_amount(per)}${multiplier > 1 ? ' × $multiplier' : ''} = ${_amount(exact)}'
+        '${exact != w.payout ? ', abgerundet ${formatCoins(w.payout)}' : ''}');
+    if (multiplier > 1) lines.add('×$multiplier kommt von der Kaskade oder den Freispielen.');
     return lines;
   }
   if (w.line >= 0) {

@@ -13,8 +13,42 @@ def pay(g, sym, n):
     p = g["pays"].get(sym)
     if not p:
         return 0
+    if g.get("mode") == "cluster":
+        i = n - g.get("cluster_min", 5)
+        return p[min(i, len(p) - 1)] if i >= 0 else 0
     i = n - 3
     return p[i] if 0 <= i < len(p) else 0
+
+
+def cluster_wins(g, grid, stake, mult):
+    """Gruppen aus gleichen Symbolen (waagrecht und senkrecht), Joker zählen für jedes Symbol."""
+    out = []
+    reels = len(grid)
+    for sym in g["pays"]:
+        if sym == WILD:
+            continue
+        seen = set()
+        for r in range(reels):
+            for row in range(len(grid[r])):
+                if grid[r][row] != sym or (r, row) in seen:
+                    continue
+                group = []
+                todo = [(r, row)]
+                seen.add((r, row))
+                while todo:
+                    cr, crow = todo.pop()
+                    group.append((cr, crow))
+                    for dr, drow in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                        nr, nrow = cr + dr, crow + drow
+                        if 0 <= nr < reels and 0 <= nrow < len(grid[nr]) and (nr, nrow) not in seen \
+                                and grid[nr][nrow] in (sym, WILD):
+                            seen.add((nr, nrow))
+                            todo.append((nr, nrow))
+                seen = {c for c in seen if grid[c[0]][c[1]] != WILD}
+                p = pay(g, sym, len(group))
+                if p:
+                    out.append((p * stake * mult // g["div"], group))
+    return out
 
 
 def line_hit(g, syms):
@@ -51,6 +85,8 @@ def wins(g, grid, stake, mult, wm=None):
     """Liste (Auszahlung, Felder)."""
     out = []
     reels = len(grid)
+    if g.get("mode") == "cluster":
+        return cluster_wins(g, grid, stake, mult)
     if g.get("mode", "lines") == "lines":
         lb = stake // len(g["lines"])
         sw = g.get("scatter_wild")

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'bonbon_art.dart';
 import 'buch_art.dart';
 import 'drachen_art.dart';
 import 'frucht_art.dart';
@@ -720,7 +721,7 @@ const zauberbibliothek = SlotGame(
       11: [5, 40, 150],
       3: [10, 50, 250],
       12: [15, 60, 300],
-      4: [20, 100, 600],
+      4: [20, 80, 500],
       5: [50, 250, 2000],
     },
     scatterWild: true,
@@ -751,4 +752,50 @@ const zauberbibliothek = SlotGame(
   freeSpinLine: 'Freispiel mit Sondersymbol',
 );
 
-const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb, fruchtlawine, pharaonengold, zauberbibliothek];
+/// Gruppen-Slot: 7 × 7, Gruppen ab fünf gleichen, Kaskaden.
+const bonbonfabrik = SlotGame(
+  name: 'Bonbonfabrik',
+  blurb: '7 × 7, Gruppen ab fünf, Kaskaden',
+  rules: SlotRules(
+    rows: 7,
+    mode: PayMode.cluster,
+    clusterMin: 5,
+    waysDivisor: 100,
+    strips: bonbonStrips,
+    linePays: {
+      0: [160, 200, 250, 330, 400, 600, 800, 1200, 2000, 3500, 8000],
+      1: [160, 200, 250, 330, 400, 600, 800, 1200, 2000, 3500, 8000],
+      10: [200, 250, 330, 400, 600, 800, 1200, 1600, 2500, 4000, 10000],
+      2: [200, 250, 330, 400, 600, 800, 1200, 1600, 2500, 4000, 10000],
+      11: [250, 330, 400, 600, 800, 1200, 1600, 2500, 3500, 6000, 12000],
+      3: [330, 400, 600, 800, 1200, 1600, 2500, 3500, 5000, 8000, 20000],
+      4: [400, 600, 800, 1200, 1600, 2500, 3500, 5000, 8000, 12000, 30000],
+      5: [800, 1200, 1600, 2500, 3500, 5000, 8000, 12000, 20000, 40000, 80000],
+    },
+    cascade: [1, 2, 3, 4, 5],
+    freeCascade: [2, 4, 6, 8, 10],
+    scatterPays: [3, 10, 50],
+    freeSpins: 10,
+  ),
+  stakes: [100, 200, 300, 500, 1000, 2000],
+  symbolNames: ['Himbeerbonbon', 'Zitronendrops', 'Blaubeerherz', 'Gummistern', 'Lakritzschnecke', 'Lutscher', 'Zuckerkugel', 'Bonbonglas', '', '', 'Minzwürfel', 'Orangenring'],
+  paintSymbol: paintBonbonSymbol,
+  paintBackdrop: paintBonbonBackdrop,
+  background: BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF3A1034), Color(0xFF250A22), Color(0xFF140512)],
+    ),
+  ),
+  frame: [Color(0xFFFFC1E3), Color(0xFFFF4081), Color(0xFF7B1FA2)],
+  lobbyColor: Color(0xFFAD1457),
+  featureText:
+      'Sieben Walzen mit je sieben Feldern. Fünf oder mehr gleiche Süßigkeiten, die waagrecht oder senkrecht aneinandergrenzen, '
+      'gewinnen. Gewinngruppen verschwinden, neue Süßigkeiten fallen nach, jede Kaskade zählt mehr: ×1, ×2, ×3, ×4, ×5. '
+      'Drei oder mehr Bonbongläser zahlen das 3-, 10- oder 50-Fache und starten 10 Freispiele, dort geht die Leiter ×2, ×4, ×6, ×8, ×10.',
+  wildText: 'Die Zuckerkugel gehört zu jeder Gruppe, an die sie grenzt, auch zu mehreren auf einmal.',
+  freeSpinLine: 'Freispiel, Kaskaden ab ×2',
+);
+
+const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb, fruchtlawine, pharaonengold, zauberbibliothek, bonbonfabrik];

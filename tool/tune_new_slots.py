@@ -115,8 +115,22 @@ GAMES = {
         book_choices=[0, 1, 2, 10, 11, 3, 12, 4, 5],
         weights=[[8, 8, 7, 6, 5, 4, 0, 2, 0, 0, 6, 6, 5]] * 5,
         pays={0: [5, 25, 100], 1: [5, 25, 100], 2: [5, 25, 100], 10: [5, 40, 150], 11: [5, 40, 150],
-              3: [10, 50, 250], 12: [15, 60, 300], 4: [20, 100, 600], 5: [50, 250, 2000]},
+              3: [10, 50, 250], 12: [15, 60, 300], 4: [20, 80, 500], 5: [50, 250, 2000]},
         scatter=[2, 20, 200], free=10, seed=1517),
+    # Bonbonfabrik: 7 × 7, Gruppen ab 5, Kaskaden
+    "bonbon": dict(
+        mode="cluster", cluster_min=5, div=100, rows=7, stake=100, random_strips=True,
+        weights=[[16, 16, 15, 13, 12, 10, 1, 1, 0, 0, 15, 13]] * 7,
+        pays={0: [160, 200, 250, 330, 400, 600, 800, 1200, 2000, 3500, 8000],
+              1: [160, 200, 250, 330, 400, 600, 800, 1200, 2000, 3500, 8000],
+              10: [200, 250, 330, 400, 600, 800, 1200, 1600, 2500, 4000, 10000],
+              2: [200, 250, 330, 400, 600, 800, 1200, 1600, 2500, 4000, 10000],
+              11: [250, 330, 400, 600, 800, 1200, 1600, 2500, 3500, 6000, 12000],
+              3: [330, 400, 600, 800, 1200, 1600, 2500, 3500, 5000, 8000, 20000],
+              4: [400, 600, 800, 1200, 1600, 2500, 3500, 5000, 8000, 12000, 30000],
+              5: [800, 1200, 1600, 2500, 3500, 5000, 8000, 12000, 20000, 40000, 80000]},
+        cascade=[1, 2, 3, 4, 5], free_cascade=[2, 4, 6, 8, 10],
+        scatter=[3, 10, 50], free=10, seed=1893),
 }
 
 
@@ -126,7 +140,8 @@ def build_strips(g):
     for w in g["weights"]:
         s = [i for i, n in enumerate(w) for _ in range(n)]
         best, score = None, 10**9
-        for _ in range(500):
+        # Gruppen-Slots: einfach gemischt, gleiche Nachbarn sind dort erwünscht
+        for _ in range(1 if g.get("random_strips") else 500):
             rng.shuffle(s)
             # keine gleichen Nachbarn, Sonder-Symbole nicht direkt untereinander
             c = sum(s[i] == s[(i + 1) % len(s)] or (6 <= s[i] <= 9 and 6 <= s[(i + 1) % len(s)] <= 9) for i in range(len(s)))

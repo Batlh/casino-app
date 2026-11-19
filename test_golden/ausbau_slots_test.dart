@@ -15,7 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens_test.dart' show loadFonts;
 
-final _games = [zauberbibliothek];
+final _games = [zauberbibliothek, bonbonfabrik];
 
 class _Sheet extends CustomPainter {
   @override
@@ -76,11 +76,11 @@ void main() {
   }
 
   testWidgets('Symbole Ausbau', (tester) async {
-    tester.view.physicalSize = const Size(1650, 150);
+    tester.view.physicalSize = const Size(1650, 300);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.runAsync(loadFonts);
-    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1650, 150), painter: _Sheet()))));
+    await tester.pumpWidget(Center(child: RepaintBoundary(child: CustomPaint(size: const Size(1650, 300), painter: _Sheet()))));
     await expectLater(find.byType(RepaintBoundary).first, matchesGoldenFile('goldens/symbole_ausbau.png'));
   });
 
@@ -104,6 +104,25 @@ void main() {
     await until(tester, 'breitet sich aus');
     await tester.pump(const Duration(milliseconds: 500));
     await snap('buch_ausgebreitet');
+    await finish(tester);
+  });
+
+  testWidgets('Bonbonfabrik: Gruppen und Kaskaden', (tester) async {
+    await tester.runAsync(loadFonts);
+    final game = bonbonfabrik;
+    var seed = 1;
+    while (SlotEngine(game.rules, rng: Random(seed)).play(game.stakes[2]).steps.length < 3) {
+      seed++;
+    }
+    await start(tester, SlotScreen(game: game));
+    await snap('bonbon_ruhe');
+    await start(tester, SlotScreen(game: game, seed: seed));
+    await spin(tester);
+    await tester.pump(const Duration(milliseconds: 200));
+    await snap('bonbon_gruppe');
+    await tester.pump(const Duration(milliseconds: 1100));
+    await tester.pump(const Duration(milliseconds: 500));
+    await snap('bonbon_kaskade');
     await finish(tester);
   });
 }
