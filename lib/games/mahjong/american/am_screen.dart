@@ -8,6 +8,7 @@ import '../../../core/settings.dart';
 import '../../../core/sfx.dart';
 import '../../../core/theme.dart';
 import '../../../ui/guide.dart';
+import '../../../ui/net_replay_mixin.dart';
 import '../../../ui/widgets.dart';
 import '../tiles.dart';
 import 'am_card.dart';
@@ -118,7 +119,7 @@ class AmScreen extends StatefulWidget {
   State<AmScreen> createState() => _AmScreenState();
 }
 
-class _AmScreenState extends State<AmScreen> {
+class _AmScreenState extends State<AmScreen> with NetReplayScreen {
   late AmGame _g;
   late math.Random _rng;
   int? _selected;
@@ -135,7 +136,17 @@ class _AmScreenState extends State<AmScreen> {
   late final Settings _store;
 
   AppScope get _app => AppScope.of(context);
-  AmPlayer get _me => _g.players[0];
+  AmPlayer get _me => _g.players[_ms];
+
+  /// Dein Platz: allein 0, im Netz je Gerät verschieden.
+  int get _ms => replayActive ? replayMe : 0;
+
+  /// Spielt hier der Computer diesen Platz (im Netz nur beim Gastgeber)?
+  bool _botHere(int p) => replayActive ? replayIsHost && replayIsBot(p) : p != 0;
+
+  /// Als Mitspieler: Ansage ist unterwegs zum Gastgeber.
+  bool _claimSent = false;
+  int _claimLog = -1;
 
   @override
   void initState() {
@@ -149,7 +160,7 @@ class _AmScreenState extends State<AmScreen> {
 
   late int _seed;
   static const _saveId = 'american';
-  bool get _saving => widget.seed == null;
+  bool get _saving => widget.seed == null && !replayActive;
 
   AmGame _make() => AmGame(rng: math.Random(_seed))..start();
 
@@ -184,7 +195,114 @@ class _AmScreenState extends State<AmScreen> {
   @override
   void dispose() {
     _persist();
+    replayDispose();
     super.dispose();
+  }
+
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get replayGame => 'american';
+  @override
+  String get replayTitle => 'American Mahjong';
+  @override
+  int get replaySeats => 4;
+  @override
+  List<String> get replayBotNames => const ['Betty', 'Ruth', 'Sylvia'];
+  @override
+  List<List<Object?>> get replayLog => _g.actionLog;
+
+  @override
+  void replayNewGame(int seed, List<String> names, int me, Map<String, Object?> options) {
+    _seed = seed;
+    _g = AmGame(rng: math.Random(seed), names: names, humans: replayHumans, me: me)..start();
+    _selected = null;
+    _pick.clear();
+    _rewarded = false;
+    _handPaid = false;
+    _earned = 0;
+    _pending = {};
+    _running = false;
+    _claimLog = -1;
+    _claimSent = false;
+  }
+
+  static AmClaim _claimOf(int mahjong, int count) =>
+      mahjong == 1 ? const AmClaim.mahjong() : (count > 0 ? AmClaim.expose(count) : const AmClaim.pass());
+
+  @override
+  void replayApply(List<dynamic> a) {
+    if (a[0] == 'cl') {
+      _startClaimRound();
+      _pending[(a[1] as num).toInt()] = _claimOf((a[2] as num).toInt(), (a[3] as num).toInt());
+      _resolveIfComplete();
+      return;
+    }
+    amApply(_g, a);
+  }
+
+  @override
+  bool replayAllowed(int seat, List<dynamic> a) {
+    int i(int k) => (a[k] as num).toInt();
+    if (a.length < 2 || i(1) != seat) return false;
+    switch (a[0]) {
+      case 'cl':
+        if (_g.phase != AmPhase.claim || _pending.containsKey(seat)) return false;
+        final opts = _g.claims[seat];
+        if (opts == null) return false;
+        final c = _claimOf(i(2), i(3));
+        return c.isPass || opts.any((o) => o.mahjong == c.mahjong && o.count == c.count);
+      case 'x':
+        return _g.phase == AmPhase.charleston && _g.players[seat].pass.length != 3 &&
+            _g.validPass(seat, [for (final t in a[2] as List) (t as num).toInt()]);
+      case 'd':
+        return _g.canDiscard(seat, i(2));
+      case 'm':
+        return _g.canMahjong(seat);
+      case 'j':
+        return _g.jokerSwaps(seat).contains((i(2), i(3)));
+    }
+    return false;
+  }
+
+  @override
+  void replayAfterRemote(List<List<dynamic>> acts) {
+    if (acts.isNotEmpty) _app.sfx.play(Sound.tick);
+    if (_g.phase != AmPhase.handOver && _g.phase != AmPhase.gameOver) _handPaid = false;
+    if (_selected != null && !_me.hand.contains(_selected)) _selected = null;
+    setState(() {});
+    _pump();
+  }
+
+  @override
+  void replayClosed() => _newGame();
+
+  /// Zug ausführen: allein und beim Gastgeber sofort, als Mitspieler über den Gastgeber.
+  void _do(List<Object?> a) {
+    if (replaySend(a)) return;
+    amApply(_g, a);
+    replayBroadcast();
+  }
+
+  /// Neue Ansagerunde (erkannt am Protokoll): Computer entscheiden sofort, Menschen wählen selbst.
+  void _startClaimRound() {
+    if (_g.phase != AmPhase.claim || _claimLog == _g.actionLog.length) return;
+    _claimLog = _g.actionLog.length;
+    _claimSent = false;
+    _pending = {};
+    if (replayIsGuest) return;
+    for (final e in _g.claims.entries) {
+      if (_botHere(e.key)) _pending[e.key] = amBotClaim(_g, e.key, e.value);
+    }
+  }
+
+  /// Gastgeber: Haben alle, die etwas ansagen dürfen, gewählt, wird entschieden.
+  void _resolveIfComplete() {
+    if (_g.phase != AmPhase.claim) return;
+    if (_g.claims.keys.any((q) => !_pending.containsKey(q))) return;
+    final choices = _pending;
+    _pending = {};
+    _g.resolveClaims(choices);
   }
 
   void _persist() {
@@ -198,6 +316,11 @@ class _AmScreenState extends State<AmScreen> {
   }
 
   void _newGame() {
+    if (replayActive) {
+      if (replayIsHost) replayHostStart();
+      _pump();
+      return;
+    }
     _seed = math.Random.secure().nextInt(1 << 31);
     setState(() {
       _g = _make();
@@ -211,8 +334,8 @@ class _AmScreenState extends State<AmScreen> {
     _app.sfx.play(Sound.card);
   }
 
-  bool get _humanClaim => _g.phase == AmPhase.claim && _g.claims.containsKey(0);
-  bool get _myTurn => !_running && _g.phase == AmPhase.discard && _g.current == 0;
+  bool get _humanClaim => _g.phase == AmPhase.claim && _g.claims.containsKey(_ms) && !_claimSent;
+  bool get _myTurn => !_running && _g.phase == AmPhase.discard && _g.current == _ms;
 
   List<(AmConcrete, int)> get _nearHands {
     final key = '${_me.hand.join(',')}|${_me.exposed.length}';
@@ -237,9 +360,12 @@ class _AmScreenState extends State<AmScreen> {
       }
       if (_g.phase == AmPhase.charleston) break;
       if (_g.phase == AmPhase.discard) {
-        if (_g.current == 0) break;
+        if (!_botHere(_g.current)) break;
+        final engine = _g;
+        final log = _g.actionLog.length;
         await Future<void>.delayed(_app.settings.botDelay(650));
         if (!mounted) return;
+        if (!identical(engine, _g) || _g.actionLog.length != log) continue;
         final p = _g.current;
         switch (amBotTurn(_g, p, _rng)) {
           case AmBotMahjong():
@@ -252,24 +378,24 @@ class _AmScreenState extends State<AmScreen> {
             _g.discard(p, tile);
             _app.sfx.play(Sound.tick);
         }
+        replayBroadcast();
         setState(() {});
         continue;
       }
       if (_g.phase == AmPhase.claim) {
-        final choices = <int, AmClaim>{};
-        for (final e in _g.claims.entries) {
-          if (e.key != 0) choices[e.key] = amBotClaim(_g, e.key, e.value);
-        }
-        if (_g.claims.containsKey(0)) {
-          _pending = choices;
+        _startClaimRound();
+        if (replayIsGuest || _g.claims.keys.any((q) => !_pending.containsKey(q))) {
           setState(() {});
           break;
         }
-        if (choices.values.any((c) => !c.isPass)) {
+        if (_pending.values.any((c) => !c.isPass)) {
+          final log = _g.actionLog.length;
           await Future<void>.delayed(_app.settings.botDelay(300));
           if (!mounted) return;
+          if (_g.actionLog.length != log) continue;
         }
-        _g.resolveClaims(choices);
+        _resolveIfComplete();
+        replayBroadcast();
         setState(() {});
         continue;
       }
@@ -282,7 +408,7 @@ class _AmScreenState extends State<AmScreen> {
     if (_handPaid) return;
     _handPaid = true;
     final r = _g.result;
-    if (r != null && r.winner == 0) {
+    if (r != null && r.winner == _ms) {
       final coins = amHandReward(r);
       _earned += coins;
       _app.wallet.credit(coins);
@@ -293,7 +419,7 @@ class _AmScreenState extends State<AmScreen> {
   void _payGame() {
     if (_rewarded) return;
     _rewarded = true;
-    final place = _g.ranking().indexOf(0);
+    final place = _g.ranking().indexOf(_ms);
     final coins = amPlaceRewards[place];
     if (coins > 0) {
       _earned += coins;
@@ -303,7 +429,9 @@ class _AmScreenState extends State<AmScreen> {
   }
 
   void _nextHand() {
+    if (replayIsGuest) return;
     _g.nextHand();
+    replayBroadcast();
     setState(() {
       _handPaid = false;
       _selected = null;
@@ -320,9 +448,9 @@ class _AmScreenState extends State<AmScreen> {
       });
       return;
     }
-    if (!_myTurn || !_g.canDiscard(0, t)) return;
+    if (!_myTurn || !_g.canDiscard(_ms, t)) return;
     if (_selected == t) {
-      _g.discard(0, t);
+      _do(['d', _ms, t]);
       _app.sfx.play(Sound.tick);
       setState(() => _selected = null);
       _pump();
@@ -338,8 +466,8 @@ class _AmScreenState extends State<AmScreen> {
 
   void _pass() {
     final tiles = _picked;
-    if (!_g.validPass(0, tiles)) return;
-    _g.submitPass(0, tiles);
+    if (!_g.validPass(_ms, tiles) || _me.pass.length == 3) return;
+    _do(['x', _ms, tiles]);
     _app.sfx.play(Sound.card);
     setState(() => _pick.clear());
     _pump();
@@ -348,7 +476,7 @@ class _AmScreenState extends State<AmScreen> {
   void _suggest() {
     final hand = [..._me.hand]..sort();
     final used = <int>{};
-    for (final t in _g.botPass(0, _rng)) {
+    for (final t in _g.botPass(_ms, _rng)) {
       for (var i = 0; i < hand.length; i++) {
         if (hand[i] == t && !used.contains(i)) {
           used.add(i);
@@ -364,25 +492,30 @@ class _AmScreenState extends State<AmScreen> {
   }
 
   void _mahjong() {
-    if (!_g.canMahjong(0)) return;
-    _g.mahjong(0);
+    if (!_g.canMahjong(_ms)) return;
+    _do(['m', _ms]);
     setState(() {});
     _pump();
   }
 
   void _swap() {
-    final s = _g.jokerSwaps(0);
+    final s = _g.jokerSwaps(_ms);
     if (s.isEmpty) return;
-    _g.swapJoker(0, s.first.$1, s.first.$2);
+    _do(['j', _ms, s.first.$1, s.first.$2]);
     _app.sfx.play(Sound.chip);
     setState(() {});
   }
 
   void _claim(AmClaim c) {
     if (!_humanClaim) return;
-    final choices = {..._pending, 0: c};
-    _pending = {};
-    _g.resolveClaims(choices);
+    if (replaySend(['cl', _ms, c.mahjong ? 1 : 0, c.count])) {
+      _claimSent = true;
+    } else {
+      _startClaimRound();
+      _pending[_ms] = c;
+      _resolveIfComplete();
+      replayBroadcast();
+    }
     _app.sfx.play(c.isPass ? Sound.tick : Sound.chip);
     setState(() => _selected = null);
     _pump();
@@ -391,6 +524,8 @@ class _AmScreenState extends State<AmScreen> {
   String get _status {
     if (_g.phase == AmPhase.gameOver) return 'Das Spiel ist vorbei';
     if (_g.phase == AmPhase.handOver) return _g.result?.text ?? '';
+    if (_g.phase == AmPhase.claim && _claimSent) return 'Warte auf die anderen …';
+    if (_g.phase == AmPhase.charleston && _me.pass.length == 3) return 'Warte, bis alle weitergegeben haben …';
     if (_g.phase == AmPhase.charleston) {
       return 'Charleston ${_g.charlestonStep + 1} von 3: Gib drei Steine ${charlestonNames[_g.charlestonStep]} weiter';
     }
@@ -398,7 +533,7 @@ class _AmScreenState extends State<AmScreen> {
     final near = _nearHands;
     final hint = near.isEmpty ? '' : ' · Am nächsten: ${near.first.$1.hand.category} (es fehlen ${near.first.$2})';
     if (_myTurn) {
-      if (_g.canMahjong(0)) return 'Deine Hand passt zur Karte! Mahjong?';
+      if (_g.canMahjong(_ms)) return 'Deine Hand passt zur Karte! Mahjong?';
       return '${_g.lastEvent.isNotEmpty ? '${_g.lastEvent}. ' : ''}Du bist dran$hint';
     }
     return '${_g.lastEvent.isNotEmpty ? _g.lastEvent : '${_g.players[_g.current].name} ist dran'}$hint';
@@ -407,13 +542,14 @@ class _AmScreenState extends State<AmScreen> {
   @override
   Widget build(BuildContext context) {
     return GameFrame(
-      actions: const [TileLegendButton()],
+      actions: [...replayActions(context), const TileLegendButton()],
+      network: replayActive ? null : replayOpenPanel,
       title: 'American Mahjong',
       guide: widget.guide,
       background: const BoxDecoration(
         gradient: RadialGradient(radius: 1.2, colors: [Color(0xFF1F3F6B), Color(0xFF0C1A2B)]),
       ),
-      child: LayoutBuilder(builder: (context, box) => _layout(box)),
+      child: replayScreen() ?? LayoutBuilder(builder: (context, box) => _layout(box)),
     );
   }
 
@@ -442,7 +578,7 @@ class _AmScreenState extends State<AmScreen> {
           ),
         ),
         const SizedBox(height: 3),
-        if (p != 0) _exposures(p, tw * 0.9),
+        if (p != _ms) _exposures(p, tw * 0.9),
         SizedBox(
           width: perRow * (tw + 1),
           child: Wrap(spacing: 1, runSpacing: 1, children: [for (final t in pl.discards) TileView(tile: t, width: tw)]),
@@ -461,12 +597,12 @@ class _AmScreenState extends State<AmScreen> {
     Widget seat(int p) => FittedBox(fit: BoxFit.scaleDown, child: _seat(p, pondW, perRow));
     final table = Column(
       children: [
-        Expanded(flex: 2, child: seat(2)),
+        Expanded(flex: 2, child: seat((_ms + 2) % 4)),
         Expanded(
           flex: 3,
           child: Row(
             children: [
-              Expanded(child: Center(child: seat(3))),
+              Expanded(child: Center(child: seat((_ms + 3) % 4))),
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(color: const Color(0x66000000), borderRadius: BorderRadius.circular(10)),
@@ -479,11 +615,11 @@ class _AmScreenState extends State<AmScreen> {
                   ],
                 ),
               ),
-              Expanded(child: Center(child: seat(1))),
+              Expanded(child: Center(child: seat((_ms + 1) % 4))),
             ],
           ),
         ),
-        Expanded(flex: 2, child: FittedBox(fit: BoxFit.scaleDown, child: _seat(0, pondW, landscape ? 12 : 9))),
+        Expanded(flex: 2, child: FittedBox(fit: BoxFit.scaleDown, child: _seat(_ms, pondW, landscape ? 12 : 9))),
       ],
     );
     final overlay = _g.phase == AmPhase.handOver || _g.phase == AmPhase.gameOver;
@@ -504,18 +640,20 @@ class _AmScreenState extends State<AmScreen> {
 
   Widget _actions() {
     final b = <Widget>[ActionButton(label: 'Karte', onPressed: () => showAmCard(context, near: _nearHands))];
-    if (_g.phase == AmPhase.charleston) {
+    if (_g.phase == AmPhase.charleston && _me.pass.length == 3) {
+      // schon weitergegeben, warten
+    } else if (_g.phase == AmPhase.charleston) {
       b.add(ActionButton(label: 'Vorschlag', onPressed: _suggest));
-      b.add(ActionButton(primary: true, label: 'Weitergeben', onPressed: _g.validPass(0, _picked) ? _pass : null));
+      b.add(ActionButton(primary: true, label: 'Weitergeben', onPressed: _g.validPass(_ms, _picked) ? _pass : null));
     } else if (_humanClaim) {
-      for (final o in _g.claims[0]!) {
+      for (final o in _g.claims[_ms]!) {
         final label = o.mahjong ? 'Mahjong!' : const {3: 'Pung', 4: 'Kong', 5: 'Fünfling'}[o.count]!;
         b.add(ActionButton(primary: o.mahjong, label: label, onPressed: () => _claim(o)));
       }
       b.add(ActionButton(label: 'Weiter', onPressed: () => _claim(const AmClaim.pass())));
     } else if (_myTurn) {
-      if (_g.canMahjong(0)) b.add(ActionButton(primary: true, label: 'Mahjong!', onPressed: _mahjong));
-      if (_g.jokerSwaps(0).isNotEmpty) b.add(ActionButton(label: 'Joker holen', onPressed: _swap));
+      if (_g.canMahjong(_ms)) b.add(ActionButton(primary: true, label: 'Mahjong!', onPressed: _mahjong));
+      if (_g.jokerSwaps(_ms).isNotEmpty) b.add(ActionButton(label: 'Joker holen', onPressed: _swap));
     }
     return SizedBox(
       height: 46,
@@ -525,7 +663,7 @@ class _AmScreenState extends State<AmScreen> {
 
   Widget _hand(double tw) {
     final sorted = [..._me.hand]..sort();
-    final drawn = _g.current == 0 && _g.phase == AmPhase.discard ? _g.drawn : null;
+    final drawn = _g.current == _ms && _g.phase == AmPhase.discard ? _g.drawn : null;
     final charleston = _g.phase == AmPhase.charleston;
     Widget tile(int t, int index) {
       final sel = charleston ? _pick.contains(index) : _selected == t;
@@ -551,7 +689,7 @@ class _AmScreenState extends State<AmScreen> {
       }
       children.addAll([SizedBox(width: tw * 0.4), tile(drawn, -1)]);
     }
-    if (_me.exposed.isNotEmpty) children.addAll([SizedBox(width: tw * 0.5), _exposures(0, tw * 0.8)]);
+    if (_me.exposed.isNotEmpty) children.addAll([SizedBox(width: tw * 0.5), _exposures(_ms, tw * 0.8)]);
     return FittedBox(
       fit: BoxFit.scaleDown,
       child: Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.end, children: children),
@@ -569,13 +707,17 @@ class _AmScreenState extends State<AmScreen> {
       for (var i = 0; i < 4; i++) {
         final p = order[i];
         c.add(Text(
-          '${i + 1}. ${_g.players[p].name}: ${formatCoins(_g.players[p].points)}${p == 0 && amPlaceRewards[i] > 0 ? ' · +${amPlaceRewards[i]} Münzen' : ''}',
-          style: TextStyle(color: pal.ink, fontSize: 16, fontWeight: p == 0 ? FontWeight.w700 : FontWeight.w500),
+          '${i + 1}. ${_g.players[p].name}: ${formatCoins(_g.players[p].points)}${p == _ms && amPlaceRewards[i] > 0 ? ' · +${amPlaceRewards[i]} Münzen' : ''}',
+          style: TextStyle(color: pal.ink, fontSize: 16, fontWeight: p == _ms ? FontWeight.w700 : FontWeight.w500),
         ));
       }
       if (_earned > 0) c.add(Text('Verdient: ${formatCoins(_earned)} Münzen', style: TextStyle(color: pal.inkSoft)));
       c.add(const SizedBox(height: 10));
-      c.add(ActionButton(primary: true, label: 'Neues Spiel', onPressed: _newGame));
+      if (replayActive) {
+        c.add(Wrap(spacing: 8, children: replayButtons(label: 'Neues Spiel', next: replayHostStart)));
+      } else {
+        c.add(ActionButton(primary: true, label: 'Neues Spiel', onPressed: _newGame));
+      }
     } else if (r != null) {
       c.add(Text(r.text, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium));
       if (r.hand != null) {
@@ -585,7 +727,7 @@ class _AmScreenState extends State<AmScreen> {
         c.add(Text('${r.hand!.hand.category}: ${r.hand!.hand.value} Punkte${r.jokerless ? ', ohne Joker doppelt' : ''}',
             style: TextStyle(color: pal.ink, fontWeight: FontWeight.w700)));
         c.add(FittedBox(child: amHandLabel(r.hand!.hand, ink: pal.ink)));
-        if (r.winner == 0) {
+        if (r.winner == _ms) {
           c.add(Text('+${amHandReward(r)} Münzen', style: const TextStyle(color: Color(0xFFFFC95C), fontWeight: FontWeight.w700)));
         }
       }
@@ -598,7 +740,11 @@ class _AmScreenState extends State<AmScreen> {
         ));
       }
       c.add(const SizedBox(height: 10));
-      c.add(ActionButton(primary: true, label: _g.gameWillEnd ? 'Zum Endstand' : 'Nächste Hand', onPressed: _nextHand));
+      if (replayActive) {
+        c.add(Wrap(spacing: 8, children: replayButtons(label: _g.gameWillEnd ? 'Zum Endstand' : 'Nächste Hand', next: _nextHand)));
+      } else {
+        c.add(ActionButton(primary: true, label: _g.gameWillEnd ? 'Zum Endstand' : 'Nächste Hand', onPressed: _nextHand));
+      }
     }
     return ColoredBox(
       color: const Color(0x99000000),

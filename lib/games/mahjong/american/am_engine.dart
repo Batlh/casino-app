@@ -48,9 +48,13 @@ const charlestonNames = ['nach rechts', 'über den Tisch', 'nach links'];
 const _charlestonDirs = [1, 2, 3];
 
 class AmGame with ActionLog {
-  AmGame({Random? rng, List<String> names = const ['Du', 'Betty', 'Ruth', 'Sylvia']})
+  /// [humans]: Plätze mit Menschen (allein nur 0). [me]: dein Platz, für die Texte („Du“).
+  AmGame({Random? rng, List<String> names = const ['Du', 'Betty', 'Ruth', 'Sylvia'], Set<int> humans = const {0}, this.me = 0})
       : _rng = rng ?? Random.secure(),
-        players = [for (var i = 0; i < 4; i++) AmPlayer(names[i], human: i == 0)];
+        players = [for (var i = 0; i < 4; i++) AmPlayer(names[i], human: humans.contains(i))];
+
+  /// Dein Platz (im Netz je Gerät verschieden).
+  final int me;
 
   final Random _rng;
   final List<AmPlayer> players;
@@ -107,8 +111,8 @@ class AmGame with ActionLog {
     lastEvent = '';
     charlestonStep = 0;
     phase = AmPhase.charleston;
-    for (var p = 1; p < 4; p++) {
-      players[p].pass = botPass(p);
+    for (var p = 0; p < 4; p++) {
+      if (!players[p].human) players[p].pass = botPass(p);
     }
   }
 
@@ -164,8 +168,8 @@ class AmGame with ActionLog {
     if (charlestonStep >= 3) {
       _draw(dealer);
     } else {
-      for (var q = 1; q < 4; q++) {
-        players[q].pass = botPass(q);
+      for (var q = 0; q < 4; q++) {
+        if (!players[q].human) players[q].pass = botPass(q);
       }
     }
   }
@@ -218,7 +222,7 @@ class AmGame with ActionLog {
     pl.hand.add(jokerKind);
     pl.hand.sort();
     e.jokers--;
-    lastEvent = '${_who(p)} ${p == 0 ? 'holst' : 'holt'} einen Joker';
+    lastEvent = '${_who(p)} ${p == me ? 'holst' : 'holt'} einen Joker';
   }
 
   void mahjong(int p) => record(['m', p], () => _mahjongImpl(p));
@@ -244,7 +248,7 @@ class AmGame with ActionLog {
     _openClaims();
   }
 
-  String _who(int p) => p == 0 ? 'Du' : players[p].name;
+  String _who(int p) => p == me ? 'Du' : players[p].name;
 
   /// Kann Spieler q mit dem Abwurf t eine Gruppe aus [count] Steinen aufdecken, die zu einer Kartenhand passt?
   bool _canExpose(int q, int t, int count) {
@@ -330,7 +334,7 @@ class AmGame with ActionLog {
     pl.exposed.add(AmExposure(k, count, jokers, from: lastDiscarder));
     claims = {};
     const names = {3: 'Pung', 4: 'Kong', 5: 'Fünfling'};
-    lastEvent = '${_who(q)} ${q == 0 ? 'deckst' : 'deckt'} einen ${names[count]} auf';
+    lastEvent = '${_who(q)} ${q == me ? 'deckst' : 'deckt'} einen ${names[count]} auf';
     current = q;
     drawn = null;
     phase = AmPhase.discard;
@@ -353,9 +357,9 @@ class AmGame with ActionLog {
     for (var p = 0; p < 4; p++) {
       players[p].points += changes[p];
     }
-    final how = loser == null ? 'selbst gezogen' : (loser == 0 ? 'mit deinem Abwurf' : 'mit dem Abwurf von ${players[loser].name}');
+    final how = loser == null ? 'selbst gezogen' : (loser == me ? 'mit deinem Abwurf' : 'mit dem Abwurf von ${players[loser].name}');
     result = AmResult(
-      text: '${winner == 0 ? 'Du hast' : '${pl.name} hat'} Mahjong, $how',
+      text: '${winner == me ? 'Du hast' : '${pl.name} hat'} Mahjong, $how',
       changes: changes,
       winner: winner,
       loser: loser,

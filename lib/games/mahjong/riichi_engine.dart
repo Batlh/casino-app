@@ -72,9 +72,13 @@ class HandResult {
 }
 
 class RiichiGame with ActionLog {
-  RiichiGame({Random? rng, List<String> names = const ['Du', 'Helga', 'Otto', 'Bärbel']})
+  /// [humans]: Plätze mit Menschen (allein nur 0). [me]: dein Platz, für die Texte („Du“).
+  RiichiGame({Random? rng, List<String> names = const ['Du', 'Helga', 'Otto', 'Bärbel'], Set<int> humans = const {0}, this.me = 0})
       : _rng = rng ?? Random.secure(),
-        players = [for (var i = 0; i < 4; i++) RPlayer(names[i], human: i == 0)];
+        players = [for (var i = 0; i < 4; i++) RPlayer(names[i], human: humans.contains(i))];
+
+  /// Dein Platz (im Netz je Gerät verschieden).
+  final int me;
 
   final Random _rng;
   final List<RPlayer> players;
@@ -268,7 +272,7 @@ class RiichiGame with ActionLog {
     }
     _breakIppatsu();
     doraCount = min(5, doraCount + 1);
-    lastEvent = '${_who(p)} ${p == 0 ? 'machst' : 'macht'} Kan';
+    lastEvent = '${_who(p)} ${p == me ? 'machst' : 'macht'} Kan';
     _draw(p, rinshan: true);
   }
 
@@ -286,7 +290,7 @@ class RiichiGame with ActionLog {
       pl.ippatsu = true;
       pl.points -= 1000;
       riichiSticks++;
-      lastEvent = '${_who(p)} ${p == 0 ? 'sagst' : 'sagt'} Riichi!';
+      lastEvent = '${_who(p)} ${p == me ? 'sagst' : 'sagt'} Riichi!';
     } else {
       lastEvent = '';
     }
@@ -299,7 +303,7 @@ class RiichiGame with ActionLog {
     _openClaims();
   }
 
-  String _who(int p) => p == 0 ? 'Du' : players[p].name;
+  String _who(int p) => p == me ? 'Du' : players[p].name;
 
   void _breakIppatsu() {
     for (final pl in players) {
@@ -403,7 +407,7 @@ class RiichiGame with ActionLog {
       MeldKind.pon => 'Pon',
       MeldKind.kan => 'Kan',
     };
-    lastEvent = '${_who(q)} ${q == 0 ? 'rufst' : 'ruft'} $name';
+    lastEvent = '${_who(q)} ${q == me ? 'rufst' : 'ruft'} $name';
     if (kind == MeldKind.kan) {
       doraCount = min(5, doraCount + 1);
       _draw(q, rinshan: true);
@@ -438,8 +442,8 @@ class RiichiGame with ActionLog {
       players[p].points += changes[p];
     }
     final how = loser == null ? 'Tsumo' : 'Ron';
-    final who = winner == 0 ? 'Du gewinnst' : '${players[winner].name} gewinnt';
-    final from = loser == null ? '' : (loser == 0 ? ' mit deinem Abwurf' : ' mit dem Abwurf von ${players[loser].name}');
+    final who = winner == me ? 'Du gewinnst' : '${players[winner].name} gewinnt';
+    final from = loser == null ? '' : (loser == me ? ' mit deinem Abwurf' : ' mit dem Abwurf von ${players[loser].name}');
     result = HandResult(
       text: '$who mit $how$from',
       changes: changes,
@@ -467,7 +471,7 @@ class RiichiGame with ActionLog {
         players[p].points += changes[p];
       }
     }
-    final names = [for (final p in tenpai) p == 0 ? 'du' : players[p].name];
+    final names = [for (final p in tenpai) p == me ? 'du' : players[p].name];
     result = HandResult(
       text: tenpai.isEmpty
           ? 'Die Mauer ist leer. Niemand ist Tenpai'
