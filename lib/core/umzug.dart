@@ -6,8 +6,8 @@ import 'debug_log.dart';
 
 /// Umzug vom alten Paketnamen de.privat.gluckspfennig auf io.github.batlh.gluckspfennig.
 ///
-/// Am PC hängt der Speicherort der Einstellungen am Namen (Windows: %APPDATA%\<Firma>\<Produkt>,
-/// Linux: ~/.local/share/<Kennung>). Beim ersten Start mit dem neuen Namen holt die App die alten Daten selbst.
+/// Am PC hängt der Speicherort der Einstellungen am Namen (Windows: `%APPDATA%\Firma\Produkt`,
+/// Linux: `~/.local/share/Kennung`). Beim ersten Start mit dem neuen Namen holt die App die alten Daten selbst.
 /// Android und macOS trennen die Apps streng; dort bleibt nur die Sicherung (Einstellungen → Spielstand sichern).
 const oldOrg = 'de.privat';
 const newOrg = 'io.github.batlh';
