@@ -12,6 +12,8 @@ import '../core/umzug.dart';
 import '../core/updater.dart';
 import '../core/wallet.dart';
 import '../games/arschloch/ah_screen.dart';
+import '../games/arcade/arcade_engine.dart';
+import '../games/arcade/arcade_screen.dart';
 import '../games/baccarat/baccarat_screen.dart';
 import '../games/bingo/bingo_screen.dart';
 import '../games/blackjack/blackjack_screen.dart';
@@ -392,6 +394,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF14506E),
         _VideoPokerArt.new,
         () => _open(const VideoPokerScreen()),
+      ),
+      _Game(
+        'Goldene Sieben',
+        'Spielhallen-Klassiker: Risikoleiter, Halten, Sonderspiele',
+        const Color(0xFF3A0D2E),
+        _ArcadeArt.new,
+        () => _open(const ArcadeScreen()),
       ),
       _Game(
         'Höher oder Tiefer',
@@ -2279,6 +2288,25 @@ class _VideoPokerArt extends CustomPainter {
             : const Color(0xFF241410),
       );
     }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _ArcadeArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width * 0.24;
+    final c = size.center(const Offset(0, 8));
+    for (var i = -1; i <= 1; i++) {
+      final r = Rect.fromCenter(center: c.translate(i * (w + 6), 0), width: w, height: w * 1.2);
+      canvas.drawRRect(RRect.fromRectAndRadius(r, const Radius.circular(8)), Paint()..color = const Color(0xFFFFF8E7));
+      paintArcadeSymbol(canvas, r.deflate(w * 0.12), arcadeSeven);
+    }
+    canvas.drawLine(Offset(c.dx - w * 1.7, c.dy), Offset(c.dx + w * 1.7, c.dy), Paint()
+      ..color = const Color(0xAAD32F2F)
+      ..strokeWidth = 2);
   }
 
   @override

@@ -24,6 +24,7 @@ import 'package:gluckspfennig/games/videopoker/video_poker_screen.dart';
 import 'package:gluckspfennig/main.dart';
 import 'package:gluckspfennig/ui/widgets.dart';
 import 'package:gluckspfennig/ui/help_screen.dart';
+import 'package:gluckspfennig/games/arcade/arcade_screen.dart';
 import 'package:gluckspfennig/games/hilo/hilo_screen.dart';
 import 'package:gluckspfennig/games/threecard/three_card_screen.dart';
 import 'package:gluckspfennig/ui/progress_screen.dart';
@@ -102,6 +103,7 @@ void main() {
         QuatroScreen(),
         HelpScreen(),
         HiloScreen(seed: 1),
+        ArcadeScreen(seed: 1),
         ThreeCardScreen(seed: 1),
         ProgressScreen(),
       ]) {
