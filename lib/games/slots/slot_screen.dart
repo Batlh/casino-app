@@ -237,7 +237,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
           setState(() {
             _message = _rules.growing
                 ? '$open Walzen${s.multiplier > 1 ? ' ×${s.multiplier}' : ''}${running > 0 ? ': +${formatCoins(running)}' : ''}'
-                : 'Joker wandert, Nachdrehung $n${running > 0 ? ': +${formatCoins(running)}' : ''}';
+                : 'Nachdrehung $n${running > 0 ? ': +${formatCoins(running)}' : ''}';
             _big = running > 0;
           });
           if (s.win > 0) _app.sfx.play(Sound.win);

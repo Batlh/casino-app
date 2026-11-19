@@ -131,3 +131,13 @@ Ablauf:
 
 ## Sonstiges
 - Spielkarten-Grafik: Korrektur von GPT abwarten (Zweig spielkarten-grafik), dann prüfen und einbauen.
+
+### Zwischenstand Ausbau (19.11.2026, 23:30)
+- Erledigt: 1–12 (Favoriten/Suche, Statistik, Erfolge, Tagesaufgaben, Höher oder Tiefer, Three Card Poker, Roulette-Ausbau,
+  Goldene Sieben, Zauberbibliothek (Buch), Bonbonfabrik (Gruppen), Goldgräber (wandernde Joker, Riesensymbol),
+  Runenpfad (endlose Walzen)).
+- Als Nächstes 13 Pachislo. Entwurf in tool/entwurf/pachislo.py und gen.py: nur die Mittellinie zählt, Rutschen
+  höchstens 4 Felder, interne Auslosung (Pflaume, Replay, Kirsche überall auf Walze 1, Glocke nur mit Zielen, BIG 7-7-7,
+  REG 7-7-BAR; Bonus-Fahne bleibt bis zum Treffer, Glückslampe). Walzen mit 21 Feldern: Pflaume und Replay höchstens
+  alle 5 Felder, Kirsche höchstens alle 7; Pflaume und Replay dürfen auf Walze 1 nicht nur neben Kirschen erreichbar sein.
+  gen.py sucht passende Bänder (Prüfung pro Druckpunkt eingebaut, Lauf noch nicht fertig).
