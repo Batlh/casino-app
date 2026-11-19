@@ -2,7 +2,7 @@
 # Erzeugt die Plattform-Ordner, setzt den App-Namen und das Icon.
 set -euo pipefail
 NAME="Glückspfennig"
-flutter create --project-name gluckspfennig --org de.privat --platforms=android,windows,linux,macos .
+flutter create --project-name gluckspfennig --org io.github.batlh --platforms=android,windows,linux,macos .
 flutter pub get
 dart run flutter_launcher_icons || echo "Icons wurden nicht erzeugt, Build läuft weiter"
 if [ -f android/app/src/main/AndroidManifest.xml ]; then

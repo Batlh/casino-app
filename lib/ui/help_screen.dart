@@ -125,6 +125,12 @@ final List<HelpTopic> helpTopics = [
       'Unter Einstellungen, „Spielstand sichern“, kannst du Münzen und Spielstände als Datei oder in die Zwischenablage sichern '
           'und wieder laden. So nimmst du alles auf ein neues Gerät mit. Laden ersetzt den bisherigen Stand.',
     ),
+    (
+      'Umzug auf die neue App (ab 0.9.51)',
+      'Seit Version 0.9.51 hat Glückspfennig einen neuen internen Namen. Am Handy ist es deshalb eine neue App neben der alten. '
+          'So kommen Münzen und Spielstände mit: In der alten App unter Einstellungen „Spielstand sichern“ wählen, in der neuen '
+          'App laden, danach die alte App löschen. Unter Windows und Linux übernimmt die neue Version alles von selbst, am Mac geht es wie am Handy über die Sicherung.',
+    ),
   ]),
   const HelpTopic(Icons.system_update, 'Updates', 'Neue Versionen finden und installieren', [
     (

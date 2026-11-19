@@ -44,7 +44,9 @@ shutil.copy(root / "ci" / "update" / "update_paths.xml", xml / "update_paths.xml
 activities = list((app / "src" / "main").rglob("MainActivity.kt")) + list((app / "src" / "main").rglob("MainActivity.java"))
 for a in activities:
     a.unlink()
-target = app / "src" / "main" / "kotlin" / "de" / "privat" / "gluckspfennig" / "MainActivity.kt"
+# Ordner aus der package-Zeile der eigenen MainActivity (io.github.batlh.gluckspfennig → io/github/batlh/gluckspfennig)
+package = (root / "ci" / "update" / "MainActivity.kt").read_text(encoding="utf-8").splitlines()[0].split()[1]
+target = app / "src" / "main" / "kotlin" / pathlib.Path(*package.split(".")) / "MainActivity.kt"
 target.parent.mkdir(parents=True, exist_ok=True)
 shutil.copy(root / "ci" / "update" / "MainActivity.kt", target)
 
