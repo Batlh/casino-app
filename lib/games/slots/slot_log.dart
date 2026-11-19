@@ -15,6 +15,9 @@ String _gridText(SlotGame game, List<List<int>> grid) {
 }
 
 String _winText(SlotGame game, SlotRules rules, List<List<int>> grid, LineWin w) {
+  if (w.kind == WinKind.expand) {
+    return '\n  Sondersymbol ${game.symbolNames[w.symbol]} auf ${w.count} Walzen, alle ${rules.lineCount} Linien = ${w.payout}';
+  }
   final wilds = [for (final (r, row) in w.cells) if (grid[r][row] == symWild) 1].length;
   final head = w.line >= 0
       ? 'Linie ${w.line + 1} (${rules.lines[w.line].map((row) => row + 1).join('-')})'
@@ -41,7 +44,11 @@ String describeSlotOutcome(SlotGame game, SpinOutcome o, {required int stake, re
   if (balance != null) b.write(' · Stand $balance');
   for (var i = 0; i < o.steps.length; i++) {
     final s = o.steps[i];
-    if (i > 0) b.write('\n  Kaskade ${i + 1} ×${s.multiplier}:');
+    if (s.expanded) {
+      b.write('\n  Ausgebreitet:');
+    } else if (i > 0) {
+      b.write('\n  Kaskade ${i + 1} ×${s.multiplier}:');
+    }
     b.write(_gridText(game, s.grid));
     if (i == 0 && o.coins.isNotEmpty) {
       b.write('\n  Münzen: ${[for (final v in o.coins.values) coinText(rules, v, stake)].join(', ')}');
@@ -56,6 +63,7 @@ String describeSlotOutcome(SlotGame game, SpinOutcome o, {required int stake, re
   final wheel = o.wheel;
   if (wheel != null) b.write('\n  Glücksrad: ${wheel.segment.label}${wheel.win > 0 ? ' = ${wheel.win}' : ''}');
   if (o.freeSpinsWon > 0) b.write('\n  ${o.freeSpinsWon} Freispiele');
+  if (o.expandSymbol != null) b.write('\n  Sondersymbol ${game.symbolNames[o.expandSymbol!]}');
   final h = o.holdSpin;
   if (h != null) {
     b.write('\n  Hold & Spin: ${h.boards.first.length} Startmünzen, ${h.boards.length - 1} Respins, '

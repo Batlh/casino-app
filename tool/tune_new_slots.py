@@ -12,6 +12,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 import sim_slots as S  # noqa: E402
 
+LINES10 = [[1, 1, 1, 1, 1], [0, 0, 0, 0, 0], [2, 2, 2, 2, 2], [0, 1, 2, 1, 0], [2, 1, 0, 1, 2],
+           [0, 0, 1, 2, 2], [2, 2, 1, 0, 0], [1, 0, 0, 0, 1], [1, 2, 2, 2, 1], [1, 0, 1, 2, 1]]
+
 # Gewichte je Walze für die Symbole 0–9 (0–5 normal, 6 Joker, 7 Scatter, 8 Münze, 9 Bonus)
 GAMES = {
     "mine": dict(
@@ -106,6 +109,14 @@ GAMES = {
         wheel=[("coins", 50, 6), ("coins", 100, 4), ("free", 10, 4), ("holdSpin", 6, 3), ("coins", 200, 2),
                ("free", 15, 2), ("coins", 500, 1)],
         seed=777),
+    # Zauberbibliothek: 10 Linien, das Buch ist Joker und Streusymbol, Buch-Freispiele mit Sondersymbol
+    "buch": dict(
+        mode="lines", lines=LINES10, rows=3, stake=100, scatter_wild=True, book=True,
+        book_choices=[0, 1, 2, 10, 11, 3, 12, 4, 5],
+        weights=[[8, 8, 7, 6, 5, 4, 0, 2, 0, 0, 6, 6, 5]] * 5,
+        pays={0: [5, 25, 100], 1: [5, 25, 100], 2: [5, 25, 100], 10: [5, 40, 150], 11: [5, 40, 150],
+              3: [10, 50, 250], 12: [15, 60, 300], 4: [20, 100, 600], 5: [50, 250, 2000]},
+        scatter=[2, 20, 200], free=10, seed=1517),
 }
 
 

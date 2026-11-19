@@ -310,4 +310,73 @@ void main() {
         expect(o.holdSpin, isNotNull);
     }
   });
+
+  group('Zauberbibliothek (Buch)', () {
+    final rules = zauberbibliothek.rules;
+    const b = symScatter;
+
+    test('Buch ersetzt auf Linien, zahlt selbst aber nicht als Linie', () {
+      final e = SlotEngine(rules, rng: Random(1));
+      final o = e.playGrid([
+        [0, 4, 1],
+        [1, b, 2],
+        [2, 4, 10],
+        [10, 11, 0],
+        [11, 2, 1],
+      ], 100);
+      final mid = o.steps.first.wins.firstWhere((w) => w.line == 0);
+      expect(mid.symbol, 4);
+      expect(mid.count, 3);
+      expect(mid.payout, 20 * 10);
+      expect(o.steps.first.wins.any((w) => w.symbol == symWild || w.symbol == b), isFalse);
+    });
+
+    test('Drei Bücher starten Freispiele und ziehen ein Sondersymbol', () {
+      final e = SlotEngine(rules, rng: Random(2));
+      final o = e.playGrid([
+        [b, 0, 1],
+        [1, 2, 10],
+        [2, b, 10],
+        [10, 11, 0],
+        [11, 2, b],
+      ], 100);
+      expect(o.freeSpinsWon, 10);
+      expect(o.scatterWin, 2 * 100);
+      expect(rules.expandingChoices, contains(o.expandSymbol));
+      expect(e.expandSymbol, o.expandSymbol);
+    });
+
+    test('Sondersymbol breitet sich über nicht benachbarte Walzen aus und zahlt auf allen Linien', () {
+      final e = SlotEngine(rules, rng: Random(3))..expandSymbol = 5;
+      final o = e.playGrid([
+        [5, 0, 1],
+        [0, 1, 2],
+        [2, 10, 5],
+        [10, 11, 0],
+        [1, 5, 2],
+      ], 100, free: true);
+      final last = o.steps.last;
+      expect(last.expanded, isTrue);
+      expect(last.grid[0], [5, 5, 5]);
+      expect(last.grid[1], [0, 1, 2]);
+      expect(last.grid[4], [5, 5, 5]);
+      final w = last.wins.single;
+      expect(w.kind, WinKind.expand);
+      expect(w.count, 3);
+      expect(w.payout, 50 * 10 * 10);
+      expect(o.total, o.steps.fold(0, (a, s) => a + s.win));
+    });
+
+    test('Ohne Freispiele breitet sich nichts aus', () {
+      final e = SlotEngine(rules, rng: Random(4))..expandSymbol = 5;
+      final o = e.playGrid([
+        [5, 0, 1],
+        [0, 1, 2],
+        [2, 10, 5],
+        [10, 11, 0],
+        [1, 5, 2],
+      ], 100);
+      expect(o.steps.any((s) => s.expanded), isFalse);
+    });
+  });
 }

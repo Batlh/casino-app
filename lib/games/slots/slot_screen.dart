@@ -88,6 +88,9 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
   late int _stake = widget.game.stakes[2];
   int _freeSpins = 0;
   int _freeTotal = 0;
+
+  /// Sondersymbol der Buch-Freispiele.
+  int? _expandSymbol;
   bool _spinning = false;
   bool _auto = false;
   String _message = 'Einsatz wählen und drehen';
@@ -223,9 +226,15 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
           _app.sfx.play(Sound.reelStop);
         }
         running += s.win;
-        if (s.win > 0) {
+        if (s.expanded) {
           setState(() {
-            _message = out.steps.length > 1
+            _message = '${widget.game.symbolNames[s.wins.first.symbol]} breitet sich aus: +${formatCoins(s.win)}';
+            _big = true;
+          });
+          _app.sfx.play(Sound.bigWin);
+        } else if (s.win > 0) {
+          setState(() {
+            _message = out.steps.where((x) => !x.expanded).length > 1
                 ? 'Kaskade ${i + 1}${s.multiplier > 1 ? ' ×${s.multiplier}' : ''}: +${formatCoins(running)}'
                 : 'Gewonnen: +${formatCoins(running)}';
             _big = true;
@@ -288,6 +297,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
       _spinning = false;
       _hold = null;
       _freeSpins += out.freeSpinsWon;
+      _expandSymbol = out.expandSymbol;
       if (free || out.freeSpinsWon > 0) _freeTotal += out.total;
       _message = _describe(out);
       _big = out.total > 0 || out.freeSpinsWon > 0;
@@ -318,6 +328,10 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
 
   String _describe(SpinOutcome r) {
     if (r.freeSpinsWon > 0) {
+      final book = r.expandSymbol;
+      if (book != null && _freeSpins == r.freeSpinsWon) {
+        return '${r.freeSpinsWon} Freispiele mit Sondersymbol ${widget.game.symbolNames[book]}! +${formatCoins(r.total)}';
+      }
       return '${r.freeSpinsWon} Freispiele! +${formatCoins(r.total)}';
     }
     if (r.total == 0) return _freeSpins > 0 ? 'Noch $_freeSpins Freispiele' : '';
@@ -402,7 +416,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
         ResultBanner(text: _message, highlight: _big),
         if (_freeSpins > 0)
           Text(
-            'Noch $_freeSpins Freispiele',
+            'Noch $_freeSpins Freispiele${_expandSymbol != null ? ' · Sondersymbol ${widget.game.symbolNames[_expandSymbol!]}' : ''}',
             style: const TextStyle(
               color: Color(0xFFFFE9A8),
               fontWeight: FontWeight.w700,
@@ -822,6 +836,10 @@ class _SymbolPainter extends CustomPainter {
 
 /// Ein Gewinn als Text, z. B. „Linie 16: 3 × Seepferdchen = 40“ oder „3 × Seestern, 4 Wege = 12“.
 String winText(SlotGame game, LineWin w, {int multiplier = 1}) {
+  if (w.kind == WinKind.expand) {
+    return '${w.count} Walzen ${game.symbolNames[w.symbol]} auf allen ${game.rules.lineCount} Linien'
+        '${multiplier > 1 ? ' ×$multiplier' : ''} = ${formatCoins(w.payout)}';
+  }
   final head = w.line >= 0 ? 'Linie ${w.line + 1}: ' : '';
   final ways = w.line < 0 ? ', ${w.ways} ${w.ways == 1 ? 'Weg' : 'Wege'}' : '';
   final from = w.line < 0 && w.start > 0 ? ' ab Walze ${w.start + 1}' : '';

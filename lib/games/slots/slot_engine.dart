@@ -95,7 +95,20 @@ class SlotRules {
     this.scatterDrops = false,
     this.wildMultipliers = const [],
     this.wildMultiplierWeights = const [],
+    this.scatterWild = false,
+    this.expandingInFree = false,
+    this.expandingChoices = const [0, 1, 2, 3, 4, 5],
   });
+
+  /// Das Streusymbol ersetzt auf den Linien auch jedes andere Symbol (zahlt selbst aber nur als Streusymbol).
+  final bool scatterWild;
+
+  /// Buch-Freispiele: Zu Beginn wird ein Sondersymbol gezogen. Liegt es in einem Freispiel auf genug Walzen,
+  /// füllt es diese Walzen ganz und zahlt auf allen Linien, auch wenn die Walzen nicht nebeneinander liegen.
+  final bool expandingInFree;
+
+  /// Aus diesen Symbolen wird das Sondersymbol gezogen.
+  final List<int> expandingChoices;
 
   /// Wege-Slots: Jeder Joker bekommt beim Dreh einen Multiplikator (z. B. ×2, ×3, ×5) und zählt als so viele Wege.
   final List<int> wildMultipliers;
@@ -156,6 +169,8 @@ class SlotRules {
   /// Einsatzteiler: Linienzahl oder Wege-Teiler.
   int get betDivisor => mode == PayMode.lines ? lines.length : waysDivisor;
 
+  int payFor(int symbol, int count) => _pay(symbol, count);
+
   int _pay(int symbol, int count) {
     final pays = linePays[symbol];
     if (pays == null) return 0;
@@ -205,10 +220,24 @@ class SlotRules {
   }
 }
 
-/// Ein Gewinn: auf einer Linie (line ≥ 0) oder über Wege (line = -1).
+/// Art eines Gewinns.
+enum WinKind {
+  /// Auf einer Gewinnlinie.
+  line,
+
+  /// Über Wege.
+  ways,
+
+  /// Ausgebreitetes Sondersymbol der Buch-Freispiele, zahlt auf allen Linien.
+  expand,
+}
+
+/// Ein Gewinn: auf einer Linie (line ≥ 0), über Wege (line = -1) oder als ausgebreitetes Sondersymbol (line = -2).
 class LineWin {
   const LineWin(this.line, this.symbol, this.count, this.payout, {this.ways = 1, this.start = 0, this.cells = const []});
   final int line;
+
+  WinKind get kind => line >= 0 ? WinKind.line : (line == -2 ? WinKind.expand : WinKind.ways);
   final int symbol;
 
   /// Anzahl Walzen.
@@ -250,7 +279,10 @@ class SpinResult {
 
 /// Eine Stufe einer Drehung: Raster, Gewinne und Multiplikator. Ohne Kaskaden gibt es genau eine Stufe.
 class CascadeStep {
-  const CascadeStep({required this.grid, required this.wins, required this.multiplier, required this.win, this.falls});
+  const CascadeStep({required this.grid, required this.wins, required this.multiplier, required this.win, this.falls, this.expanded = false});
+
+  /// Bild nach dem Ausbreiten des Sondersymbols (Buch-Freispiele), keine Kaskade.
+  final bool expanded;
 
   final List<List<int>> grid;
   final List<LineWin> wins;
@@ -296,7 +328,11 @@ class SpinOutcome {
     this.holdSpin,
     this.wheel,
     this.wildMults = const {},
+    this.expandSymbol,
   });
+
+  /// Sondersymbol der Buch-Freispiele: in Freispielen das gültige, sonst das gerade gezogene (null ohne).
+  final int? expandSymbol;
 
   /// Multiplikatoren der Joker im ersten Raster (Feld = Walze * rows + Reihe).
   final Map<int, int> wildMults;
@@ -328,6 +364,9 @@ class SlotEngine {
 
   /// Felder (Walze, Reihe) mit liegenbleibenden Jokern der laufenden Freispielserie.
   final Set<(int, int)> stickyWilds = {};
+
+  /// Sondersymbol der laufenden Buch-Freispiele.
+  int? expandSymbol;
 
   /// stake: Gesamteinsatz, durch die Linienzahl teilbar.
   SpinResult spin(int stake, {bool free = false}) {
@@ -395,7 +434,10 @@ class SlotEngine {
     final wins = <LineWin>[];
     for (var l = 0; l < rules.lines.length; l++) {
       final line = rules.lines[l];
-      final symbols = [for (var r = 0; r < rules.reels; r++) shown[r][line[r]]];
+      final symbols = [
+        for (var r = 0; r < rules.reels; r++)
+          rules.scatterWild && shown[r][line[r]] == symScatter ? symWild : shown[r][line[r]],
+      ];
       final hit = rules.evaluateLine(symbols);
       if (hit != null) {
         final payout = hit.multiplier * lineBet * multiplier;
@@ -482,6 +524,7 @@ class SlotEngine {
     }
     if (!free) {
       stickyWilds.clear();
+      expandSymbol = null;
     } else if (rules.stickyWildsInFree) {
       // Liegende Joker übernehmen, neue Joker kommen dazu
       for (final (r, row) in stickyWilds) {
@@ -564,6 +607,31 @@ class SlotEngine {
       falls = fall;
     }
 
+    // Buch-Freispiele: Sondersymbol breitet sich über alle Walzen aus, auf denen es liegt
+    final book = expandSymbol;
+    if (free && rules.expandingInFree && book != null) {
+      final last = steps.last.grid;
+      final hitReels = [for (var r = 0; r < reels; r++) if (last[r].contains(book)) r];
+      final pay = rules._pay(book, hitReels.length);
+      if (pay > 0) {
+        final lineBet = stake ~/ rules.lineCount;
+        final win = pay * lineBet * rules.lineCount * baseMult;
+        final grown = [for (var r = 0; r < reels; r++) hitReels.contains(r) ? List.filled(last[r].length, book) : last[r].toList()];
+        steps.add(CascadeStep(
+          grid: grown,
+          wins: [
+            LineWin(-2, book, hitReels.length, win, start: hitReels.first, cells: [
+              for (final r in hitReels)
+                for (var row = 0; row < grown[r].length; row++) (r, row),
+            ]),
+          ],
+          multiplier: baseMult,
+          win: win,
+          expanded: true,
+        ));
+      }
+    }
+
     var total = steps.fold(0, (a, s) => a + s.win);
     // Streu- und Bonussymbole verschwinden in Kaskaden nie und fallen auch nicht nach: Was im Raster liegt,
     // liegt bis zum Ende. Gezählt wird im Raster vor dem Ausfüllen der Joker (sonst verdeckt ein Joker sie).
@@ -618,7 +686,12 @@ class SlotEngine {
     }
 
     total += (hold?.total ?? 0) + (wheel?.win ?? 0);
+    // Erste Buch-Freispiele: Sondersymbol ziehen (bei weiteren Freispielen bleibt es)
+    if (rules.expandingInFree && freeWon > 0 && expandSymbol == null) {
+      expandSymbol = rules.expandingChoices[_rng.nextInt(rules.expandingChoices.length)];
+    }
     return SpinOutcome(
+      expandSymbol: rules.expandingInFree ? expandSymbol : null,
       stops: stops,
       heights: heights,
       steps: steps,

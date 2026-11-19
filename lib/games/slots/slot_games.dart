@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'buch_art.dart';
 import 'drachen_art.dart';
 import 'frucht_art.dart';
 import 'garten_art.dart';
@@ -703,4 +704,51 @@ const pharaonengold = SlotGame(
   freeSpinLine: 'Freispiel, Pyramiden bleiben liegen',
 );
 
-const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb, fruchtlawine, pharaonengold];
+/// Buch-Slot: Das Zauberbuch ist Joker und Streusymbol, in Freispielen breitet sich ein Sondersymbol aus.
+const zauberbibliothek = SlotGame(
+  name: 'Zauberbibliothek',
+  blurb: '10 Linien, Freispiele mit Sondersymbol',
+  rules: SlotRules(
+    rows: 3,
+    lines: _lines10,
+    strips: buchStrips,
+    linePays: {
+      0: [5, 25, 100],
+      1: [5, 25, 100],
+      2: [5, 25, 100],
+      10: [5, 40, 150],
+      11: [5, 40, 150],
+      3: [10, 50, 250],
+      12: [15, 60, 300],
+      4: [20, 100, 600],
+      5: [50, 250, 2000],
+    },
+    scatterWild: true,
+    scatterPays: [2, 20, 200],
+    freeSpins: 10,
+    expandingInFree: true,
+    expandingChoices: [0, 1, 2, 10, 11, 3, 12, 4, 5],
+  ),
+  stakes: [10, 20, 50, 100, 200, 500],
+  symbolNames: ['Feder', 'Kerze', 'Sanduhr', 'Schriftrolle', 'Kristallkugel', 'Eule', '', 'Zauberbuch', '', '', 'Schlüssel', 'Tintenfass', 'Zaubertrank'],
+  paintSymbol: paintBuchSymbol,
+  paintBackdrop: paintBuchBackdrop,
+  background: BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFF2B160C), Color(0xFF1A0D07), Color(0xFF0D0603)],
+    ),
+  ),
+  frame: [Color(0xFFFFE0A0), Color(0xFFB8860B), Color(0xFF5D2E0C)],
+  lobbyColor: Color(0xFF6D3B16),
+  featureText:
+      'Drei oder mehr Zauberbücher irgendwo zahlen das 2-, 20- oder 200-Fache des Einsatzes und starten 10 Freispiele. '
+      'Vorher wird ein Sondersymbol gezogen. Liegt es in einem Freispiel auf mindestens drei Walzen, füllt es diese Walzen '
+      'ganz und zahlt auf allen 10 Linien, auch wenn die Walzen nicht nebeneinander liegen. Neue Bücher in Freispielen '
+      'bringen 10 weitere mit demselben Sondersymbol.',
+  wildText: 'Das Zauberbuch ersetzt auf den Linien jedes Symbol. Selbst zahlt es nur als Streusymbol.',
+  freeSpinLine: 'Freispiel mit Sondersymbol',
+);
+
+const allSlots = [kosmos78, tiefsee, schrebergarten, edelsteinmine, drachenhort, jahrmarkt, vulkaninsel, sakura, jadetempel, fruechtekorb, fruchtlawine, pharaonengold, zauberbibliothek];

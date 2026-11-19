@@ -270,6 +270,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         () => _open(const SlotScreen(game: pharaonengold)),
       ),
       _Game(
+        zauberbibliothek.name,
+        zauberbibliothek.blurb,
+        zauberbibliothek.lobbyColor,
+        () => _SlotArt(zauberbibliothek, 5, symScatter),
+        () => _open(const SlotScreen(game: zauberbibliothek)),
+      ),
+      _Game(
         "Texas Hold'em",
         'No-Limit gegen bis zu fünf Gegner',
         const Color(0xFF7A1F12),

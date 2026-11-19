@@ -107,6 +107,10 @@ String freeSpinsText(SlotGame g) {
     if (r.expandWildInFree) 'Ein Joker auf den inneren Walzen füllt dort die ganze Walze.',
     if (r.stickyWildsInFree) 'Jeder Joker, der landet, bleibt bis zum Ende der Freispiele an seinem Platz liegen.',
     if (r.freeCascade.isNotEmpty) 'Die Kaskaden zählen mehr (siehe Kaskaden).',
+    if (r.expandingInFree)
+      'Vor den Freispielen wird ein Sondersymbol gezogen. Liegt es in einem Freispiel auf mindestens drei Walzen, füllt es '
+          'diese Walzen ganz und zahlt auf allen ${r.lineCount} Linien, auch wenn die Walzen nicht nebeneinander liegen. '
+          'Dieser Gewinn kommt zu den normalen Liniengewinnen dazu. Weitere Freispiele behalten dasselbe Sondersymbol.',
   ].join(' ');
   return 'Drei oder mehr ${_sym(g, symScatter)} irgendwo auf den Walzen zahlen das ${_fold(r.scatterPays)} des '
       'Einsatzes und starten ${r.freeSpins} Freispiele. Freispiele kosten nichts, neue Symbole „${g.symbolNames[symScatter]}“ '
@@ -225,6 +229,16 @@ List<String> winBreakdown(SlotGame game, List<List<int>> grid, LineWin w,
   final r = game.rules;
   final name = game.symbolNames[w.symbol];
   final lines = <String>[];
+  if (w.kind == WinKind.expand) {
+    final lineBet = stake ~/ r.lineCount;
+    final pay = r.linePays[w.symbol]![w.count - 3];
+    final reels = [for (final (c, _) in w.cells) c + 1].toSet().toList()..sort();
+    lines.add('Sondersymbol $name liegt auf ${w.count} Walzen (${reels.join(', ')}) und füllt sie ganz.');
+    lines.add('Es zahlt auf allen ${r.lineCount} Linien, auch wenn die Walzen nicht nebeneinander liegen.');
+    lines.add('Laut Gewinnplan: ${w.count} gleiche = $pay × Linieneinsatz (${formatCoins(lineBet)}).');
+    lines.add('$pay × ${formatCoins(lineBet)} × ${r.lineCount} Linien${multiplier > 1 ? ' × $multiplier' : ''} = ${formatCoins(w.payout)}');
+    return lines;
+  }
   if (w.line >= 0) {
     final lineBet = stake ~/ r.lineCount;
     final factor = w.payout ~/ (lineBet * multiplier);

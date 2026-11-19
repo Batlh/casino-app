@@ -53,8 +53,9 @@ def wins(g, grid, stake, mult, wm=None):
     reels = len(grid)
     if g.get("mode", "lines") == "lines":
         lb = stake // len(g["lines"])
+        sw = g.get("scatter_wild")
         for line in g["lines"]:
-            h = line_hit(g, [grid[r][line[r]] for r in range(reels)])
+            h = line_hit(g, [WILD if sw and grid[r][line[r]] == SCATTER else grid[r][line[r]] for r in range(reels)])
             if h:
                 out.append((h[2] * lb * mult, [(r, line[r]) for r in range(h[1])]))
         return out
@@ -135,6 +136,7 @@ def play(g, rng, stake, free=False):
         grid.append([st[(s + row) % len(st)] for row in range(h)])
     if not free:
         g["_sticky"] = set()
+        g["_book"] = None
     elif g.get("sticky"):
         held = g.setdefault("_sticky", set())
         for r, row in held:
@@ -187,6 +189,14 @@ def play(g, rng, stake, free=False):
             nxt.append(fresh + kept)
         shown = expand(g, nxt, free)
     info["steps"] = steps
+    # Buch-Freispiele: Sondersymbol füllt alle Walzen, auf denen es liegt, und zahlt auf allen Linien
+    book = g.get("_book")
+    if free and g.get("book") and book is not None:
+        n = sum(1 for c in shown if book in c)
+        p = pay(g, book, n)
+        if p:
+            total += p * (stake // len(g["lines"])) * len(g["lines"]) * base
+            info["book"] = n
     # Wie SlotEngine: im Raster vor dem Ausfüllen der Joker zählen (fallen in Kaskaden nicht nach)
     flat = [x for c in (shown if g.get("scatter_drop") else grid) for x in c]
     info["cascade_scatter"] = flat.count(SCATTER) >= 3 and sum(c.count(SCATTER) for c in grid) < 3
@@ -216,6 +226,8 @@ def play(g, rng, stake, free=False):
             w, full = hold_spin(g, rng, {c: coin_value(g, rng) for c in cells[:amount]}, stake)
             total += w
             info["hold"] = w
+    if g.get("book") and freewon and g.get("_book") is None:
+        g["_book"] = rng.choice(g.get("book_choices", [0, 1, 2, 3, 4, 5]))
     return total, freewon, info
 
 
