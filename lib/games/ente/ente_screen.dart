@@ -93,12 +93,13 @@ class _EntenScreenState extends State<EntenScreen> with TickerProviderStateMixin
       _message = m == 0 ? 'Leider eine Niete' : '$m-fach: +${formatCoins(win)}';
       _big = m > 0;
     });
-    app.wallet.refillIfBroke();
+    app.wallet.refillIfBroke(min: entenPreise.first);
   }
 
   @override
   Widget build(BuildContext context) {
     return GameFrame(
+      minStake: entenPreise.first,
       title: 'Entchen angeln',
       guide: entenGuide,
       child: SafeArea(

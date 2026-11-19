@@ -118,7 +118,7 @@ class _PinballScreenState extends State<PinballScreen> with SingleTickerProvider
   void _start() {
     if (_table != null && !_table!.gameOver) return;
     if (!_app.wallet.spend(pinballGameCost)) {
-      _app.wallet.refillIfBroke();
+      _app.wallet.refillIfBroke(min: pinballGameCost);
       setState(() => _message = 'Münzen reichen nicht für ein Spiel');
       return;
     }
@@ -388,6 +388,7 @@ class _PinballScreenState extends State<PinballScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     final th = _spec.theme;
     return GameFrame(
+      minStake: pinballGameCost,
       title: _choosing ? 'Flipper: Tisch wählen' : _spec.name,
       guide: pinballGuide,
       background: BoxDecoration(

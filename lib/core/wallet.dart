@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -27,6 +29,9 @@ class Wallet extends ChangeNotifier {
 
   /// Zählt hoch, sobald nachgefüllt wurde. Die Oberfläche zeigt dann einen Hinweis.
   final ValueNotifier<int> refills = ValueNotifier<int>(0);
+
+  /// Wie viel zuletzt nachgefüllt wurde.
+  int lastRefill = refillAmount;
 
   int get balance => _balance;
 
@@ -60,10 +65,13 @@ class Wallet extends ChangeNotifier {
     return dailyBonus;
   }
 
-  /// Am Ende einer Runde aufrufen. Wer nicht mehr setzen kann, bekommt neue Münzen.
-  bool refillIfBroke() {
-    if (_balance >= minBet) return false;
-    _set(_balance + refillAmount);
+  /// Am Ende einer Runde und beim Öffnen eines Spiels aufrufen. Wer den kleinsten Einsatz des Spiels ([min])
+  /// nicht mehr bezahlen kann, bekommt neue Münzen, mindestens so viele, dass es wieder reicht.
+  bool refillIfBroke({int min = minBet}) {
+    final need = math.max(min, minBet);
+    if (_balance >= need) return false;
+    lastRefill = math.max(refillAmount, need - _balance);
+    _set(_balance + lastRefill);
     refills.value++;
     return true;
   }

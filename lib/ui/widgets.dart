@@ -186,9 +186,13 @@ class GameFrame extends StatefulWidget {
     this.settings,
     this.actions = const [],
     this.network,
+    this.minStake = Wallet.minBet,
   });
 
   final String title;
+
+  /// Kleinster Einsatz des Spiels. Reicht das Guthaben beim Öffnen nicht dafür, wird nachgefüllt.
+  final int minStake;
   final Widget child;
   final Decoration? background;
 
@@ -218,6 +222,9 @@ class _GameFrameState extends State<GameFrame> {
     if (!_listening) {
       _listening = true;
       _wallet.refills.addListener(_onRefill);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _wallet.refillIfBroke(min: widget.minStake);
+      });
     }
   }
 
@@ -226,7 +233,7 @@ class _GameFrameState extends State<GameFrame> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Münzen aufgebraucht. ${formatCoins(Wallet.refillAmount)} neue Münzen sind da.',
+          'Zu wenig Münzen zum Weiterspielen. ${formatCoins(_wallet.lastRefill)} neue Münzen sind da.',
         ),
       ),
     );

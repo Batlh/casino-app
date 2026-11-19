@@ -6,6 +6,7 @@ import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guides.dart';
+import '../../ui/net_replay_mixin.dart';
 import '../../ui/widgets.dart';
 import '../cards/card_widgets.dart';
 import '../cards/rewards.dart';
@@ -23,7 +24,7 @@ class QuatroScreen extends StatefulWidget {
   State<QuatroScreen> createState() => _QuatroScreenState();
 }
 
-class _QuatroScreenState extends State<QuatroScreen> {
+class _QuatroScreenState extends State<QuatroScreen> with NetReplayScreen {
   final _rng = math.Random.secure();
   int _opponents = 1;
   int _round = 0;
@@ -32,9 +33,17 @@ class _QuatroScreenState extends State<QuatroScreen> {
   int? _swapFirst;
   bool _running = false;
   bool _rewarded = false;
+  final List<List<Object?>> _log = [];
 
   AppScope get _app => AppScope.of(context);
-  bool get _myTurn => !_e.finished && _e.actor.human && !_running;
+
+  /// Dein Platz: allein immer 0, im Netz je Gerät verschieden.
+  int get _me => replayActive ? replayMe : 0;
+  QPlayer get _mine => _e.players[_me];
+  bool get _myTurn => !_e.finished && _e.current == _me && !_running;
+
+  /// Spielt der Computer diesen Platz (im Netz nur beim Gastgeber)?
+  bool _bot(int seat) => replayActive ? replayIsHost && replayIsBot(seat) : seat != 0;
 
   @override
   void initState() {
@@ -42,7 +51,103 @@ class _QuatroScreenState extends State<QuatroScreen> {
     _setup();
   }
 
+  @override
+  void dispose() {
+    replayDispose();
+    super.dispose();
+  }
+
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get replayGame => 'viererkette';
+  @override
+  String get replayTitle => 'Viererkette';
+  @override
+  int get replaySeats => 4;
+  @override
+  List<String> get replayBotNames => const [];
+  @override
+  List<List<Object?>> get replayLog => _log;
+  @override
+  Map<String, Object?> get replayOptions => {'start': _rng.nextInt(4)};
+
+  @override
+  void replayNewGame(int seed, List<String> names, int me, Map<String, Object?> options) {
+    _log.clear();
+    _e = QuatroEngine(
+      players: [for (final (i, n) in names.indexed) QPlayer(n, human: i == me)],
+      rng: math.Random(seed),
+    )..start(startPlayer: ((options['start'] as num?)?.toInt() ?? 0) % names.length);
+    _selected = null;
+    _swapFirst = null;
+    _rewarded = false;
+    _running = false;
+  }
+
+  @override
+  void replayApply(List<dynamic> a) => _apply(a);
+
+  @override
+  bool replayAllowed(int seat, List<dynamic> a) {
+    if (_e.finished || seat != _e.current) return false;
+    return switch (a[0]) {
+      'p' => !_e.swapPending && _e.actor.hand.any((t) => t.id == a[1] && _e.canPlace(t, (a[2] as num).toInt())),
+      's' => _e.swapPending && a[1] != a[2],
+      'x' => !_e.swapPending && _e.exchanged == null && !_e.canMove,
+      'e' => !_e.swapPending && _e.exchanged != null,
+      _ => false,
+    };
+  }
+
+  @override
+  void replayAfterRemote(List<List<dynamic>> acts) {
+    if (acts.isNotEmpty) _app.sfx.play(Sound.chip);
+    if (_selected != null && !_mine.hand.contains(_selected)) _selected = null;
+    setState(() {});
+    _after();
+  }
+
+  @override
+  void replayClosed() => _newRound();
+
+  /// Zug ausführen: allein und beim Gastgeber sofort, als Mitspieler über den Gastgeber.
+  void _do(List<Object?> a) {
+    if (replaySend(a)) return;
+    _apply(a);
+    replayBroadcast();
+  }
+
+  void _apply(List<dynamic> a) {
+    final seat = _e.current;
+    switch (a[0]) {
+      case 'p':
+        final t = _e.actor.hand.firstWhere((t) => t.id == (a[1] as num).toInt());
+        final col = (a[2] as num).toInt();
+        final next = _e.players[(_e.current + 1) % _e.players.length];
+        final threatsBefore = seat == _me ? _threats(next) : 0;
+        _e.place(t, col);
+        if (seat == _me && !_e.finished) {
+          var bonus = t.kind == TileKind.plain ? 0 : actionTileReward;
+          // Eine Viererreihe des Nächsten verhindert
+          if (threatsBefore > 0 && _threats(next) < threatsBefore) bonus += blockReward;
+          if (bonus > 0) _app.wallet.credit(bonus);
+        }
+      case 's':
+        _e.swapColumns((a[1] as num).toInt(), (a[2] as num).toInt());
+      case 'x':
+        final id = (a[1] as num).toInt();
+        _e.exchange(id < 0 ? null : _e.actor.hand.firstWhere((t) => t.id == id));
+      case 'e':
+        _e.endTurn();
+      default:
+        throw StateError('Unbekannter Zug $a');
+    }
+    _log.add(a);
+  }
+
   void _setup() {
+    _log.clear();
     final offset = _rng.nextInt(_names.length);
     _e = QuatroEngine(
       players: [
@@ -90,11 +195,12 @@ class _QuatroScreenState extends State<QuatroScreen> {
       } else if (_swapFirst == col) {
         setState(() => _swapFirst = null);
       } else {
-        _e.swapColumns(_swapFirst!, col);
+        final first = _swapFirst!;
         _swapFirst = null;
+        _do(['s', first, col]);
         _app.sfx.play(Sound.chip);
         setState(() {});
-        _after();
+        if (!replayIsGuest) _after();
       }
       return;
     }
@@ -106,19 +212,11 @@ class _QuatroScreenState extends State<QuatroScreen> {
       t = fits.first;
     }
     if (!_e.canPlace(t, col)) return;
-    final next = _e.players[(_e.current + 1) % _e.players.length];
-    final threatsBefore = _threats(next);
-    _e.place(t, col);
     _selected = null;
-    if (!_e.finished) {
-      var bonus = t.kind == TileKind.plain ? 0 : actionTileReward;
-      // Eine Viererreihe des Nächsten verhindert
-      if (threatsBefore > 0 && _threats(next) < threatsBefore) bonus += blockReward;
-      if (bonus > 0) _app.wallet.credit(bonus);
-    }
+    _do(['p', t.id, col]);
     _app.sfx.play(Sound.chip);
     setState(() {});
-    if (!_e.swapPending) _after();
+    if (!replayIsGuest && !_e.swapPending) _after();
   }
 
   /// In wie vielen Spalten dieser Spieler sofort gewinnen könnte.
@@ -131,14 +229,15 @@ class _QuatroScreenState extends State<QuatroScreen> {
   void _exchange() {
     if (!_myTurn) return;
     if (_e.exchanged != null) {
-      _e.endTurn();
+      _do(['e']);
     } else {
       if (_e.canMove) return;
-      _e.exchange(_selected ?? (_e.actor.hand.isEmpty ? null : _e.actor.hand.first));
-      _selected = _e.exchanged;
+      final t = _selected ?? (_e.actor.hand.isEmpty ? null : _e.actor.hand.first);
+      _do(['x', t?.id ?? -1]);
+      _selected = replayIsGuest ? null : _e.exchanged;
     }
     setState(() {});
-    _after();
+    if (!replayIsGuest) _after();
   }
 
   void _after() {
@@ -152,21 +251,22 @@ class _QuatroScreenState extends State<QuatroScreen> {
   Future<void> _pump() async {
     if (_running) return;
     _running = true;
-    while (mounted && !_e.finished && !_e.actor.human) {
+    final engine = _e;
+    while (mounted && identical(engine, _e) && !_e.finished && _bot(_e.current)) {
       await Future<void>.delayed(_app.settings.botDelay(800));
-      if (!mounted) return;
+      if (!mounted || !identical(engine, _e) || _e.finished || !_bot(_e.current)) break;
       if (_e.swapPending) {
         final (a, b) = quatroBotSwap(_e, _rng);
-        _e.swapColumns(a, b);
+        _do(['s', a, b]);
       } else {
         final m = quatroBotChoice(_e, _rng);
         if (m.tile != null) {
-          _e.place(m.tile!, m.col);
+          _do(['p', m.tile!.id, m.col]);
         } else if (_e.exchanged != null) {
-          _e.endTurn();
+          _do(['e']);
         } else {
           final hand = _e.actor.hand;
-          _e.exchange(hand.isEmpty ? null : hand[_rng.nextInt(hand.length)]);
+          _do(['x', hand.isEmpty ? -1 : hand[_rng.nextInt(hand.length)].id]);
         }
       }
       _app.sfx.play(Sound.chip);
@@ -181,8 +281,8 @@ class _QuatroScreenState extends State<QuatroScreen> {
   void _finish() {
     if (_rewarded) return;
     _rewarded = true;
-    if (_e.winner?.human ?? false) {
-      _app.wallet.credit(quatroRewardPerOpponent * _opponents);
+    if (_e.winner == _mine) {
+      _app.wallet.credit(quatroRewardPerOpponent * (_e.players.length - 1));
       _app.sfx.play(Sound.win);
     } else {
       _app.sfx.play(Sound.lose);
@@ -193,11 +293,11 @@ class _QuatroScreenState extends State<QuatroScreen> {
   String get _status {
     if (_e.finished) {
       if (_e.draw) return _e.lastEvent;
-      return _e.winner!.human
-          ? 'Vier in einer Reihe! +${formatCoins(quatroRewardPerOpponent * _opponents)} Münzen'
+      return _e.winner == _mine
+          ? 'Vier in einer Reihe! +${formatCoins(quatroRewardPerOpponent * (_e.players.length - 1))} Münzen'
           : '${_e.winner!.name} hat vier in einer Reihe';
     }
-    if (_e.actor.human) {
+    if (_e.current == _me) {
       if (_e.swapPending) {
         return _swapFirst == null ? 'Wähle zwei Spalten zum Tauschen' : 'Und jetzt die zweite Spalte';
       }
@@ -215,7 +315,9 @@ class _QuatroScreenState extends State<QuatroScreen> {
     return GameFrame(
       guide: quatroGuide,
       title: 'Viererkette',
-      child: LayoutBuilder(builder: (context, box) => _layout(box)),
+      actions: replayActions(context),
+      network: replayActive ? null : replayOpenPanel,
+      child: replayScreen() ?? LayoutBuilder(builder: (context, box) => _layout(box)),
     );
   }
 
@@ -223,16 +325,18 @@ class _QuatroScreenState extends State<QuatroScreen> {
     final w = box.maxWidth;
     final h = box.maxHeight;
     final landscape = w > h * 1.25;
-    final status = ResultBanner(text: _status, highlight: _e.winner?.human ?? false, maxLines: 2);
+    final status = ResultBanner(text: _status, highlight: _e.winner != null && _e.winner == _mine, maxLines: 2);
     final buttons = Wrap(
       spacing: 8,
       runSpacing: 8,
       alignment: WrapAlignment.center,
       children: _e.finished
-          ? [
-              ActionButton(primary: true, label: 'Neue Runde', onPressed: _newRound),
-              ActionButton(label: 'Gegner wählen', onPressed: _askOpponents),
-            ]
+          ? replayActive
+              ? replayButtons(label: 'Neue Runde', next: replayHostStart)
+              : [
+                  ActionButton(primary: true, label: 'Neue Runde', onPressed: _newRound),
+                  ActionButton(label: 'Gegner wählen', onPressed: _askOpponents),
+                ]
           : [
               ActionButton(
                 primary: _myTurn && (!_e.canMove || _e.exchanged != null),
@@ -246,7 +350,8 @@ class _QuatroScreenState extends State<QuatroScreen> {
       runSpacing: 6,
       alignment: WrapAlignment.center,
       children: [
-        for (var i = 1; i < _e.players.length; i++) _opponentChip(i),
+        for (var i = 0; i < _e.players.length; i++)
+          if (i != _me) _opponentChip(i),
         _bagChip(),
         ActionChip(
           avatar: const Icon(Icons.help_outline, size: 18, color: _gold),
@@ -262,7 +367,7 @@ class _QuatroScreenState extends State<QuatroScreen> {
     final hand = Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        for (final t in _e.players.first.hand)
+        for (final t in _mine.hand)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 5),
             child: GestureDetector(

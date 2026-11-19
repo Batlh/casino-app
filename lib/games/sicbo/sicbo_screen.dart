@@ -223,6 +223,7 @@ class _SicBoScreenState extends State<SicBoScreen> with NetSharedTable {
       paid += p;
     }
     if (paid > 0) _app.wallet.credit(paid);
+    _app.wallet.refillIfBroke();
     final played = _total > 0;
     final net = paid - _total;
     if (played) _app.sfx.play(net > 0 ? Sound.win : Sound.lose);

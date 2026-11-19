@@ -281,7 +281,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
       credit();
     }
     if (!mounted) {
-      wallet.refillIfBroke();
+      wallet.refillIfBroke(min: _stakes.first);
       return;
     }
     setState(() {
@@ -303,7 +303,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
         _freeTotal = 0;
       });
     }
-    wallet.refillIfBroke();
+    wallet.refillIfBroke(min: _stakes.first);
     if (_stake > wallet.balance && _freeSpins == 0) {
       setState(() => _stake = _stakes.first);
     }
@@ -329,6 +329,7 @@ class _SlotScreenState extends State<SlotScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return GameFrame(
+      minStake: _stakes.first,
       guide: slotGuide(widget.game),
       title: widget.game.name,
       background: widget.game.background,

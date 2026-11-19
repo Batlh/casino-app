@@ -46,6 +46,20 @@ void main() {
     expect(w.refills.value, 1);
   });
 
+  test('Teure Spiele füllen nach, sobald ihr kleinster Einsatz nicht mehr reicht', () {
+    final w = Wallet(prefs);
+    w.spend(Wallet.startBalance - 362);
+    expect(w.refillIfBroke(), isFalse);
+    expect(w.refillIfBroke(min: 500), isTrue);
+    expect(w.balance, 362 + Wallet.refillAmount);
+    // Reicht auch das Nachfüllen nicht (Poker-Einstieg), gibt es genug für einen Einsatz
+    final v = Wallet(prefs);
+    v.spend(v.balance - 100);
+    expect(v.refillIfBroke(min: 5000), isTrue);
+    expect(v.balance, 5000);
+    expect(v.lastRefill, 4900);
+  });
+
   test('Bildkarten: J und Q als Standard, B und D wählbar und gespeichert', () {
     const bube = PlayingCard(11, Suit.spades);
     const dame = PlayingCard(12, Suit.hearts);

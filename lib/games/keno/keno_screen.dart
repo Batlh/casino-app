@@ -135,6 +135,7 @@ class _KenoScreenState extends State<KenoScreen> with NetSharedTable {
     final hits = _drawn.where(_picks.contains).length;
     final paid = playing ? kenoPayout(_picks.length, hits, _bet) : 0;
     if (paid > 0) _app.wallet.credit(paid);
+    _app.wallet.refillIfBroke();
     if (playing) _app.sfx.play(paid > _bet ? Sound.win : (paid > 0 ? Sound.coin : Sound.lose));
     setState(() {
       _drawing = false;

@@ -107,7 +107,7 @@ class _HoldemScreenState extends State<HoldemScreen> {
     if (me != null) {
       // Laufende Einsätze sind verloren, der Rest geht zurück ins Münzkonto
       _wallet.credit(me.stack);
-      _wallet.refillIfBroke();
+      _wallet.refillIfBroke(min: holdemTables.first.buyIn);
     }
     _guestPayOut();
     _sub?.cancel();
@@ -320,7 +320,7 @@ class _HoldemScreenState extends State<HoldemScreen> {
       _engine = null;
       _message = '';
     });
-    _wallet.refillIfBroke();
+    _wallet.refillIfBroke(min: holdemTables.first.buyIn);
     if (_host != null) _closeNet();
   }
 
@@ -567,7 +567,7 @@ class _HoldemScreenState extends State<HoldemScreen> {
     // Ohne Sicht hat noch keine Hand begonnen: der volle Einstieg kommt zurück
     final chips = (me == null ? guest.buyIn : me.stack) + (_rebuyAsked ? guest.buyIn : 0);
     _wallet.credit(chips);
-    _wallet.refillIfBroke();
+    _wallet.refillIfBroke(min: holdemTables.first.buyIn);
     debugLog.info('netz', 'Poker verlassen, $chips Chips zurück');
   }
 
@@ -575,6 +575,7 @@ class _HoldemScreenState extends State<HoldemScreen> {
   Widget build(BuildContext context) {
     final e = _engine;
     return GameFrame(
+      minStake: holdemTables.first.buyIn,
       guide: widget.draw ? fiveCardDrawGuide : (widget.omaha ? omahaGuide : holdemGuide),
       title: widget.draw ? 'Five Card Draw' : (widget.omaha ? 'Omaha' : "Texas Hold'em"),
       child: _guest != null

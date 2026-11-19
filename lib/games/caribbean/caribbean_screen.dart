@@ -107,6 +107,7 @@ class _CaribbeanScreenState extends State<CaribbeanScreen> {
     if (!_app.wallet.spend(2 * _ante)) return;
     final (paid, text) = caribbeanSettle(bestHand(_me), bestHand(_dealer), _ante);
     if (paid > 0) _app.wallet.credit(paid);
+    _app.wallet.refillIfBroke();
     _app.sfx.play(paid > 3 * _ante ? Sound.win : (paid > 0 ? Sound.coin : Sound.lose));
     setState(() {
       _deciding = false;

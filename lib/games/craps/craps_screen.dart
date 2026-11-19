@@ -178,6 +178,7 @@ class _CrapsScreenState extends State<CrapsScreen> with NetSharedTable {
       pointText = '';
     }
     if (paid > 0) _app.wallet.credit(paid);
+    _app.wallet.refillIfBroke();
     _app.sfx.play(paid > 0 ? Sound.win : (lost > 0 ? Sound.lose : Sound.tick));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

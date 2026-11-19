@@ -174,7 +174,7 @@ class _RubbelScreenState extends State<RubbelScreen> {
       _message = los.prize > 0 ? 'Gewonnen: +${formatCoins(los.prize)}' : 'Leider eine Niete';
     });
     _app.sfx.play(los.prize >= los.sorte.price * 10 ? Sound.bigWin : (los.prize > 0 ? Sound.win : Sound.lose));
-    wallet.refillIfBroke();
+    wallet.refillIfBroke(min: _sorte.price);
   }
 
   @override
@@ -190,6 +190,7 @@ class _RubbelScreenState extends State<RubbelScreen> {
     final los = _los;
     final s = los?.sorte ?? _sorte;
     return GameFrame(
+      minStake: _sorte.price,
       title: 'Rubbellose',
       guide: rubbelGuide(),
       child: _LosFrame(
@@ -414,7 +415,7 @@ class _PullTabScreenState extends State<PullTabScreen> {
       _message = t.prize > 0 ? '3 × ${pullSymbole[t.rows[t.winRow].first]}: +${formatCoins(t.prize)}' : 'Leider eine Niete';
     });
     _app.sfx.play(t.prize >= t.sorte.price * 10 ? Sound.bigWin : (t.prize > 0 ? Sound.win : Sound.lose));
-    wallet.refillIfBroke();
+    wallet.refillIfBroke(min: _sorte.price);
   }
 
   @override
@@ -430,6 +431,7 @@ class _PullTabScreenState extends State<PullTabScreen> {
     final s = t?.sorte ?? _sorte;
     final light = Color(s.colors[1]);
     return GameFrame(
+      minStake: _sorte.price,
       title: 'Pull-Tabs',
       guide: pullGuide(),
       child: _LosFrame(
