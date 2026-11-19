@@ -8,6 +8,7 @@ import '../../../core/settings.dart';
 import '../../../core/sfx.dart';
 import '../../../core/theme.dart';
 import '../../../ui/guide.dart';
+import '../../../ui/net_replay_mixin.dart';
 import '../../../ui/widgets.dart';
 import '../../cards/card_widgets.dart';
 import '../riichi_hand.dart';
@@ -49,7 +50,7 @@ class MjScreen extends StatefulWidget {
   State<MjScreen> createState() => _MjScreenState();
 }
 
-class _MjScreenState extends State<MjScreen> {
+class _MjScreenState extends State<MjScreen> with NetReplayScreen {
   late MjGame _g;
   late math.Random _rng;
   int? _selected;
@@ -67,13 +68,22 @@ class _MjScreenState extends State<MjScreen> {
   late final Settings _store;
 
   AppScope get _app => AppScope.of(context);
-  MjPlayer get _me => _g.players[0];
+  MjPlayer get _me => _g.players[_ms];
+
+  /// Dein Platz: allein 0, im Netz je Gerät verschieden.
+  int get _ms => replayActive ? replayMe : 0;
+
+  /// Platz [k] Schritte rechts von dir (für die Sitzordnung am Bildschirm).
+  int _rel(int k) => (_ms + k) % _g.n;
+
+  /// Spielt hier der Computer diesen Platz (im Netz nur beim Gastgeber)?
+  bool _botHere(int p) => replayActive ? replayIsHost && replayIsBot(p) : p != 0;
   MjRules get _r => widget.rules;
 
   /// Startwert für die Mauer; die Computer würfeln getrennt davon.
   late int _seed;
   String get _saveId => 'mj.${_r.variant.name}';
-  bool get _saving => widget.seed == null;
+  bool get _saving => widget.seed == null && !replayActive;
 
   MjGame _make() => MjGame(_r, rng: math.Random(_seed))..start();
 
@@ -118,7 +128,119 @@ class _MjScreenState extends State<MjScreen> {
   @override
   void dispose() {
     _persist();
+    replayDispose();
     super.dispose();
+  }
+
+  // ---------------------------------------------------------------- Netzwerk
+
+  @override
+  String get replayGame => _saveId;
+  @override
+  String get replayTitle => _r.title;
+  @override
+  int get replaySeats => _r.players;
+  @override
+  List<String> get replayBotNames => const ['Mei', 'Jun', 'Lan'];
+  @override
+  List<List<Object?>> get replayLog => _g.actionLog;
+
+  @override
+  void replayNewGame(int seed, List<String> names, int me, Map<String, Object?> options) {
+    _seed = seed;
+    _g = MjGame(_r, rng: math.Random(seed), names: names, humans: replayHumans, me: me)..start();
+    _selected = null;
+    _exchangePick.clear();
+    _rewarded = false;
+    _handPaid = false;
+    _fast = false;
+    _earned = 0;
+    _pending = {};
+    _running = false;
+    _claimLog = -1;
+    _claimSent = false;
+  }
+
+  @override
+  void replayApply(List<dynamic> a) {
+    if (a[0] == 'cl') {
+      _startClaimRound();
+      _pending[(a[1] as num).toInt()] = MjOption(MjClaimType.values[(a[2] as num).toInt()], [for (final t in a.sublist(3)) (t as num).toInt()]);
+      _resolveIfComplete();
+      return;
+    }
+    mjApply(_g, a);
+  }
+
+  @override
+  bool replayAllowed(int seat, List<dynamic> a) {
+    int i(int k) => (a[k] as num).toInt();
+    if (a.length < 2 || i(1) != seat) return false;
+    switch (a[0]) {
+      case 'cl':
+        if (_g.phase != MjPhase.claim || _pending.containsKey(seat)) return false;
+        final opts = _g.claims[seat];
+        if (opts == null) return false;
+        final type = MjClaimType.values[i(2)];
+        if (type == MjClaimType.pass) return true;
+        final tiles = [for (final t in a.sublist(3)) (t as num).toInt()];
+        return opts.any((o) => o.type == type && o.tiles.join(',') == tiles.join(','));
+      case 'd':
+        return _g.phase == MjPhase.discard && _g.current == seat && _g.canDiscard(seat, i(2));
+      case 't':
+        return _g.phase == MjPhase.discard && _g.current == seat && _g.canTsumo(seat);
+      case 'k':
+        return _g.phase == MjPhase.discard && _g.current == seat && _g.kanOptions(seat).contains(i(2));
+      case 'j':
+        return _g.phase == MjPhase.discard && _g.current == seat && _g.declarableJokers(seat).contains(i(2));
+      case 'x':
+        return _g.phase == MjPhase.exchange && _g.players[seat].exchange.length != 3 &&
+            _g.validExchange([for (final t in a[2] as List) (t as num).toInt()]);
+      case 'v':
+        return _g.phase == MjPhase.voidChoice && _g.players[seat].voidSuit == null;
+    }
+    return false;
+  }
+
+  @override
+  void replayAfterRemote(List<List<dynamic>> acts) {
+    if (acts.isNotEmpty) _app.sfx.play(Sound.tick);
+    if (_g.phase != MjPhase.handOver && _g.phase != MjPhase.gameOver) _handPaid = false;
+    if (_selected != null && !_me.hand.contains(_selected)) _selected = null;
+    setState(() {});
+    _pump();
+  }
+
+  @override
+  void replayClosed() => _newGame();
+
+  /// Zug ausführen: allein und beim Gastgeber sofort, als Mitspieler über den Gastgeber.
+  void _do(List<Object?> a) {
+    if (replaySend(a)) return;
+    mjApply(_g, a);
+    replayBroadcast();
+  }
+
+  /// Neue Ansagerunde (erkannt am Protokoll): Computer entscheiden sofort, Menschen wählen selbst.
+  void _startClaimRound() {
+    if (_g.phase != MjPhase.claim || _claimLog == _g.actionLog.length) return;
+    _claimLog = _g.actionLog.length;
+    _claimSent = false;
+    _pending = {};
+    if (replayIsGuest) return;
+    for (final e in _g.claims.entries) {
+      if (_botHere(e.key)) _pending[e.key] = mjBotClaim(_g, e.key, e.value);
+    }
+  }
+
+  /// Gastgeber: Haben alle, die etwas ansagen dürfen, gewählt, wird entschieden.
+  void _resolveIfComplete() {
+    if (_g.phase != MjPhase.claim) return;
+    if (_g.claims.keys.any((q) => !_pending.containsKey(q))) return;
+    final choices = _pending;
+    _pending = {};
+    _g.resolveClaims(choices);
+    if (_g.handWins.isNotEmpty) _app.sfx.play(Sound.lose);
   }
 
   void _persist() {
@@ -132,6 +254,11 @@ class _MjScreenState extends State<MjScreen> {
   }
 
   void _newGame() {
+    if (replayActive) {
+      if (replayIsHost) replayHostStart();
+      _pump();
+      return;
+    }
     _seed = math.Random.secure().nextInt(1 << 31);
     setState(() {
       _g = _make();
@@ -149,8 +276,12 @@ class _MjScreenState extends State<MjScreen> {
 
   Duration _delay(int ms) => _fast ? const Duration(milliseconds: 60) : _app.settings.botDelay(ms);
 
-  bool get _humanClaim => _g.phase == MjPhase.claim && _g.claims.containsKey(0);
-  bool get _myTurn => !_running && _g.phase == MjPhase.discard && _g.current == 0;
+  bool get _humanClaim => _g.phase == MjPhase.claim && _g.claims.containsKey(_ms) && !_claimSent;
+  bool get _myTurn => !_running && _g.phase == MjPhase.discard && _g.current == _ms;
+
+  /// Als Mitspieler: Ansage ist unterwegs zum Gastgeber.
+  bool _claimSent = false;
+  int _claimLog = -1;
 
   Future<void> _pump() async {
     if (_running) return;
@@ -166,20 +297,26 @@ class _MjScreenState extends State<MjScreen> {
       }
       if (_g.phase == MjPhase.exchange || _g.phase == MjPhase.voidChoice) break;
       if (_g.phase == MjPhase.discard) {
-        if (_g.current == 0) {
+        if (!_botHere(_g.current)) {
           // Feste Hand nach einem Sieg (Blutfluss): unpassende Steine gehen von selbst weg
-          if (_me.locked && _g.drawn != null && !_g.canTsumo(0)) {
+          if (_g.current == _ms && _me.locked && _g.drawn != null && !_g.canTsumo(_ms)) {
+            final log = _g.actionLog.length;
             await Future<void>.delayed(_delay(450));
             if (!mounted) return;
-            _g.discard(0, _g.drawn!);
+            if (_g.actionLog.length != log) continue;
+            _do(['d', _ms, _g.drawn!]);
             _app.sfx.play(Sound.tick);
             setState(() {});
+            if (replayIsGuest) break;
             continue;
           }
           break;
         }
+        final engine = _g;
+        final log = _g.actionLog.length;
         await Future<void>.delayed(_delay(650));
         if (!mounted) return;
+        if (!identical(engine, _g) || _g.actionLog.length != log) continue;
         final p = _g.current;
         switch (mjBotTurn(_g, p, _rng)) {
           case MjBotWin():
@@ -195,25 +332,24 @@ class _MjScreenState extends State<MjScreen> {
             _g.discard(p, tile);
             _app.sfx.play(Sound.tick);
         }
+        replayBroadcast();
         setState(() {});
         continue;
       }
       if (_g.phase == MjPhase.claim) {
-        final choices = <int, MjOption>{};
-        for (final e in _g.claims.entries) {
-          if (e.key != 0) choices[e.key] = mjBotClaim(_g, e.key, e.value);
-        }
-        if (_g.claims.containsKey(0)) {
-          _pending = choices;
+        _startClaimRound();
+        if (replayIsGuest || _g.claims.keys.any((q) => !_pending.containsKey(q))) {
           setState(() {});
           break;
         }
-        if (choices.values.any((c) => c.type != MjClaimType.pass)) {
+        if (_pending.values.any((c) => c.type != MjClaimType.pass)) {
+          final log = _g.actionLog.length;
           await Future<void>.delayed(_delay(300));
           if (!mounted) return;
+          if (_g.actionLog.length != log) continue;
         }
-        _g.resolveClaims(choices);
-        if (_g.handWins.isNotEmpty) _app.sfx.play(Sound.lose);
+        _resolveIfComplete();
+        replayBroadcast();
         setState(() {});
         continue;
       }
@@ -229,7 +365,7 @@ class _MjScreenState extends State<MjScreen> {
     if (r == null) return;
     var coins = 0;
     for (final w in r.wins) {
-      if (w.winner == 0) coins += mjHandReward(_r, w.score);
+      if (w.winner == _ms) coins += mjHandReward(_r, w.score);
     }
     if (coins > 0) {
       _earned += coins;
@@ -241,7 +377,7 @@ class _MjScreenState extends State<MjScreen> {
   void _payGame() {
     if (_rewarded) return;
     _rewarded = true;
-    final place = _g.ranking().indexOf(0);
+    final place = _g.ranking().indexOf(_ms);
     final coins = mjPlaceRewards(_g.n)[place];
     if (coins > 0) {
       _earned += coins;
@@ -251,7 +387,9 @@ class _MjScreenState extends State<MjScreen> {
   }
 
   void _nextHand() {
+    if (replayIsGuest) return;
     _g.nextHand();
+    replayBroadcast();
     setState(() {
       _handPaid = false;
       _selected = null;
@@ -272,9 +410,9 @@ class _MjScreenState extends State<MjScreen> {
       });
       return;
     }
-    if (!_myTurn || !_g.canDiscard(0, t)) return;
+    if (!_myTurn || !_g.canDiscard(_ms, t)) return;
     if (_selected == t) {
-      _g.discard(0, t);
+      _do(['d', _ms, t]);
       _app.sfx.play(Sound.tick);
       setState(() => _selected = null);
       _pump();
@@ -290,15 +428,16 @@ class _MjScreenState extends State<MjScreen> {
 
   void _submitExchange() {
     final tiles = _pickedTiles;
-    if (!_g.validExchange(tiles)) return;
-    _g.submitExchange(0, tiles);
+    if (!_g.validExchange(tiles) || _me.exchange.length == 3) return;
+    _do(['x', _ms, tiles]);
     _app.sfx.play(Sound.card);
     setState(() => _exchangePick.clear());
+    _pump();
   }
 
   void _suggestExchange() {
     final hand = [..._me.hand]..sort();
-    final pick = _g.botExchange(0);
+    final pick = _g.botExchange(_ms);
     final used = <int>{};
     for (final t in pick) {
       for (var i = 0; i < hand.length; i++) {
@@ -316,22 +455,23 @@ class _MjScreenState extends State<MjScreen> {
   }
 
   void _chooseVoid(int suit) {
-    _g.chooseVoid(0, suit);
+    if (_me.voidSuit != null) return;
+    _do(['v', _ms, suit]);
     _app.sfx.play(Sound.chip);
     setState(() {});
     _pump();
   }
 
   void _tsumo() {
-    if (!_myTurn || !_g.canTsumo(0)) return;
-    _g.tsumo(0);
+    if (!_myTurn || !_g.canTsumo(_ms)) return;
+    _do(['t', _ms]);
     setState(() {});
     _pump();
   }
 
   Future<void> _kan() async {
     if (!_myTurn) return;
-    final opts = _g.kanOptions(0);
+    final opts = _g.kanOptions(_ms);
     if (opts.isEmpty) return;
     var t = opts.first;
     if (opts.length > 1) {
@@ -339,7 +479,8 @@ class _MjScreenState extends State<MjScreen> {
       if (i == null || !mounted) return;
       t = opts[i];
     }
-    _g.kan(0, t);
+    if (!_myTurn || !_g.kanOptions(_ms).contains(t)) return;
+    _do(['k', _ms, t]);
     _app.sfx.play(Sound.chip);
     setState(() => _selected = null);
     _pump();
@@ -348,16 +489,17 @@ class _MjScreenState extends State<MjScreen> {
   /// Vietnam: einen Joker für Punkte beiseitelegen, dafür kommt ein Ersatzstein.
   Future<void> _declareJoker() async {
     if (!_myTurn) return;
-    final opts = _g.declarableJokers(0);
+    final opts = _g.declarableJokers(_ms);
     if (opts.isEmpty) return;
-    final seat = _g.seatOf(0);
+    final seat = _g.seatOf(_ms);
     final i = await showChoiceSheet(
       context,
       title: 'Welchen Joker beiseitelegen? Er bringt Punkte, ersetzt aber keinen Stein mehr.',
       options: [for (final o in opts) '${tileName(o)}: ${vietBonusPhan(o, seat)} Phán'],
     );
     if (i == null || !mounted) return;
-    _g.declareJoker(0, opts[i]);
+    if (!_myTurn) return;
+    _do(['j', _ms, opts[i]]);
     _app.sfx.play(Sound.chip);
     setState(() => _selected = null);
     _pump();
@@ -365,9 +507,15 @@ class _MjScreenState extends State<MjScreen> {
 
   void _claim(MjOption o) {
     if (!_humanClaim) return;
-    final choices = {..._pending, 0: o};
-    _pending = {};
-    _g.resolveClaims(choices);
+    final msg = ['cl', _ms, o.type.index, ...o.tiles];
+    if (replaySend(msg)) {
+      _claimSent = true;
+    } else {
+      _startClaimRound();
+      _pending[_ms] = o;
+      _resolveIfComplete();
+      replayBroadcast();
+    }
     _app.sfx.play(o.type == MjClaimType.pass ? Sound.tick : Sound.chip);
     setState(() => _selected = null);
     _pump();
@@ -382,7 +530,7 @@ class _MjScreenState extends State<MjScreen> {
     final key = '${_me.hand.join(',')}|${_me.melds.length}|${_me.bonus.length}';
     if (key != _waitKey) {
       _waitKey = key;
-      _waitCache = _g.waits(0);
+      _waitCache = _g.waits(_ms);
     }
     return _waitCache;
   }
@@ -398,13 +546,16 @@ class _MjScreenState extends State<MjScreen> {
       return 'Welche Farbe streichst du? Diese Steine musst du zuerst loswerden.';
     }
     if (_me.out) return 'Du hast gewonnen und schaust zu, bis die Hand fertig ist';
+    if (_g.phase == MjPhase.claim && _claimSent) return 'Warte auf die anderen …';
+    if (_g.phase == MjPhase.exchange && _me.exchange.length == 3) return 'Warte, bis alle getauscht haben …';
+    if (_g.phase == MjPhase.voidChoice && _me.voidSuit != null) return 'Warte auf die Wahl der anderen …';
     if (_humanClaim) {
       final from = _g.lastDiscarder;
       if (_g.robbingTile != null) return '${_g.players[from].name} erweitert zum Kan. Du kannst den Stein rauben!';
       return '${_g.players[from].name} wirft ${tileName(_g.lastDiscard!)} ab. Willst du ihn?';
     }
     if (_myTurn) {
-      if (_g.canTsumo(0)) return 'Deine Hand ist fertig! Gewinnen?';
+      if (_g.canTsumo(_ms)) return 'Deine Hand ist fertig! Gewinnen?';
       final prefix = _g.lastEvent.isNotEmpty ? '${_g.lastEvent}. ' : '';
       if (_me.hasVoid()) return '${prefix}Wirf zuerst die ${suitNames[_me.voidSuit!]} ab';
       return '${prefix}Du bist dran: Stein antippen, nochmal tippen zum Abwerfen';
@@ -418,13 +569,14 @@ class _MjScreenState extends State<MjScreen> {
   @override
   Widget build(BuildContext context) {
     return GameFrame(
-      actions: const [TileLegendButton()],
+      actions: [...replayActions(context), const TileLegendButton()],
+      network: replayActive ? null : replayOpenPanel,
       title: _r.title,
       guide: widget.guide,
       background: const BoxDecoration(
         gradient: RadialGradient(radius: 1.2, colors: [Color(0xFF6B1F2A), Color(0xFF2A0C12)]),
       ),
-      child: LayoutBuilder(builder: (context, box) => _layout(box)),
+      child: replayScreen() ?? LayoutBuilder(builder: (context, box) => _layout(box)),
     );
   }
 
@@ -477,7 +629,7 @@ class _MjScreenState extends State<MjScreen> {
       wind,
       formatCoins(pl.points),
       // Die Wahl der anderen bleibt verdeckt, bis alle gewählt haben
-      if (pl.voidSuit != null && (p == 0 || _g.phase != MjPhase.voidChoice)) 'ohne ${suitNames[pl.voidSuit!]}',
+      if (pl.voidSuit != null && (p == _ms || _g.phase != MjPhase.voidChoice)) 'ohne ${suitNames[pl.voidSuit!]}',
       if (pl.out) 'fertig',
       if (pl.locked) '${pl.wonTiles.length}× gewonnen',
     ];
@@ -496,8 +648,8 @@ class _MjScreenState extends State<MjScreen> {
           ),
         ),
         const SizedBox(height: 3),
-        if (p != 0) _melds(p, tw * 0.9),
-        if (p != 0) const SizedBox(height: 2),
+        if (p != _ms) _melds(p, tw * 0.9),
+        if (p != _ms) const SizedBox(height: 2),
         _pond(p, tw, perRow: perRow),
       ],
     );
@@ -534,18 +686,18 @@ class _MjScreenState extends State<MjScreen> {
     final four = _g.n == 4;
     final table = Column(
       children: [
-        if (four) Expanded(flex: 2, child: seat(2)),
+        if (four) Expanded(flex: 2, child: seat(_rel(2))),
         Expanded(
           flex: 3,
           child: Row(
             children: [
-              Expanded(child: Center(child: seat(four ? 3 : 2))),
+              Expanded(child: Center(child: seat(_rel(four ? 3 : 2)))),
               _centerInfo(),
-              Expanded(child: Center(child: seat(1))),
+              Expanded(child: Center(child: seat(_rel(1)))),
             ],
           ),
         ),
-        Expanded(flex: 2, child: FittedBox(fit: BoxFit.scaleDown, child: _seat(0, pondW, perRow: landscape ? 12 : 9))),
+        Expanded(flex: 2, child: FittedBox(fit: BoxFit.scaleDown, child: _seat(_ms, pondW, perRow: landscape ? 12 : 9))),
       ],
     );
 
@@ -567,7 +719,11 @@ class _MjScreenState extends State<MjScreen> {
 
   Widget _actions() {
     final buttons = <Widget>[];
-    if (_g.phase == MjPhase.exchange) {
+    if (_g.phase == MjPhase.exchange && _me.exchange.length == 3) {
+      // schon getauscht, warten
+    } else if (_g.phase == MjPhase.voidChoice && _me.voidSuit != null) {
+      // schon gewählt, warten
+    } else if (_g.phase == MjPhase.exchange) {
       buttons.add(ActionButton(label: 'Vorschlag', onPressed: _suggestExchange));
       buttons.add(ActionButton(
         primary: true,
@@ -575,12 +731,12 @@ class _MjScreenState extends State<MjScreen> {
         onPressed: _g.validExchange(_pickedTiles) ? _submitExchange : null,
       ));
     } else if (_g.phase == MjPhase.voidChoice) {
-      final hint = _g.botVoid(0);
+      final hint = _g.botVoid(_ms);
       for (var s = 0; s < 3; s++) {
         buttons.add(ActionButton(primary: s == hint, label: suitNames[s], onPressed: () => _chooseVoid(s)));
       }
     } else if (_humanClaim) {
-      for (final o in _g.claims[0]!) {
+      for (final o in _g.claims[_ms]!) {
         final label = switch (o.type) {
           MjClaimType.win => 'Gewinnen!',
           MjClaimType.pon => 'Pung',
@@ -592,9 +748,9 @@ class _MjScreenState extends State<MjScreen> {
       }
       buttons.add(ActionButton(label: 'Weiter', onPressed: () => _claim(const MjOption(MjClaimType.pass))));
     } else if (_myTurn) {
-      if (_g.canTsumo(0)) buttons.add(ActionButton(primary: true, label: 'Gewinnen!', onPressed: _tsumo));
-      if (_g.kanOptions(0).isNotEmpty) buttons.add(ActionButton(label: 'Kan', onPressed: _kan));
-      if (_g.declarableJokers(0).isNotEmpty) buttons.add(ActionButton(label: 'Joker ablegen', onPressed: _declareJoker));
+      if (_g.canTsumo(_ms)) buttons.add(ActionButton(primary: true, label: 'Gewinnen!', onPressed: _tsumo));
+      if (_g.kanOptions(_ms).isNotEmpty) buttons.add(ActionButton(label: 'Kan', onPressed: _kan));
+      if (_g.declarableJokers(_ms).isNotEmpty) buttons.add(ActionButton(label: 'Joker ablegen', onPressed: _declareJoker));
     } else if (_me.out && !_fast && _g.phase != MjPhase.handOver) {
       buttons.add(ActionButton(label: 'Vorspulen', onPressed: () => setState(() => _fast = true)));
     }
@@ -606,12 +762,12 @@ class _MjScreenState extends State<MjScreen> {
 
   Widget _hand(double tw) {
     final tiles = [..._me.hand]..sort();
-    final drawn = _g.current == 0 && _g.phase == MjPhase.discard ? _g.drawn : null;
+    final drawn = _g.current == _ms && _g.phase == MjPhase.discard ? _g.drawn : null;
     if (drawn != null) tiles.remove(drawn);
     final exchanging = _g.phase == MjPhase.exchange;
     final sortedAll = [..._me.hand]..sort();
     Widget tile(int t, int index) {
-      final enabled = exchanging || (_myTurn && _g.canDiscard(0, t));
+      final enabled = exchanging || (_myTurn && _g.canDiscard(_ms, t));
       final sel = exchanging ? _exchangePick.contains(index) : _selected == t;
       final voidTile = _me.voidSuit != null && t < 27 && suitOf(t) == _me.voidSuit;
       return TapCatcher(
@@ -647,7 +803,7 @@ class _MjScreenState extends State<MjScreen> {
       if (drawn != null) children.addAll([SizedBox(width: tw * 0.4), tile(drawn, -1)]);
     }
     if (_me.melds.isNotEmpty || _me.bonus.isNotEmpty || _me.wonTiles.isNotEmpty) {
-      children.addAll([SizedBox(width: tw * 0.5), _melds(0, tw * 0.8)]);
+      children.addAll([SizedBox(width: tw * 0.5), _melds(_ms, tw * 0.8)]);
     }
     return FittedBox(
       fit: BoxFit.scaleDown,
@@ -658,8 +814,8 @@ class _MjScreenState extends State<MjScreen> {
   Widget _winBlock(MjWin w) {
     final pal = Palette.of(context);
     final s = w.score;
-    final who = w.winner == 0 ? 'Du' : _g.players[w.winner].name;
-    final how = w.loser == null ? 'selbst gezogen' : 'von ${w.loser == 0 ? 'dir' : _g.players[w.loser!].name}';
+    final who = w.winner == _ms ? 'Du' : _g.players[w.winner].name;
+    final how = w.loser == null ? 'selbst gezogen' : 'von ${w.loser == _ms ? 'dir' : _g.players[w.loser!].name}';
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Column(
@@ -691,7 +847,7 @@ class _MjScreenState extends State<MjScreen> {
             'Zusammen ${s.points} ${_r.unitName}${s.limit ? ' (Grenze)' : ''}',
             style: TextStyle(color: pal.ink, fontSize: 15, fontWeight: FontWeight.w700),
           ),
-          if (w.winner == 0)
+          if (w.winner == _ms)
             Text('+${mjHandReward(_r, s)} Münzen', style: const TextStyle(color: Color(0xFFFFC95C), fontWeight: FontWeight.w700)),
         ],
       ),
@@ -711,8 +867,8 @@ class _MjScreenState extends State<MjScreen> {
         final p = order[i];
         children.add(Text(
           '${i + 1}. ${_g.players[p].name}: ${formatCoins(_g.players[p].points)} Punkte'
-          '${p == 0 && rewards[i] > 0 ? ' · +${rewards[i]} Münzen' : ''}',
-          style: TextStyle(color: pal.ink, fontSize: 16, fontWeight: p == 0 ? FontWeight.w700 : FontWeight.w500),
+          '${p == _ms && rewards[i] > 0 ? ' · +${rewards[i]} Münzen' : ''}',
+          style: TextStyle(color: pal.ink, fontSize: 16, fontWeight: p == _ms ? FontWeight.w700 : FontWeight.w500),
         ));
       }
       if (_earned > 0) {
@@ -722,7 +878,11 @@ class _MjScreenState extends State<MjScreen> {
         ));
       }
       children.add(const SizedBox(height: 10));
-      children.add(ActionButton(primary: true, label: 'Neues Spiel', onPressed: _newGame));
+      if (replayActive) {
+        children.add(Wrap(spacing: 8, children: replayButtons(label: 'Neues Spiel', next: replayHostStart)));
+      } else {
+        children.add(ActionButton(primary: true, label: 'Neues Spiel', onPressed: _newGame));
+      }
     } else if (r != null) {
       children.add(Text(r.text, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium));
       children.add(const SizedBox(height: 8));
@@ -741,7 +901,11 @@ class _MjScreenState extends State<MjScreen> {
         ));
       }
       children.add(const SizedBox(height: 10));
-      children.add(ActionButton(primary: true, label: _g.gameWillEnd ? 'Zum Endstand' : 'Nächste Hand', onPressed: _nextHand));
+      if (replayActive) {
+        children.add(Wrap(spacing: 8, children: replayButtons(label: _g.gameWillEnd ? 'Zum Endstand' : 'Nächste Hand', next: _nextHand)));
+      } else {
+        children.add(ActionButton(primary: true, label: _g.gameWillEnd ? 'Zum Endstand' : 'Nächste Hand', onPressed: _nextHand));
+      }
     }
     return ColoredBox(
       color: const Color(0x99000000),

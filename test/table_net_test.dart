@@ -19,9 +19,12 @@ void main() {
       if (b.phase == BjPhase.playerTurn) b.stand();
       while (a.dealerStep()) {}
       while (b.dealerStep()) {}
-      if (a.hands.any((h) => !h.busted) && b.hands.any((h) => !h.busted)) {
-        expect(b.dealer.map((c) => '${c.rank}${c.suit}'), a.dealer.map((c) => '${c.rank}${c.suit}'));
-      }
+      // Zieht der Geber bei einem nicht (Black Jack oder alles überkauft), ist seine Hand der Anfang der anderen
+      final da = [for (final c in a.dealer) '${c.rank}${c.suit}'];
+      final db = [for (final c in b.dealer) '${c.rank}${c.suit}'];
+      final short = da.length <= db.length ? da : db;
+      final long = da.length <= db.length ? db : da;
+      expect(long.sublist(0, short.length), short);
     }
   });
 

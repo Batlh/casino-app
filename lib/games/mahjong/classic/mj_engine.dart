@@ -91,12 +91,16 @@ class MjHandResult {
 }
 
 class MjGame with ActionLog {
-  MjGame(this.rules, {Random? rng, List<String>? names})
+  /// [humans]: Plätze, an denen Menschen sitzen (allein nur 0). [me]: dein Platz, für die Texte („Du“).
+  MjGame(this.rules, {Random? rng, List<String>? names, Set<int> humans = const {0}, this.me = 0})
       : _rng = rng ?? Random.secure(),
         players = [
           for (var i = 0; i < rules.players; i++)
-            MjPlayer((names ?? const ['Du', 'Mei', 'Jun', 'Lan'])[i], human: i == 0),
+            MjPlayer((names ?? const ['Du', 'Mei', 'Jun', 'Lan'])[i], human: humans.contains(i)),
         ];
+
+  /// Dein Platz (im Netz je Gerät verschieden).
+  final int me;
 
   final MjRules rules;
   final Random _rng;
@@ -136,8 +140,8 @@ class MjGame with ActionLog {
   int get wallLeft => wall.length;
   bool get _sichuan => rules.voidSuit;
 
-  String who(int p) => p == 0 ? 'Du' : players[p].name;
-  String _verb(int p, String du, String er) => p == 0 ? du : er;
+  String who(int p) => p == me ? 'Du' : players[p].name;
+  String _verb(int p, String du, String er) => p == me ? du : er;
 
   void start() {
     for (final p in players) {
@@ -195,8 +199,8 @@ class MjGame with ActionLog {
     if (rules.exchange) {
       phase = MjPhase.exchange;
       exchangeDir = const [1, -1, 2][_rng.nextInt(n == 4 ? 3 : 2)];
-      for (var p = 1; p < n; p++) {
-        players[p].exchange = botExchange(p);
+      for (var p = 0; p < n; p++) {
+        if (!players[p].human) players[p].exchange = botExchange(p);
       }
     } else if (rules.voidSuit) {
       _startVoid();
@@ -299,8 +303,8 @@ class MjGame with ActionLog {
 
   void _startVoid() {
     phase = MjPhase.voidChoice;
-    for (var p = 1; p < n; p++) {
-      players[p].voidSuit = botVoid(p);
+    for (var p = 0; p < n; p++) {
+      if (!players[p].human) players[p].voidSuit = botVoid(p);
     }
   }
 
