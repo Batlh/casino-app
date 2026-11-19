@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../core/scope.dart';
 import '../core/sfx.dart';
 import '../core/theme.dart';
+import '../core/umzug.dart';
 import '../core/updater.dart';
 import '../core/wallet.dart';
 import '../games/arschloch/ah_screen.dart';
@@ -64,6 +66,7 @@ import '../games/reversi/reversi_screen.dart';
 import '../games/solitaire/klondike_screen.dart';
 import '../games/solitaire/spider_screen.dart';
 import '../games/videopoker/video_poker_screen.dart';
+import 'backup_section.dart';
 import 'help_screen.dart';
 import 'settings_sheet.dart';
 import 'widgets.dart';
@@ -80,9 +83,40 @@ class _LobbyScreenState extends State<LobbyScreen> {
   void initState() {
     super.initState();
     // Nach dem ersten Bild nach Updates schauen (nur wenn eingeschaltet, höchstens alle sechs Stunden)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await _offerMove();
       if (mounted) autoCheckForUpdate(context);
     });
+  }
+
+  /// Ganz neu installiert am Handy oder Mac: Die App hat einen neuen internen Namen bekommen, alte Daten kommen
+  /// nur über die Sicherung mit. Einmal fragen.
+  Future<void> _offerMove() async {
+    if (!packageRenamed || !freshInstall || !(Platform.isAndroid || Platform.isMacOS)) return;
+    freshInstall = false;
+    final st = AppScope.of(context).settings;
+    if (st.loadGame('umzug') != null) return;
+    st.saveGame('umzug', {'gefragt': true});
+    final choice = await showDialog<int>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Willkommen bei Glückspfennig'),
+        content: const Text(
+          'Hast du schon vorher gespielt? Seit Version 0.9.51 ist Glückspfennig eine neue App. Deine Münzen und '
+          'Spielstände holst du so: In der alten App unter Einstellungen „Spielstand sichern“ wählen, dann hier laden. '
+          'Danach kannst du die alte App löschen.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, 0), child: const Text('Neu anfangen')),
+          TextButton(onPressed: () => Navigator.pop(c, 2), child: const Text('Aus Zwischenablage')),
+          FilledButton(onPressed: () => Navigator.pop(c, 1), child: const Text('Sicherung laden')),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (choice == 1) await backupImportFile(context);
+    if (choice == 2 && mounted) await backupPaste(context);
   }
 
   void _open(Widget screen) {

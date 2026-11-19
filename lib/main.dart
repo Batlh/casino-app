@@ -12,6 +12,7 @@ import 'core/scope.dart';
 import 'core/settings.dart';
 import 'core/sfx.dart';
 import 'core/theme.dart';
+import 'core/umzug.dart';
 import 'core/version.dart';
 import 'core/wallet.dart';
 import 'ui/lobby_screen.dart';
@@ -29,8 +30,13 @@ Future<void> main() async {
       debugLog.error('plattform', error, stack);
       return true;
     };
+    // Umzug auf den neuen Paketnamen: am PC alte Daten übernehmen, bevor sie geladen werden
+    final moved = await moveDesktopData();
     final prefs = await SharedPreferences.getInstance();
+    // Ganz neu installiert (nichts außer dem Fehlerprotokoll gespeichert)? Dann bietet die Lobby an, eine Sicherung zu laden.
+    freshInstall = prefs.getKeys().every((k) => k.startsWith('debug.'));
     debugLog.attach(prefs);
+    if (moved != null) debugLog.info('umzug', 'Alte Daten übernommen aus $moved');
     final view = PlatformDispatcher.instance.implicitView;
     final size = view == null ? '?' : '${(view.physicalSize.width / view.devicePixelRatio).round()}×${(view.physicalSize.height / view.devicePixelRatio).round()}';
     debugLog.info('app', 'Start $appVersion auf ${defaultTargetPlatform.name}, Fenster $size');

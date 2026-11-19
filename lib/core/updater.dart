@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../ui/backup_section.dart';
 import 'debug_log.dart';
 import 'scope.dart';
 import 'theme.dart';
@@ -126,6 +127,12 @@ Future<void> manualCheckForUpdate(BuildContext context) async {
   }
 }
 
+/// Hinweise aus den Release-Notes: Zeilen, die mit „! “ beginnen.
+List<String> updateNotices(String notes) => [
+      for (final l in notes.split('\n'))
+        if (l.trim().startsWith('! ')) l.trim().substring(2).trim(),
+    ];
+
 /// Fragt nach und aktualisiert. Android lädt die APK und startet die Installation, am PC öffnet sich die Download-Seite.
 Future<void> offerUpdate(BuildContext context, Release r) async {
   final p = Palette.of(context);
@@ -134,6 +141,8 @@ Future<void> offerUpdate(BuildContext context, Release r) async {
       .where((l) => l.trim().startsWith('- '))
       .take(8)
       .join('\n');
+  // Wichtige Hinweise stehen in den Release-Notes als Zeilen mit „! “, etwa vor dem Umzug auf einen neuen Paketnamen
+  final notices = updateNotices(r.notes);
   final yes = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
@@ -143,6 +152,30 @@ Future<void> offerUpdate(BuildContext context, Release r) async {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (notices.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: p.accent.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: p.accent, width: 2),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Wichtig', style: TextStyle(color: p.ink, fontWeight: FontWeight.w800)),
+                    for (final n in notices) Text(n, style: TextStyle(color: p.ink, fontSize: 14)),
+                    const SizedBox(height: 6),
+                    FilledButton.tonalIcon(
+                      icon: const Icon(Icons.save_alt),
+                      label: const Text('Jetzt sichern'),
+                      onPressed: () => backupExport(context),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
             Text('Du hast ${appVersion.split('+').first}. Jetzt aktualisieren?', style: TextStyle(color: p.ink)),
             if (notes.isNotEmpty) ...[
               const SizedBox(height: 10),
