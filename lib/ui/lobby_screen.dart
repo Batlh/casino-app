@@ -40,6 +40,7 @@ import '../games/gluecksrad/gluecksrad_screen.dart';
 import '../games/eins/eins_engine.dart';
 import '../games/eins/eins_screen.dart';
 import '../games/hearts/hearts_screen.dart';
+import '../games/hilo/hilo_screen.dart';
 import '../games/holdem/holdem_screen.dart';
 import '../games/maumau/maumau_screen.dart';
 import '../games/pachinko/pachinko_screen.dart';
@@ -390,6 +391,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF14506E),
         _VideoPokerArt.new,
         () => _open(const VideoPokerScreen()),
+      ),
+      _Game(
+        'Höher oder Tiefer',
+        'Kartenleiter: raten, steigen, rechtzeitig aussteigen',
+        const Color(0xFF2E4A2A),
+        _HiloArt.new,
+        () => _open(const HiloScreen()),
       ),
     ];
     final cardGames = <_Game>[
@@ -2262,6 +2270,32 @@ class _VideoPokerArt extends CustomPainter {
             ? const Color(0xFFC8321F)
             : const Color(0xFF241410),
       );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _HiloArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width * 0.2;
+    final c = size.center(const Offset(0, 8));
+    _miniCard(canvas, c.translate(-w * 0.75, 0), w, -0.12, '7', Suit.hearts);
+    _miniCard(canvas, c.translate(w * 0.75, 0), w, 0.12, '?', Suit.spades);
+    final paint = Paint()
+      ..color = const Color(0xFFFFC95C)
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final x = c.dx + w * 1.6;
+    for (final dir in [-1.0, 1.0]) {
+      final y0 = c.dy + dir * w * 0.25;
+      final y1 = c.dy + dir * w * 0.85;
+      canvas.drawLine(Offset(x, y0), Offset(x, y1), paint);
+      canvas.drawLine(Offset(x, y1), Offset(x - 8, y1 - dir * 10), paint);
+      canvas.drawLine(Offset(x, y1), Offset(x + 8, y1 - dir * 10), paint);
     }
   }
 
