@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../../core/progress.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
@@ -44,6 +45,7 @@ class _VideoPokerScreenState extends State<VideoPokerScreen> {
     _app.sfx.play(Sound.card);
     final paid = _engine.payout;
     _app.wallet.credit(paid);
+    if (_engine.payIndex == 0) progress.event('royal_flush');
     setState(() {
       for (var i = 0; i < 5; i++) {
         if (replaced[i]) _cardGeneration[i]++;

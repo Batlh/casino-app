@@ -45,13 +45,26 @@ class Wallet extends ChangeNotifier {
   bool canAfford(int amount) => amount <= _balance;
 
   /// Zieht den Einsatz ab. Liefert false, wenn das Guthaben nicht reicht.
+  /// Beobachter für Statistik und Erfolge (setzt Progress).
+  void Function(int amount)? onSpend;
+  void Function(int amount)? onCredit;
+  void Function()? onBonus;
+
   bool spend(int amount) {
     if (amount <= 0 || amount > _balance) return false;
     _set(_balance - amount);
+    onSpend?.call(amount);
     return true;
   }
 
   void credit(int amount) {
+    if (amount <= 0) return;
+    _set(_balance + amount);
+    onCredit?.call(amount);
+  }
+
+  /// Belohnung (Tagesaufgabe, Erfolg): Münzen dazu, zählt aber nicht als Gewinn eines Spiels.
+  void addReward(int amount) {
     if (amount <= 0) return;
     _set(_balance + amount);
   }
@@ -62,6 +75,7 @@ class Wallet extends ChangeNotifier {
     _lastBonus = _today;
     _prefs.setString(_bonusKey, _lastBonus!);
     _set(_balance + dailyBonus);
+    onBonus?.call();
     return dailyBonus;
   }
 

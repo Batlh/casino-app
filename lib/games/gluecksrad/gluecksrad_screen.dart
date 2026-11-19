@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/debug_log.dart';
+import '../../core/progress.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
@@ -154,6 +155,7 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
     final stake = _bets[v] ?? 0;
     final win = stake == 0 ? 0 : stake * (v + 1);
     _app.wallet.credit(win);
+    if (v == 40 && win > 0) progress.event('rad_joker');
     debugLog.info('gluecksrad', 'Einsatz $_total auf ${_bets.keys.join('/')}, Feld $v, Auszahlung $win');
     final played = _bets.isNotEmpty;
     if (played || win > 0) _app.sfx.play(win > 0 ? (v >= 10 ? Sound.bigWin : Sound.win) : Sound.lose);

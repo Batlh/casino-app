@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 import '../debug_log.dart';
+import '../progress.dart';
 import '../version.dart';
 
 /// Mehrspieler im lokalen Netzwerk, ohne Internet und ohne fremden Server.
@@ -98,6 +99,7 @@ class LanHost {
       final id = _nextId++;
       _clients[id] = ws;
       debugLog.info('netz', 'Mitspieler $id verbunden von ${req.connectionInfo?.remoteAddress.address}');
+      progress.event('netz');
       _joins.add(id);
       ws.listen(
         (data) {
@@ -245,6 +247,7 @@ class LanClient {
     final ws = await WebSocket.connect('ws://$address:$port').timeout(const Duration(seconds: 6));
     _ws = ws;
     debugLog.info('netz', 'Verbunden mit $address:$port');
+    progress.event('netz');
     ws.listen(
       (data) {
         try {

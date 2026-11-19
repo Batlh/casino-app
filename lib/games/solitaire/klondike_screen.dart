@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/debug_log.dart';
+import '../../core/progress.dart';
 import '../../core/saves.dart';
 import '../../core/scope.dart';
 import '../../core/settings.dart';
@@ -234,6 +235,7 @@ class _KlondikeScreenState extends State<KlondikeScreen> {
     _clock.stop();
     _payFoundations();
     if (reward > 0) _app.wallet.credit(reward);
+    progress.event('solitaire_sieg');
     _app.sfx.play(Sound.bigWin);
     final tips = _hints == 0 ? '' : ' (${_hints == 1 ? 'ein Tipp' : '$_hints Tipps'} abgezogen)';
     setState(() {

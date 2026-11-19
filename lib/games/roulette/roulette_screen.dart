@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/progress.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
@@ -145,6 +146,7 @@ class _RouletteScreenState extends State<RouletteScreen>
 
     final back = resolveBets(placed, n);
     wallet.credit(back);
+    if (n == 0 && back > 0) progress.event('roulette_null');
     if (!mounted) {
       wallet.refillIfBroke();
       return;

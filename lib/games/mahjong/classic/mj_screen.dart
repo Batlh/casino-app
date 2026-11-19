@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/debug_log.dart';
+import '../../../core/progress.dart';
 import '../../../core/scope.dart';
 import '../../../core/settings.dart';
 import '../../../core/sfx.dart';
@@ -365,7 +366,10 @@ class _MjScreenState extends State<MjScreen> with NetReplayScreen {
     if (r == null) return;
     var coins = 0;
     for (final w in r.wins) {
-      if (w.winner == _ms) coins += mjHandReward(_r, w.score);
+      if (w.winner == _ms) {
+        coins += mjHandReward(_r, w.score);
+        progress.event('mahjong_sieg');
+      }
     }
     if (coins > 0) {
       _earned += coins;

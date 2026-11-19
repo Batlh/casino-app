@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/debug_log.dart';
+import '../../core/progress.dart';
 import '../../core/scope.dart';
 import '../../core/settings.dart';
 import '../../core/sfx.dart';
@@ -255,6 +256,7 @@ class _ChessScreenState extends State<ChessScreen> with NetDuelScreen {
     final lost = r == ChessResult.whiteMates || r == ChessResult.blackMates;
     _reward = won ? level.reward : (lost ? 0 : level.reward ~/ 2);
     if (_reward > 0) _app.wallet.credit(_reward);
+    if (won) progress.event('schach_sieg');
     _app.sfx.play(won ? Sound.bigWin : (lost ? Sound.lose : Sound.coin));
     setState(() {});
   }

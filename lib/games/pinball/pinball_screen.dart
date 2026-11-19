@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/progress.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../ui/guides.dart';
@@ -293,6 +294,7 @@ class _PinballScreenState extends State<PinballScreen> with SingleTickerProvider
     _lastScore = t.score;
     _paid = pinballPayout(t.score);
     if (_paid > 0) _app.wallet.credit(_paid);
+    if (t.score >= 1000000) progress.event('flipper_million');
     final best = _high(_spec);
     final record = t.score > best;
     if (record) _setHigh(_spec, t.score);

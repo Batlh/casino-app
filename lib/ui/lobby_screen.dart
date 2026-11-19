@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../core/debug_log.dart';
+import '../core/progress.dart';
 import '../core/scope.dart';
 import '../core/sfx.dart';
 import '../core/theme.dart';
@@ -69,6 +70,7 @@ import '../games/solitaire/spider_screen.dart';
 import '../games/videopoker/video_poker_screen.dart';
 import 'backup_section.dart';
 import 'help_screen.dart';
+import 'progress_screen.dart';
 import 'settings_sheet.dart';
 import 'widgets.dart';
 
@@ -121,8 +123,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
     if (choice == 2 && mounted) await backupPaste(context);
   }
 
-  void _open(Widget screen) {
-    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
+  Future<void> _open(Widget screen) async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
+    // Zurück in der Lobby: Aufgaben-Zähler und Zuletzt gespielt auffrischen
+    if (mounted) setState(() {});
   }
 
   final _sectionKeys = {
@@ -620,6 +624,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               icon: Icon(Icons.help_outline, color: p.ink),
                               onPressed: () => _open(const HelpScreen()),
                             ),
+                            IconButton(
+                              tooltip: 'Erfolge und Aufgaben',
+                              icon: Badge(
+                                isLabelVisible: progress.dailyReady > 0,
+                                label: Text('${progress.dailyReady}'),
+                                child: Icon(Icons.emoji_events_outlined, color: p.ink),
+                              ),
+                              onPressed: () => _open(const ProgressScreen()),
+                            ),
                             const Spacer(),
                             const BalanceBadge(),
                           ],
@@ -641,6 +654,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
                                 side: BorderSide(color: p.panelEdge, width: 2),
                                 onPressed: () => _jump(s),
                               ),
+                            ActionChip(
+                              avatar: Icon(Icons.emoji_events_outlined, size: 18, color: p.ink),
+                              label: Text(
+                                progress.dailyReady > 0 ? 'Aufgaben (${progress.dailyReady})' : 'Aufgaben',
+                                style: TextStyle(color: p.ink, fontWeight: FontWeight.w700),
+                              ),
+                              backgroundColor: p.panel,
+                              side: BorderSide(color: progress.dailyReady > 0 ? p.accent : p.panelEdge, width: 2),
+                              onPressed: () => _open(const ProgressScreen()),
+                            ),
                             ActionChip(
                               avatar: Icon(Icons.help_outline, size: 18, color: p.ink),
                               label: Text('Hilfe', style: TextStyle(color: p.ink, fontWeight: FontWeight.w700)),

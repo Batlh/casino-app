@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/debug_log.dart';
+import '../../core/progress.dart';
 import '../../core/scope.dart';
 import '../../core/settings.dart';
 import '../../core/sfx.dart';
@@ -238,6 +239,7 @@ class _KniffelScreenState extends State<KniffelScreen> with NetReplayScreen {
     final pts = kniffelScore(cat, g.dice);
     if (!g.rolled || g.scores[who][cat] != null) return;
     if (!_act(['s', cat])) return;
+    if (cat == 11 && pts > 0 && (replayActive ? who == replayMe : _seats[who].human)) progress.event('kniffel');
     AppScope.of(context).sfx.play(pts > 0 ? Sound.chip : Sound.lose);
     var text = '${_seats[who].name}: ${kniffelCategories[cat]} für $pts. ${_seats[g.current].name} ist dran';
     if (g.over) text = _finish(g);

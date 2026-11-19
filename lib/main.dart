@@ -8,6 +8,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'core/backup.dart';
 import 'core/debug_log.dart';
 import 'core/licenses.dart';
+import 'core/progress.dart';
 import 'core/scope.dart';
 import 'core/settings.dart';
 import 'core/sfx.dart';
@@ -86,6 +87,7 @@ class _RootState extends State<_Root> {
 
   void _load() {
     _wallet = Wallet(widget.prefs);
+    progress.attach(widget.prefs, _wallet);
     _sfx = Sfx(widget.prefs);
     _settings = Settings(widget.prefs);
     _settings.addListener(_applyScreen);

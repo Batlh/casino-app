@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../core/progress.dart';
 import '../core/scope.dart';
 import '../core/sfx.dart';
 import '../core/theme.dart';
@@ -222,6 +223,9 @@ class _GameFrameState extends State<GameFrame> {
     if (!_listening) {
       _listening = true;
       _wallet.refills.addListener(_onRefill);
+      // Einsätze und Gewinne zählen ab jetzt für dieses Spiel
+      progress.current = widget.title;
+      progress.justUnlocked.addListener(_onAchievement);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _wallet.refillIfBroke(min: widget.minStake);
       });
@@ -239,9 +243,25 @@ class _GameFrameState extends State<GameFrame> {
     );
   }
 
+  void _onAchievement() {
+    final a = progress.justUnlocked.value;
+    if (!mounted || a == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(children: [
+          const Icon(Icons.emoji_events, color: Color(0xFFFFC95C)),
+          const SizedBox(width: 10),
+          Expanded(child: Text('Erfolg: ${a.title}. ${a.text}')),
+        ]),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _wallet.refills.removeListener(_onRefill);
+    progress.justUnlocked.removeListener(_onAchievement);
+    if (progress.current == widget.title) progress.current = null;
     super.dispose();
   }
 

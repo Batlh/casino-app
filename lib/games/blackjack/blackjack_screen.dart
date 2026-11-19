@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../../core/progress.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
 import '../../core/theme.dart';
@@ -136,6 +137,7 @@ class _BlackjackScreenState extends State<BlackjackScreen> with NetSharedTable {
     final bet = _engine.totalBet;
     _app.wallet.credit(paid);
     final bj = _engine.hands.any((h) => h.outcome == BjOutcome.blackjack);
+    if (bj) progress.event('black_jack');
     setState(() {
       if (bj) {
         _message = 'Black Jack! +${formatCoins(paid - bet)}';
