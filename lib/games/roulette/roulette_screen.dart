@@ -8,6 +8,7 @@ import '../../core/sfx.dart';
 import '../../core/theme.dart';
 import '../../ui/guides.dart';
 import '../../ui/net_shared_mixin.dart';
+import '../../ui/settings_sheet.dart';
 import '../../ui/widgets.dart';
 import 'roulette_engine.dart';
 import 'roulette_painters.dart';
@@ -43,6 +44,88 @@ class _RouletteScreenState extends State<RouletteScreen>
 
   AppScope get _app => AppScope.of(context);
   bool get _spinning => _spin.isAnimating;
+
+  /// Spielart (Zahnrad im Spiel), gemerkt unter 'roulette'.
+  late RouletteVariant _variant = RouletteVariant.values.firstWhere(
+    (v) => v.name == _app.settings.loadGame('roulette')?['variant'],
+    orElse: () => RouletteVariant.european,
+  );
+  List<int> get _order => wheelFor(_variant);
+
+  void _setVariant(RouletteVariant v) {
+    if (_spinning || sharedActive || v == _variant) return;
+    _app.settings.saveGame('roulette', {'variant': v.name});
+    setState(() {
+      _variant = v;
+      _bets = {};
+      _lastBets = {};
+      _history.clear();
+      _result = null;
+      _message = '${rouletteVariantNames[v]}es Roulette';
+    });
+  }
+
+  /// Kesselansage setzen (Stücke × Jeton).
+  void _placeCall(CallBet call) {
+    if (_spinning) return;
+    final add = call.spots(_chip);
+    final total = add.values.fold(0, (a, b) => a + b);
+    if (!_app.wallet.canAfford(_staked + total)) {
+      setState(() => _message = '${call.name} braucht ${formatCoins(total)}');
+      return;
+    }
+    _app.sfx.play(Sound.chip);
+    setState(() {
+      _result = null;
+      for (final e in add.entries) {
+        _bets[e.key] = (_bets[e.key] ?? 0) + e.value;
+      }
+      _message = '${call.name}: ${formatCoins(total)}';
+      _big = false;
+    });
+    sharedStake(_staked);
+  }
+
+  Future<void> _calls() async {
+    final call = await showModalBottomSheet<CallBet>(
+      context: context,
+      showDragHandle: true,
+      builder: (c) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          children: [
+            Text('Kesselansagen (${formatCoins(_chip)} je Stück)', style: Theme.of(c).textTheme.titleLarge),
+            const SizedBox(height: 6),
+            for (final b in callBets)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(b.name),
+                subtitle: Text(b.text),
+                trailing: Text(formatCoins(b.pieces * _chip)),
+                onTap: () => Navigator.pop(c, b),
+              ),
+            const Divider(),
+            const Text('Nachbarn: Zahl antippen, gesetzt wird sie mit je zwei Nachbarn links und rechts (5 Stücke)'),
+            const SizedBox(height: 8),
+            Wrap(spacing: 4, runSpacing: 4, children: [
+              for (var n = 0; n <= 36; n++)
+                SizedBox(
+                  width: 40,
+                  height: 34,
+                  child: TextButton(
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero, backgroundColor: pocketColor(n), foregroundColor: Colors.white),
+                    onPressed: () => Navigator.pop(c, neighbours(n)),
+                    child: Text('$n'),
+                  ),
+                ),
+            ]),
+          ],
+        ),
+      ),
+    );
+    if (call != null && mounted) _placeCall(call);
+  }
   int get _staked => _bets.values.fold(0, (a, b) => a + b);
 
   @override
@@ -55,7 +138,7 @@ class _RouletteScreenState extends State<RouletteScreen>
   // ---------------------------------------------------------------- Netzwerk
 
   @override
-  String get sharedGame => 'roulette';
+  String get sharedGame => _variant == RouletteVariant.european ? 'roulette' : 'roulette-${_variant.name}';
   @override
   String get sharedTitle => 'Roulette';
 
@@ -65,7 +148,7 @@ class _RouletteScreenState extends State<RouletteScreen>
   @override
   void sharedResult(Object? outcome) {
     final n = (outcome as num?)?.toInt();
-    if (n == null || n < 0 || n > 36) return;
+    if (n == null || !_order.contains(n)) return;
     if (_spinning) {
       _pending = n;
       return;
@@ -111,7 +194,7 @@ class _RouletteScreenState extends State<RouletteScreen>
     // Am Netztisch dreht der Gastgeber auch ohne eigenen Einsatz
     if (_staked == 0 && !sharedHost) return;
     if (_staked > 0 && !_app.wallet.canAfford(_staked)) return;
-    final n = spinWheel(_rng);
+    final n = spinWheel(_rng, _variant);
     sharedSend(n);
     await _spinTo(n);
   }
@@ -122,14 +205,14 @@ class _RouletteScreenState extends State<RouletteScreen>
       _bets = {};
       stake = 0;
     }
-    final index = wheelOrder.indexOf(n);
+    final index = _order.indexOf(n);
     final wallet = _app.wallet;
     final placed = Map.of(_bets);
 
     _wheelStart = _wheelEnd % (2 * math.pi);
     _wheelEnd = _wheelStart + 2 * math.pi * 2 + _rng.nextDouble() * 2 * math.pi;
     _ballStart = _rng.nextDouble() * 2 * math.pi;
-    final target = _wheelEnd + pocketCenter(index);
+    final target = _wheelEnd + pocketCenter(index, _order);
     _ballEnd = target - 2 * math.pi * 6;
     setState(() {
       _ballVisible = true;
@@ -144,7 +227,7 @@ class _RouletteScreenState extends State<RouletteScreen>
       // Bildschirm wurde verlassen. Die Abrechnung folgt unten trotzdem.
     }
 
-    final back = resolveBets(placed, n);
+    final back = resolveBets(placed, n, partage: _variant == RouletteVariant.french);
     wallet.credit(back);
     if (n == 0 && back > 0) progress.event('roulette_null');
     if (!mounted) {
@@ -158,16 +241,17 @@ class _RouletteScreenState extends State<RouletteScreen>
       if (placed.isNotEmpty) _lastBets = placed;
       _bets = {};
       final net = back - stake;
+      final label = pocketLabel(n);
       if (stake == 0) {
-        _message = '$n';
+        _message = label;
       } else if (net > 0) {
-        _message = '$n: Gewonnen +${formatCoins(net)}';
+        _message = '$label: Gewonnen +${formatCoins(net)}';
         _big = true;
         _app.sfx.play(net >= stake * 10 ? Sound.bigWin : Sound.win);
       } else if (net == 0) {
-        _message = '$n: Einsatz zurück';
+        _message = '$label: Einsatz zurück';
       } else {
-        _message = '$n: Verloren -${formatCoins(-net)}';
+        _message = '$label: Verloren -${formatCoins(-net)}${n == 0 && _variant == RouletteVariant.french && back > 0 ? ' (Hälfte zurück)' : ''}';
         _app.sfx.play(Sound.lose);
       }
     });
@@ -184,6 +268,31 @@ class _RouletteScreenState extends State<RouletteScreen>
     return GameFrame(
       guide: rouletteGuide,
       title: 'Roulette',
+      settings: GameSettings(
+        'Roulette',
+        (context) => StatefulBuilder(
+          builder: (context, set) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Spielart'),
+              const SizedBox(height: 6),
+              SegmentedButton<RouletteVariant>(
+                segments: [for (final v in RouletteVariant.values) ButtonSegment(value: v, label: Text(rouletteVariantNames[v]!))],
+                selected: {_variant},
+                onSelectionChanged: _spinning || sharedActive
+                    ? null
+                    : (v) {
+                        _setVariant(v.first);
+                        set(() {});
+                      },
+              ),
+              const SizedBox(height: 6),
+              const Text('Französisch: Fällt die Null, gibt es auf einfachen Chancen die Hälfte zurück. '
+                  'Amerikanisch: zusätzlich eine Doppelnull, ohne Kesselansagen.'),
+            ],
+          ),
+        ),
+      ),
       actions: sharedActions(context),
       network: sharedActive ? null : sharedOpenPanel,
       child: sharedScreen() ?? LayoutBuilder(
@@ -219,6 +328,7 @@ class _RouletteScreenState extends State<RouletteScreen>
               ballAngle: ball,
               ballRadius: radius,
               showBall: _ballVisible,
+              order: _order,
               blur: ((speed - 2) / 6).clamp(0.0, 0.85),
             ),
           );
@@ -244,7 +354,7 @@ class _RouletteScreenState extends State<RouletteScreen>
                 borderRadius: BorderRadius.circular(5),
               ),
               child: Text(
-                '$n',
+                pocketLabel(n),
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
@@ -262,6 +372,11 @@ class _RouletteScreenState extends State<RouletteScreen>
       children: [
         ResultBanner(text: _message, highlight: _big),
         sharedStakesBar(),
+        if (_bets.keys.any((b) => b.type == BetType.group))
+          Text(
+            'Kombinationen und Ansagen: ${formatCoins(_bets.entries.where((e) => e.key.type == BetType.group).fold(0, (a, e) => a + e.value))}',
+            style: TextStyle(color: Palette.of(context).onFelt),
+          ),
         BetPicker(
           value: _chip,
           size: 42,
@@ -289,8 +404,8 @@ class _RouletteScreenState extends State<RouletteScreen>
                 label: 'Wiederholen',
                 onPressed: _lastBets.isNotEmpty && !_spinning ? _repeat : null,
               ),
-            if (!sharedActive && MediaQuery.sizeOf(context).width < 420)
-              ActionButton(label: 'Im Netzwerk', onPressed: sharedOpenPanel),
+            if (_variant != RouletteVariant.american)
+              ActionButton(label: 'Ansagen', onPressed: _spinning ? null : _calls),
           ],
         ),
       ],
@@ -302,6 +417,7 @@ class _RouletteScreenState extends State<RouletteScreen>
         bets: _bets,
         result: _result,
         onTap: _place,
+        doubleZero: _variant == RouletteVariant.american,
       );
 
   Widget _tallLayout(BoxConstraints box) {
@@ -387,8 +503,10 @@ class _BetTable extends StatelessWidget {
     required this.bets,
     required this.result,
     required this.onTap,
+    this.doubleZero = false,
   });
 
+  final bool doubleZero;
   final bool horizontal;
   final Map<BetSpot, int> bets;
   final int? result;
@@ -415,7 +533,18 @@ class _BetTable extends StatelessWidget {
   }
 
   Widget _number(int n) =>
-      _cell(BetSpot(BetType.straight, n), '$n', color: pocketColor(n));
+      _cell(BetSpot(BetType.straight, n), pocketLabel(n), color: pocketColor(n));
+
+  /// Null (und Doppelnull beim amerikanischen Kessel).
+  Widget _zeros({required bool vertical}) {
+    if (!doubleZero) return _number(0);
+    final cells = [_number(0), _number(37)];
+    return Expanded(
+      child: vertical
+          ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [for (final c in cells) Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [c]))])
+          : Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [for (final c in cells) Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [c]))]),
+    );
+  }
 
   List<Widget> _outside() => [
         _cell(const BetSpot(BetType.low), '1 bis 18'),
@@ -445,7 +574,7 @@ class _BetTable extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _number(0),
+              _zeros(vertical: true),
               Expanded(
                 flex: 12,
                 child: Column(
@@ -514,7 +643,7 @@ class _BetTable extends StatelessWidget {
             children: [
               Expanded(child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [_number(0)],
+                children: [_zeros(vertical: false)],
               )),
               for (var row = 0; row < 12; row++)
                 Expanded(

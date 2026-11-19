@@ -118,6 +118,18 @@ const rouletteGuide = GameGuide('Roulette', [
         'Ein Dutzend oder eine Kolonne zahlt 2:1. Fällt die Null, verlieren alle einfachen Chancen.',
   ),
   GuideSection('Bedienung', 'Jeton wählen, Feld antippen, Drehen. „Wiederholen“ setzt die letzten Einsätze noch einmal.'),
+  GuideSection(
+    'Spielarten',
+    'Unter dem Zahnrad wählst du: europäisch (eine Null, 97,3 %), französisch (eine Null, fällt sie, kommt auf einfachen '
+        'Chancen die Hälfte zurück, dort 98,6 %) oder amerikanisch (Null und Doppelnull, 94,7 %).',
+  ),
+  GuideSection(
+    'Kesselansagen',
+    'Mit „Ansagen“ setzt du auf Gruppen, die auf dem Kessel nebeneinander liegen. Voisins du Zéro (17 Zahlen um die Null, '
+        '9 Stücke), Tiers du Cylindre (12 Zahlen gegenüber, 6 Stücke), Orphelins (8 Zahlen, 5 Stücke), Jeu Zéro '
+        '(7 Zahlen bei der Null, 4 Stücke) und Nachbarn (eine Zahl mit je zwei Nachbarn, 5 Stücke). '
+        'Ein Stück ist dein gewählter Jeton. Gesetzt wird auf Zahlen, Chevals (17:1), Transversalen (11:1) und Carrés (8:1).',
+  ),
 ]);
 
 const videoPokerGuide = GameGuide('Video Poker', [

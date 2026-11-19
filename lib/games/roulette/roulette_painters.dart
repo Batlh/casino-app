@@ -10,12 +10,12 @@ const Color rouletteBlack = Color(0xFF211410);
 const Color rouletteGreen = Color(0xFF0F7A5C);
 
 Color pocketColor(int n) =>
-    n == 0 ? rouletteGreen : (isRed(n) ? rouletteRed : rouletteBlack);
+    isZero(n) ? rouletteGreen : (isRed(n) ? rouletteRed : rouletteBlack);
 
-double get pocketAngle => 2 * math.pi / wheelOrder.length;
+double pocketAngleFor(List<int> order) => 2 * math.pi / order.length;
 
 /// Winkel einer Tasche auf dem Kessel, 0 zeigt nach oben.
-double pocketCenter(int index) => -math.pi / 2 + index * pocketAngle;
+double pocketCenter(int index, [List<int> order = wheelOrder]) => -math.pi / 2 + index * pocketAngleFor(order);
 
 /// Zeichnet den Kessel aus Holz, Taschen und Messingkreuz.
 void paintWheel(
@@ -24,6 +24,7 @@ void paintWheel(
   double radius,
   double angle, {
   bool labels = true,
+  List<int> order = wheelOrder,
 }) {
   // Große Kreise als Vieleck: Kreise und Ovale hinterließen mit Impeller
   // eckige Reste außerhalb des Kessels.
@@ -55,13 +56,13 @@ void paintWheel(
 
   final outer = radius * 0.88;
   final inner = radius * 0.62;
-  final sector = pocketAngle;
+  final sector = pocketAngleFor(order);
   final ring = (outer + inner) / 2;
   final stroke = outer - inner;
   final ringRect = Rect.fromCircle(center: center, radius: ring);
-  for (var i = 0; i < wheelOrder.length; i++) {
-    final n = wheelOrder[i];
-    final mid = angle + pocketCenter(i);
+  for (var i = 0; i < order.length; i++) {
+    final n = order[i];
+    final mid = angle + pocketCenter(i, order);
     canvas.drawPath(
       Path()..addArc(ringRect, mid - sector / 2, sector),
       Paint()
@@ -80,11 +81,11 @@ void paintWheel(
     if (labels) {
       final tp = TextPainter(
         text: TextSpan(
-          text: '$n',
+          text: pocketLabel(n),
           style: TextStyle(
             fontFamily: bodyFont,
             fontWeight: FontWeight.w700,
-            fontSize: radius * 0.085,
+            fontSize: radius * (n == doubleZero ? 0.07 : 0.085),
             color: const Color(0xFFFFF1C9),
           ),
         ),
@@ -129,7 +130,11 @@ class WheelPainter extends CustomPainter {
     required this.ballRadius,
     required this.showBall,
     this.blur = 0,
+    this.order = wheelOrder,
   });
+
+  /// Taschen im Kessel (europäisch oder amerikanisch).
+  final List<int> order;
 
   /// Bewegungsunschärfe 0..1: Bei schneller Drehung verschwimmen die roten und schwarzen Fächer,
   /// statt zu flackern (Stroboskop-Effekt).
@@ -146,7 +151,7 @@ class WheelPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
     final r = math.min(size.width, size.height) / 2;
-    paintWheel(canvas, c, r, wheelAngle);
+    paintWheel(canvas, c, r, wheelAngle, order: order);
     if (blur > 0) {
       canvas.drawCircle(c, r * 0.93, Paint()..color = const Color(0xFF4A1512).withValues(alpha: blur));
     }
@@ -176,5 +181,6 @@ class WheelPainter extends CustomPainter {
       old.ballAngle != ballAngle ||
       old.ballRadius != ballRadius ||
       old.showBall != showBall ||
-      old.blur != blur;
+      old.blur != blur ||
+      old.order != order;
 }
