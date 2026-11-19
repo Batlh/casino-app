@@ -34,9 +34,15 @@ Future<String?> moveDesktopData({Future<Directory> Function()? supportDir}) asyn
     final target = File('${dir.path}${Platform.pathSeparator}$prefsFile');
     if (target.existsSync()) return null;
     final old = oldSupportPath(dir.path);
-    if (old == null) return null;
+    if (old == null) {
+      debugLog.info('umzug', 'Speicherort ${dir.path} ohne neuen Namen, nichts zu übernehmen');
+      return null;
+    }
     final source = File('$old${Platform.pathSeparator}$prefsFile');
-    if (!source.existsSync()) return null;
+    if (!source.existsSync()) {
+      debugLog.info('umzug', 'Keine alten Daten unter $old, Start mit neuem Stand');
+      return null;
+    }
     dir.createSync(recursive: true);
     source.copySync(target.path);
     return source.path;

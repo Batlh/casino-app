@@ -72,8 +72,11 @@ Future<void> backupExport(BuildContext context) async {
       mimeType: 'application/json',
       bytes: bytes,
     );
-    if (uri == null) return;
-    debugLog.info('spielstand', 'Gesichert: $uri');
+    if (uri == null) {
+      debugLog.info('spielstand', 'Sichern abgebrochen');
+      return;
+    }
+    debugLog.info('spielstand', 'Gesichert: $uri (${bytes.length} Bytes)');
     if (context.mounted) _say(context, 'Spielstand gesichert');
   } catch (e, st) {
     debugLog.error('spielstand.export', e, st);
@@ -88,7 +91,11 @@ Future<void> backupImportFile(BuildContext context) async {
   String text;
   try {
     final f = await FilePicker.pickFile(dialogTitle: 'Spielstand laden');
-    if (f == null) return;
+    if (f == null) {
+      debugLog.info('spielstand', 'Laden abgebrochen');
+      return;
+    }
+    debugLog.info('spielstand', 'Datei gewählt: ${f.name}');
     text = utf8.decode(await f.readAsBytes(), allowMalformed: true);
   } catch (e, st) {
     debugLog.error('spielstand.import', e, st);
@@ -123,6 +130,7 @@ Future<void> _apply(BuildContext context, String text) async {
   try {
     info = inspectBackup(text);
   } on FormatException catch (e) {
+    debugLog.warn('spielstand.import', 'Keine gültige Sicherung: ${e.message}');
     _say(context, e.message);
     return;
   }
@@ -141,7 +149,10 @@ Future<void> _apply(BuildContext context, String text) async {
       ],
     ),
   );
-  if (ok != true || !context.mounted) return;
+  if (ok != true || !context.mounted) {
+    debugLog.info('spielstand', 'Laden nicht bestätigt');
+    return;
+  }
   try {
     final prefs = await SharedPreferences.getInstance();
     final n = await importBackup(prefs, text);

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../core/debug_log.dart';
 import '../core/scope.dart';
 import '../core/sfx.dart';
 import '../core/theme.dart';
@@ -114,6 +115,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         ],
       ),
     );
+    debugLog.info('umzug', 'Erster Start, Auswahl: ${switch (choice) { 1 => 'Sicherung laden', 2 => 'Zwischenablage', _ => 'Neu anfangen' }}');
     if (!mounted) return;
     if (choice == 1) await backupImportFile(context);
     if (choice == 2 && mounted) await backupPaste(context);
