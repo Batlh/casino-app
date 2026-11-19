@@ -55,6 +55,8 @@ Nachbauten echter Automaten (keine Namen, Figuren oder Spielelemente bekannter G
 Reihenfolge: Bauteile zuerst in der Physik (pinball_table.dart) mit Tests, dann die Tische.
 
 ## Hilfeseite in der Lobby
+Erste Fassung steht (lib/ui/help_screen.dart): Fragezeichen und Knopf „Hilfe“ in der Lobby, Eintrag in den Einstellungen,
+Suche. Noch offen: Bilder in den Kapiteln, Liste aller Spiele mit Kurzbeschreibung.
 - Eigener Eintrag „Hilfe“ in der Lobby (gut sichtbar, z. B. Fragezeichen oben und ein Kärtchen unter den Spielen).
 - Kurze Kapitel mit Bildern oder Symbolen, durchsuchbar:
   - Erste Schritte: Münzen ohne Geldwert, Tagesbonus, Nachfüllen (wann und wie viel)
