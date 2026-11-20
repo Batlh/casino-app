@@ -37,7 +37,7 @@ const psOdds = {
   PsFlag.bell: 655, // etwa 1 : 100
   PsFlag.cherry: 1820, // etwa 1 : 36
   PsFlag.replay: 8978, // etwa 1 : 7,3
-  PsFlag.plum: 10082, // etwa 1 : 6,5
+  PsFlag.plum: 10600, // etwa 1 : 6,2
 };
 
 /// Auszahlung in Münzen je Rolle bei Einsatz [psBet].

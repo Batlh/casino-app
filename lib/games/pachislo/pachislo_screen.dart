@@ -40,7 +40,7 @@ const pachisloGuide = GameGuide('Pachislo', [
   ),
   GuideSection(
     'Zielen lohnt sich',
-    'Wer Sieben und Glocke trifft, holt auf lange Sicht etwa 98 % der Einsätze zurück, wer blind drückt etwa 92 %. Mit '
+    'Wer Sieben und Glocke trifft, holt auf lange Sicht etwa 99 % der Einsätze zurück, wer blind drückt etwa 91 %. Mit '
         '„Langsam“ laufen die Walzen halb so schnell.',
   ),
 ]);
@@ -125,7 +125,7 @@ class _PachisloScreenState extends State<PachisloScreen> with SingleTickerProvid
         if (_pos[r] >= t) {
           _target[r] = null;
           _spinning[r] = false;
-          _app.sfx.play(Sound.tick);
+          _app.sfx.play(Sound.reelStop);
           if (_m.allStopped && !_spinning.contains(true)) _finish();
         } else {
           any = true;
@@ -149,7 +149,7 @@ class _PachisloScreenState extends State<PachisloScreen> with SingleTickerProvid
     if (!free) progress.event('pachislo');
     _m.start();
     debugLog.info('pachislo', 'Auslosung ${_m.flag.name}${free ? ' (Replay)' : ''}');
-    _app.sfx.play(Sound.spin);
+    _app.sfx.play(Sound.coin);
     for (var r = 0; r < 3; r++) {
       _spinning[r] = true;
       _target[r] = null;
