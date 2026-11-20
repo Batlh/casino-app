@@ -13,7 +13,7 @@ class PusherCoin {
   final double x;
   final double y;
 
-  /// Wert beim Gewinnen (Münzwert beim Einwurf, Goldmünzen das Zehnfache).
+  /// Münzwert beim Einwurf; Goldmünzen zahlen das Zehnfache davon.
   final int value;
   final bool gold;
 }
@@ -43,7 +43,7 @@ class PusherTable {
   static const double coinRadius = 0.42;
 
   /// Bis hierhin haben die Seiten Wände; davor sind sie offen (Rinnen).
-  static const double wallEnd = 8.4;
+  static const double wallEnd = 8.0;
 
   /// Schieber: Vorderkante pendelt zwischen [pusherMin] und [pusherMax].
   static const double pusherMin = 1.2;
@@ -51,7 +51,7 @@ class PusherTable {
   static const double pusherPeriod = 3.2;
 
   /// Chance, dass ein Einwurf eine Goldmünze (zehnfacher Wert) mit auf den Tisch bringt.
-  static const double goldChance = 1 / 45;
+  static const double goldChance = 1 / 120;
 
   final Random _rng;
   final World _world = World(Vector2.zero());
@@ -65,6 +65,12 @@ class PusherTable {
 
   double get pusherFront => pusherMin + (pusherMax - pusherMin) * (0.5 - 0.5 * cos(2 * pi * _time / pusherPeriod));
   int get queued => _queue.length;
+
+  /// Wartende Einwürfe zum Speichern (negativer Wert: Goldmünze).
+  List<(double, int)> get pending => List.unmodifiable(_queue);
+
+  /// Gespeicherten wartenden Einwurf wiederherstellen.
+  void enqueue(double x, int value) => _queue.add((x, value));
 
   Iterable<PusherCoin> get coins => _coins.map((b) {
         final d = b.userData! as _CoinData;
@@ -113,7 +119,7 @@ class PusherTable {
   void drop(double x, int value) {
     _queue.add((x.clamp(coinRadius + 0.02, width - coinRadius - 0.02), value));
     if (_rng.nextDouble() < goldChance) {
-      _queue.add(((_rng.nextDouble() * (width - 2 * coinRadius)) + coinRadius, -value * 10));
+      _queue.add(((_rng.nextDouble() * (width - 2 * coinRadius)) + coinRadius, -value));
     }
   }
 
