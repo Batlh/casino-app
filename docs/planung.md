@@ -144,4 +144,5 @@ Ablauf:
 - Spielkarten: Runde 5 (Spielkarten_Korrektur_5_geprueft_2026-11-20.zip) am 20.11. abgenommen. Beim nächsten Merge auf main
   mitnehmen, als ein einzelner Commit ohne URL.
 - Erledigt bis 20.11. früh zusätzlich: 13 Pachislo, 14 Münzschieber, 15 Greifautomat, 16 Pferderennen (Netz),
-  18 Schnellnachrichten, 19 Hilfe mit Spieleliste und Bildern. Offen: 17 Turniere im Netz.
+  17 Turniere im Netz (gleiche Startchips, 10/20/30 Runden, Rangliste), 18 Schnellnachrichten, 19 Hilfe mit
+  Spieleliste und Bildern. Damit sind alle 19 Schritte umgesetzt; offen ist nur der Test im echten WLAN.
