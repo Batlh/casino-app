@@ -184,7 +184,7 @@ class _SicBoScreenState extends State<SicBoScreen> with NetSharedTable {
   }
 
   void _place(SicBet b) {
-    if (_rolling || !_app.wallet.canAfford(_total + _chip)) return;
+    if (_rolling || !sharedWallet.canAfford(_total + _chip)) return;
     _app.sfx.play(Sound.chip);
     setState(() {
       _bets[b] = (_bets[b] ?? 0) + _chip;
@@ -197,14 +197,14 @@ class _SicBoScreenState extends State<SicBoScreen> with NetSharedTable {
     if (_rolling || sharedGuest) return;
     // Am Netztisch würfelt der Gastgeber auch ohne eigenen Einsatz
     if (_total == 0 && !sharedHost) return;
-    if (!_app.wallet.canAfford(_total)) return;
+    if (!sharedWallet.canAfford(_total)) return;
     final d = [for (var k = 0; k < 3; k++) 1 + _rng.nextInt(6)];
     sharedSend(d);
     await _rollTo(d);
   }
 
   Future<void> _rollTo(List<int> d) async {
-    if (_total > 0 && !_app.wallet.spend(_total)) _bets.clear();
+    if (_total > 0 && !sharedWallet.spend(_total)) _bets.clear();
     setState(() {
       _rolling = true;
       _message = '';
@@ -222,8 +222,8 @@ class _SicBoScreenState extends State<SicBoScreen> with NetSharedTable {
       if (p > 0) won.add(e.key);
       paid += p;
     }
-    if (paid > 0) _app.wallet.credit(paid);
-    _app.wallet.refillIfBroke();
+    if (paid > 0) sharedWallet.credit(paid);
+    sharedWallet.refillIfBroke();
     final played = _total > 0;
     final net = paid - _total;
     if (played) _app.sfx.play(net > 0 ? Sound.win : Sound.lose);
@@ -282,7 +282,7 @@ class _SicBoScreenState extends State<SicBoScreen> with NetSharedTable {
                     ActionButton(
                       primary: true,
                       label: sharedGuest ? 'Der Gastgeber würfelt' : (_total == 0 ? 'Würfeln' : 'Würfeln: ${formatCoins(_total)}'),
-                      onPressed: _rolling || sharedGuest || (_total == 0 && !sharedHost) || !_app.wallet.canAfford(_total) ? null : _roll,
+                      onPressed: _rolling || sharedGuest || (_total == 0 && !sharedHost) || !sharedWallet.canAfford(_total) ? null : _roll,
                     ),
                     if (!sharedActive && MediaQuery.sizeOf(context).width < 420) ActionButton(label: 'Im Netzwerk', onPressed: sharedOpenPanel),
                   ],

@@ -6,11 +6,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Münzkonto. Münzen haben keinen Geldwert und lassen sich weder kaufen
 /// noch auszahlen.
 class Wallet extends ChangeNotifier {
-  Wallet(this._prefs, {DateTime Function()? clock})
-      : _clock = clock ?? DateTime.now {
+  Wallet(SharedPreferences this._prefs, {DateTime Function()? clock})
+      : _clock = clock ?? DateTime.now,
+        tournament = false {
     _balance = _prefs.getInt(_balanceKey) ?? startBalance;
     _lastBonus = _prefs.getString(_bonusKey);
   }
+
+  /// Turnierchips am Netztisch: nur im Speicher, kein Tagesbonus, kein Nachfüllen (wer pleite ist, ist raus).
+  Wallet.tournament(int chips)
+      : _prefs = null,
+        _clock = DateTime.now,
+        tournament = true {
+    _balance = chips;
+  }
+
+  final bool tournament;
 
   static const startBalance = 5000;
   static const dailyBonus = 1000;
@@ -22,7 +33,7 @@ class Wallet extends ChangeNotifier {
   static const _balanceKey = 'wallet.balance';
   static const _bonusKey = 'wallet.lastBonus';
 
-  final SharedPreferences _prefs;
+  final SharedPreferences? _prefs;
   final DateTime Function() _clock;
   late int _balance;
   String? _lastBonus;
@@ -40,7 +51,7 @@ class Wallet extends ChangeNotifier {
     return '${d.year}-${d.month}-${d.day}';
   }
 
-  bool get bonusAvailable => _lastBonus != _today;
+  bool get bonusAvailable => !tournament && _lastBonus != _today;
 
   bool canAfford(int amount) => amount <= _balance;
 
@@ -73,7 +84,7 @@ class Wallet extends ChangeNotifier {
   int claimBonus() {
     if (!bonusAvailable) return 0;
     _lastBonus = _today;
-    _prefs.setString(_bonusKey, _lastBonus!);
+    _prefs?.setString(_bonusKey, _lastBonus!);
     _set(_balance + dailyBonus);
     onBonus?.call();
     return dailyBonus;
@@ -83,7 +94,7 @@ class Wallet extends ChangeNotifier {
   /// nicht mehr bezahlen kann, bekommt neue Münzen, mindestens so viele, dass es wieder reicht.
   bool refillIfBroke({int min = minBet}) {
     final need = math.max(min, minBet);
-    if (_balance >= need) return false;
+    if (tournament || _balance >= need) return false;
     lastRefill = math.max(refillAmount, need - _balance);
     _set(_balance + lastRefill);
     refills.value++;
@@ -92,7 +103,7 @@ class Wallet extends ChangeNotifier {
 
   void _set(int value) {
     _balance = value;
-    _prefs.setInt(_balanceKey, value);
+    _prefs?.setInt(_balanceKey, value);
     notifyListeners();
   }
 

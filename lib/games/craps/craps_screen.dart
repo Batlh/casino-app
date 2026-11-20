@@ -131,7 +131,7 @@ class _CrapsScreenState extends State<CrapsScreen> with NetSharedTable {
   }
 
   void _place(CrapsBet b) {
-    if (!_canPlace(b) || !_app.wallet.spend(_chip)) return;
+    if (!_canPlace(b) || !sharedWallet.spend(_chip)) return;
     _app.sfx.play(Sound.chip);
     setState(() => _bets[b] = (_bets[b] ?? 0) + _chip);
     sharedStake(_staked);
@@ -177,8 +177,8 @@ class _CrapsScreenState extends State<CrapsScreen> with NetSharedTable {
     } else {
       pointText = '';
     }
-    if (paid > 0) _app.wallet.credit(paid);
-    _app.wallet.refillIfBroke();
+    if (paid > 0) sharedWallet.credit(paid);
+    sharedWallet.refillIfBroke();
     _app.sfx.play(paid > 0 ? Sound.win : (lost > 0 ? Sound.lose : Sound.tick));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

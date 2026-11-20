@@ -78,8 +78,8 @@ class _HorseScreenState extends State<HorseScreen> with SingleTickerProviderStat
     final o = _order;
     if (_racing && o != null) {
       final won = _bets.fold(0, (a, b) => a + _card.payout(b, o));
-      if (won > 0) _wallet?.credit(won);
-    } else if (_bets.isNotEmpty) {
+      if (won > 0 && !sharedTournament) _wallet?.credit(won);
+    } else if (_bets.isNotEmpty && !sharedTournament) {
       _wallet?.credit(_staked);
     }
     _run.dispose();
@@ -110,7 +110,7 @@ class _HorseScreenState extends State<HorseScreen> with SingleTickerProviderStat
   }
 
   void _addBet(int horse, BetKind kind) {
-    if (_racing || !_app.wallet.spend(_bet)) return;
+    if (_racing || !sharedWallet.spend(_bet)) return;
     _app.sfx.play(Sound.chip);
     setState(() {
       _bets.add(HorseBet(horse, kind, _bet));
@@ -121,7 +121,7 @@ class _HorseScreenState extends State<HorseScreen> with SingleTickerProviderStat
 
   void _clearBets() {
     if (_racing) return;
-    _app.wallet.credit(_staked);
+    sharedWallet.credit(_staked);
     setState(() => _bets.clear());
     sharedStake(0);
   }
@@ -151,7 +151,7 @@ class _HorseScreenState extends State<HorseScreen> with SingleTickerProviderStat
     for (final b in _bets) {
       won += _card.payout(b, order);
     }
-    if (won > 0) _app.wallet.credit(won);
+    if (won > 0) sharedWallet.credit(won);
     final staked = _staked;
     _bets.clear();
     sharedStake(0);
@@ -165,7 +165,7 @@ class _HorseScreenState extends State<HorseScreen> with SingleTickerProviderStat
       _card = RaceCard.fromSeed(_cardSeed);
       if (sharedHost) sharedSend({'c': _cardSeed});
     }
-    _app.wallet.refillIfBroke();
+    sharedWallet.refillIfBroke();
     setState(() {});
   }
 

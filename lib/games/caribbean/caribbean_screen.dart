@@ -108,7 +108,7 @@ class _CaribbeanScreenState extends State<CaribbeanScreen> with NetSharedTable {
   }
 
   void _deal() {
-    if (sharedGuest || !_app.wallet.canAfford(3 * _ante)) return;
+    if (sharedGuest || !sharedWallet.canAfford(3 * _ante)) return;
     if (sharedHost) {
       final seed = _rng.nextInt(1 << 31);
       sharedSend(seed);
@@ -125,7 +125,7 @@ class _CaribbeanScreenState extends State<CaribbeanScreen> with NetSharedTable {
   }
 
   void _dealRound(int? seed) {
-    if (!_app.wallet.canAfford(3 * _ante) || !_app.wallet.spend(_ante)) {
+    if (!sharedWallet.canAfford(3 * _ante) || !sharedWallet.spend(_ante)) {
       setState(() => _message = 'Zu wenig Münzen, du setzt diese Runde aus');
       return;
     }
@@ -153,15 +153,15 @@ class _CaribbeanScreenState extends State<CaribbeanScreen> with NetSharedTable {
       _revealed = true;
       _message = 'Ausgestiegen, das Ante ist weg. Die Bank hatte ${handName(bestHand(_dealer))}';
     });
-    _app.wallet.refillIfBroke();
+    sharedWallet.refillIfBroke();
     _nextPending();
   }
 
   void _raise() {
-    if (!_app.wallet.spend(2 * _ante)) return;
+    if (!sharedWallet.spend(2 * _ante)) return;
     final (paid, text) = caribbeanSettle(bestHand(_me), bestHand(_dealer), _ante);
-    if (paid > 0) _app.wallet.credit(paid);
-    _app.wallet.refillIfBroke();
+    if (paid > 0) sharedWallet.credit(paid);
+    sharedWallet.refillIfBroke();
     _app.sfx.play(paid > 3 * _ante ? Sound.win : (paid > 0 ? Sound.coin : Sound.lose));
     setState(() {
       _deciding = false;
@@ -211,7 +211,7 @@ class _CaribbeanScreenState extends State<CaribbeanScreen> with NetSharedTable {
               if (_deciding)
                 Wrap(spacing: 8, children: [
                   ActionButton(label: 'Aussteigen', onPressed: _fold),
-                  ActionButton(primary: true, label: 'Erhöhen: ${formatCoins(2 * _ante)}', onPressed: _app.wallet.canAfford(2 * _ante) ? _raise : null),
+                  ActionButton(primary: true, label: 'Erhöhen: ${formatCoins(2 * _ante)}', onPressed: sharedWallet.canAfford(2 * _ante) ? _raise : null),
                 ])
               else ...[
                 BetPicker(
@@ -227,7 +227,7 @@ class _CaribbeanScreenState extends State<CaribbeanScreen> with NetSharedTable {
                 ActionButton(
                   primary: true,
                   label: sharedGuest ? 'Der Gastgeber teilt aus' : 'Austeilen: ${formatCoins(_ante)}',
-                  onPressed: !sharedGuest && _app.wallet.canAfford(3 * _ante) ? _deal : null,
+                  onPressed: !sharedGuest && sharedWallet.canAfford(3 * _ante) ? _deal : null,
                 ),
               ],
             ],

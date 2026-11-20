@@ -112,7 +112,7 @@ class _KenoScreenState extends State<KenoScreen> with NetSharedTable {
     if (_drawing || sharedGuest) return;
     // Am Netztisch zieht der Gastgeber auch ohne eigene Zahlen
     if (_picks.isEmpty && !sharedHost) return;
-    if (_picks.isNotEmpty && !_app.wallet.canAfford(_bet)) return;
+    if (_picks.isNotEmpty && !sharedWallet.canAfford(_bet)) return;
     final all = [for (var i = 1; i <= 80; i++) i]..shuffle(_rng);
     final drawn = all.take(20).toList();
     sharedSend(drawn);
@@ -120,7 +120,7 @@ class _KenoScreenState extends State<KenoScreen> with NetSharedTable {
   }
 
   Future<void> _drawTo(List<int> drawn) async {
-    final playing = _picks.isNotEmpty && _app.wallet.spend(_bet);
+    final playing = _picks.isNotEmpty && sharedWallet.spend(_bet);
     setState(() {
       _drawing = true;
       _drawn.clear();
@@ -134,8 +134,8 @@ class _KenoScreenState extends State<KenoScreen> with NetSharedTable {
     }
     final hits = _drawn.where(_picks.contains).length;
     final paid = playing ? kenoPayout(_picks.length, hits, _bet) : 0;
-    if (paid > 0) _app.wallet.credit(paid);
-    _app.wallet.refillIfBroke();
+    if (paid > 0) sharedWallet.credit(paid);
+    sharedWallet.refillIfBroke();
     if (playing) _app.sfx.play(paid > _bet ? Sound.win : (paid > 0 ? Sound.coin : Sound.lose));
     setState(() {
       _drawing = false;
@@ -235,7 +235,7 @@ class _KenoScreenState extends State<KenoScreen> with NetSharedTable {
                     ActionButton(
                       primary: true,
                       label: sharedGuest ? 'Der Gastgeber zieht' : (_picks.isEmpty && sharedHost ? 'Ziehen' : 'Ziehen: ${formatCoins(_bet)}'),
-                      onPressed: _drawing || sharedGuest || (_picks.isEmpty && !sharedHost) || (_picks.isNotEmpty && !_app.wallet.canAfford(_bet)) ? null : _draw,
+                      onPressed: _drawing || sharedGuest || (_picks.isEmpty && !sharedHost) || (_picks.isNotEmpty && !sharedWallet.canAfford(_bet)) ? null : _draw,
                     ),
                   ],
                 ),

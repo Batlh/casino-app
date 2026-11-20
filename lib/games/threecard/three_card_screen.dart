@@ -72,7 +72,7 @@ class _ThreeCardScreenState extends State<ThreeCardScreen> with NetSharedTable {
     // Mitten in der Entscheidung gehen gilt als Aussteigen
     if (_deciding) {
       final r = _round!.fold();
-      if (r.paid > 0) _wallet?.credit(r.paid);
+      if (r.paid > 0 && !sharedTournament) _wallet?.credit(r.paid);
     }
     sharedDispose();
     super.dispose();
@@ -98,7 +98,7 @@ class _ThreeCardScreenState extends State<ThreeCardScreen> with NetSharedTable {
   }
 
   void _deal() {
-    if (sharedGuest || !_app.wallet.canAfford(2 * _ante + _pp)) return;
+    if (sharedGuest || !sharedWallet.canAfford(2 * _ante + _pp)) return;
     if (sharedHost) {
       final seed = _rng.nextInt(1 << 31);
       sharedSend(seed);
@@ -109,7 +109,7 @@ class _ThreeCardScreenState extends State<ThreeCardScreen> with NetSharedTable {
   }
 
   void _dealRound(int? seed) {
-    if (!_app.wallet.canAfford(2 * _ante + _pp) || !_app.wallet.spend(_ante + _pp)) {
+    if (!sharedWallet.canAfford(2 * _ante + _pp) || !sharedWallet.spend(_ante + _pp)) {
       setState(() => _message = 'Zu wenig Münzen, du setzt diese Runde aus');
       return;
     }
@@ -130,13 +130,13 @@ class _ThreeCardScreenState extends State<ThreeCardScreen> with NetSharedTable {
   void _fold() => _settle(_round!.fold(), folded: true);
 
   void _play() {
-    if (!_app.wallet.spend(_ante)) return;
+    if (!sharedWallet.spend(_ante)) return;
     _settle(_round!.play());
   }
 
   void _settle(TcResult r, {bool folded = false}) {
     final round = _round!;
-    if (r.paid > 0) _app.wallet.credit(r.paid);
+    if (r.paid > 0) sharedWallet.credit(r.paid);
     final staked = round.ante + round.pairPlus + (folded ? 0 : round.ante);
     final net = r.paid - staked;
     debugLog.info('threecard', '${tcRankNames[round.player.rank]} gegen ${tcRankNames[round.dealer.rank]}: ${r.text}, Saldo $net');
@@ -151,7 +151,7 @@ class _ThreeCardScreenState extends State<ThreeCardScreen> with NetSharedTable {
           : '${r.text}: ${tcRankNames[round.player.rank]} gegen ${tcRankNames[round.dealer.rank]}'
               '${r.dealerQualifies ? '' : ' (spielt nicht)'}. ${net > 0 ? '+${formatCoins(net)}' : (net == 0 ? 'Einsatz zurück' : formatCoins(net))}.$pp';
     });
-    _app.wallet.refillIfBroke();
+    sharedWallet.refillIfBroke();
     final next = _pending;
     _pending = null;
     if (next != null && mounted) _dealRound(next);
@@ -210,7 +210,7 @@ class _ThreeCardScreenState extends State<ThreeCardScreen> with NetSharedTable {
               if (_deciding)
                 Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
                   ActionButton(label: 'Aussteigen', onPressed: _fold),
-                  ActionButton(primary: true, label: 'Spielen: ${formatCoins(_ante)}', onPressed: _app.wallet.canAfford(_ante) ? _play : null),
+                  ActionButton(primary: true, label: 'Spielen: ${formatCoins(_ante)}', onPressed: sharedWallet.canAfford(_ante) ? _play : null),
                   ActionButton(
                     label: 'Tipp',
                     onPressed: () => setState(() => _message = tcShouldPlay(round!.player)
@@ -242,7 +242,7 @@ class _ThreeCardScreenState extends State<ThreeCardScreen> with NetSharedTable {
                 ActionButton(
                   primary: true,
                   label: sharedGuest ? 'Der Gastgeber teilt aus' : 'Austeilen: ${formatCoins(_ante + _pp)}',
-                  onPressed: !sharedGuest && _app.wallet.canAfford(2 * _ante + _pp) ? _deal : null,
+                  onPressed: !sharedGuest && sharedWallet.canAfford(2 * _ante + _pp) ? _deal : null,
                 ),
               ],
             ],

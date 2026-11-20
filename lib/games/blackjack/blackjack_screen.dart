@@ -58,7 +58,7 @@ class _BlackjackScreenState extends State<BlackjackScreen> with NetSharedTable {
 
   void _deal() {
     if (sharedGuest) return;
-    if (!_app.wallet.canAfford(_bet)) return;
+    if (!sharedWallet.canAfford(_bet)) return;
     if (sharedHost) {
       final seed = Random.secure().nextInt(1 << 31);
       sharedSend(seed);
@@ -69,7 +69,7 @@ class _BlackjackScreenState extends State<BlackjackScreen> with NetSharedTable {
   }
 
   void _dealRound(int? seed) {
-    if (!_app.wallet.spend(_bet)) {
+    if (!sharedWallet.spend(_bet)) {
       setState(() => _message = 'Zu wenig Münzen, du setzt diese Runde aus');
       return;
     }
@@ -103,17 +103,17 @@ class _BlackjackScreenState extends State<BlackjackScreen> with NetSharedTable {
   }
 
   void _double() {
-    if (!_app.wallet.spend(_engine.active.bet)) return;
+    if (!sharedWallet.spend(_engine.active.bet)) return;
     _act(_engine.doubleDown);
   }
 
   void _split() {
-    if (!_app.wallet.spend(_engine.active.bet)) return;
+    if (!sharedWallet.spend(_engine.active.bet)) return;
     _act(_engine.split);
   }
 
   Future<void> _runDealer() async {
-    final wallet = _app.wallet;
+    final wallet = sharedWallet;
     setState(() => _busy = true);
     await Future<void>.delayed(const Duration(milliseconds: 500));
     while (mounted && _engine.dealerStep()) {
@@ -135,7 +135,7 @@ class _BlackjackScreenState extends State<BlackjackScreen> with NetSharedTable {
   void _finish() {
     final paid = _engine.totalPayout;
     final bet = _engine.totalBet;
-    _app.wallet.credit(paid);
+    sharedWallet.credit(paid);
     final bj = _engine.hands.any((h) => h.outcome == BjOutcome.blackjack);
     if (bj) progress.event('black_jack');
     setState(() {
@@ -157,8 +157,8 @@ class _BlackjackScreenState extends State<BlackjackScreen> with NetSharedTable {
         _app.sfx.play(Sound.lose);
       }
     });
-    _app.wallet.refillIfBroke();
-    if (!_app.wallet.canAfford(_bet)) {
+    sharedWallet.refillIfBroke();
+    if (!sharedWallet.canAfford(_bet)) {
       setState(() => _bet = 10);
     }
     _nextPending();
@@ -230,7 +230,7 @@ class _BlackjackScreenState extends State<BlackjackScreen> with NetSharedTable {
           ActionButton(
             primary: true,
             label: sharedGuest ? 'Der Gastgeber teilt aus' : 'Austeilen: ${formatCoins(_bet)}',
-            onPressed: !sharedGuest && _app.wallet.canAfford(_bet) ? _deal : null,
+            onPressed: !sharedGuest && sharedWallet.canAfford(_bet) ? _deal : null,
           ),
         ] else
           Wrap(
@@ -251,7 +251,7 @@ class _BlackjackScreenState extends State<BlackjackScreen> with NetSharedTable {
                 label: 'Verdoppeln',
                 onPressed: playing &&
                         _engine.canDouble &&
-                        _app.wallet.canAfford(_engine.active.bet)
+                        sharedWallet.canAfford(_engine.active.bet)
                     ? _double
                     : null,
               ),
@@ -259,7 +259,7 @@ class _BlackjackScreenState extends State<BlackjackScreen> with NetSharedTable {
                 label: 'Teilen',
                 onPressed: playing &&
                         _engine.canSplit &&
-                        _app.wallet.canAfford(_engine.active.bet)
+                        sharedWallet.canAfford(_engine.active.bet)
                     ? _split
                     : null,
               ),

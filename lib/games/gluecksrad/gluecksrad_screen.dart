@@ -106,7 +106,7 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
 
   void _bet(int v) {
     if (_turn.isAnimating) return;
-    if (!_app.wallet.canAfford(_total + _chip)) return;
+    if (!sharedWallet.canAfford(_total + _chip)) return;
     _app.sfx.play(Sound.chip);
     setState(() {
       _bets[v] = (_bets[v] ?? 0) + _chip;
@@ -118,19 +118,19 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
 
   Future<void> _spin() async {
     if (_turn.isAnimating || sharedGuest) return;
-    if (_bets.isEmpty && _lastBets.isNotEmpty && _app.wallet.canAfford(_lastBets.values.fold(0, (a, b) => a + b))) {
+    if (_bets.isEmpty && _lastBets.isNotEmpty && sharedWallet.canAfford(_lastBets.values.fold(0, (a, b) => a + b))) {
       _bets.addAll(_lastBets);
     }
     // Am Netztisch dreht der Gastgeber auch ohne eigenen Einsatz
     if (_bets.isEmpty && !sharedHost) return;
-    if (!_app.wallet.canAfford(_total)) return;
+    if (!sharedWallet.canAfford(_total)) return;
     final index = _rng.nextInt(radReihe.length);
     sharedSend(index);
     await _spinTo(index);
   }
 
   Future<void> _spinTo(int index) async {
-    if (_bets.isNotEmpty && !_app.wallet.spend(_total)) _bets.clear();
+    if (_bets.isNotEmpty && !sharedWallet.spend(_total)) _bets.clear();
     final n = radReihe.length;
     final seg = 2 * math.pi / n;
     // Feld index unter den Zeiger oben drehen, mindestens drei volle Umdrehungen. Ist in den Systemeinstellungen
@@ -154,7 +154,7 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
     final v = radReihe[index];
     final stake = _bets[v] ?? 0;
     final win = stake == 0 ? 0 : stake * (v + 1);
-    _app.wallet.credit(win);
+    sharedWallet.credit(win);
     if (v == 40 && win > 0) progress.event('rad_joker');
     debugLog.info('gluecksrad', 'Einsatz $_total auf ${_bets.keys.join('/')}, Feld $v, Auszahlung $win');
     final played = _bets.isNotEmpty;
@@ -168,7 +168,7 @@ class _GluecksradScreenState extends State<GluecksradScreen> with SingleTickerPr
       _message = win > 0 ? '$name! +${formatCoins(win)}' : (played ? '$name – nichts gewonnen' : name);
       _big = win > 0;
     });
-    _app.wallet.refillIfBroke();
+    sharedWallet.refillIfBroke();
     sharedStake(0);
     final next = _pending;
     _pending = null;

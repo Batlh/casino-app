@@ -83,7 +83,7 @@ class _BaccaratScreenState extends State<BaccaratScreen> with NetSharedTable {
 
   void _place(BacBet b) {
     if (_dealing) return;
-    if (!_app.wallet.canAfford(_total + _chip)) return;
+    if (!sharedWallet.canAfford(_total + _chip)) return;
     _app.sfx.play(Sound.chip);
     setState(() {
       _bets[b] = (_bets[b] ?? 0) + _chip;
@@ -101,7 +101,7 @@ class _BaccaratScreenState extends State<BaccaratScreen> with NetSharedTable {
     if (_dealing || sharedGuest) return;
     // Am Netztisch teilt der Gastgeber auch ohne eigenen Einsatz aus
     if (_total == 0 && !sharedHost) return;
-    if (!_app.wallet.canAfford(_total)) return;
+    if (!sharedWallet.canAfford(_total)) return;
     final r = _shoe.play();
     sharedSend(bacRoundToJson(r));
     await _play(r);
@@ -109,7 +109,7 @@ class _BaccaratScreenState extends State<BaccaratScreen> with NetSharedTable {
 
   Future<void> _play(BacRound r) async {
     // Wer sich den Einsatz nicht mehr leisten kann, schaut nur zu
-    if (_total > 0 && !_app.wallet.spend(_total)) _bets.clear();
+    if (_total > 0 && !sharedWallet.spend(_total)) _bets.clear();
     final stake = _total;
     setState(() {
       _dealing = true;
@@ -145,7 +145,7 @@ class _BaccaratScreenState extends State<BaccaratScreen> with NetSharedTable {
     for (final e in _bets.entries) {
       paid += r.payout(e.key, e.value);
     }
-    if (paid > 0) _app.wallet.credit(paid);
+    if (paid > 0) sharedWallet.credit(paid);
     final net = paid - stake;
     _app.sfx.play(net > 0 ? Sound.win : (net == 0 ? Sound.tick : Sound.lose));
     setState(() {
@@ -154,7 +154,7 @@ class _BaccaratScreenState extends State<BaccaratScreen> with NetSharedTable {
       _message = '${_who(r)}, ${r.playerTotal} zu ${r.bankerTotal}. '
           '${net > 0 ? 'Du gewinnst ${formatCoins(net)}' : (net == 0 ? 'Einsatz zurück' : 'Verloren')}';
     });
-    _app.wallet.refillIfBroke();
+    sharedWallet.refillIfBroke();
     _next();
   }
 
@@ -221,7 +221,7 @@ class _BaccaratScreenState extends State<BaccaratScreen> with NetSharedTable {
                       ActionButton(
                         primary: true,
                         label: sharedGuest ? 'Der Gastgeber teilt aus' : (_total == 0 ? 'Austeilen' : 'Austeilen: ${formatCoins(_total)}'),
-                        onPressed: _dealing || sharedGuest || (_total == 0 && !sharedHost) || !_app.wallet.canAfford(_total) ? null : _deal,
+                        onPressed: _dealing || sharedGuest || (_total == 0 && !sharedHost) || !sharedWallet.canAfford(_total) ? null : _deal,
                       ),
                     ],
                   ),

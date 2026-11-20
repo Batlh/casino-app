@@ -70,7 +70,7 @@ class _RouletteScreenState extends State<RouletteScreen>
     if (_spinning) return;
     final add = call.spots(_chip);
     final total = add.values.fold(0, (a, b) => a + b);
-    if (!_app.wallet.canAfford(_staked + total)) {
+    if (!sharedWallet.canAfford(_staked + total)) {
       setState(() => _message = '${call.name} braucht ${formatCoins(total)}');
       return;
     }
@@ -158,7 +158,7 @@ class _RouletteScreenState extends State<RouletteScreen>
 
   void _place(BetSpot spot) {
     if (_spinning) return;
-    if (!_app.wallet.canAfford(_staked + _chip)) return;
+    if (!sharedWallet.canAfford(_staked + _chip)) return;
     _app.sfx.play(Sound.chip);
     setState(() {
       if (_result != null) {
@@ -178,7 +178,7 @@ class _RouletteScreenState extends State<RouletteScreen>
 
   void _repeat() {
     final total = _lastBets.values.fold(0, (a, b) => a + b);
-    if (!_app.wallet.canAfford(total)) return;
+    if (!sharedWallet.canAfford(total)) return;
     _app.sfx.play(Sound.chip);
     setState(() {
       _bets = Map.of(_lastBets);
@@ -193,7 +193,7 @@ class _RouletteScreenState extends State<RouletteScreen>
     if (_spinning || sharedGuest) return;
     // Am Netztisch dreht der Gastgeber auch ohne eigenen Einsatz
     if (_staked == 0 && !sharedHost) return;
-    if (_staked > 0 && !_app.wallet.canAfford(_staked)) return;
+    if (_staked > 0 && !sharedWallet.canAfford(_staked)) return;
     final n = spinWheel(_rng, _variant);
     sharedSend(n);
     await _spinTo(n);
@@ -201,12 +201,12 @@ class _RouletteScreenState extends State<RouletteScreen>
 
   Future<void> _spinTo(int n) async {
     var stake = _staked;
-    if (stake > 0 && !_app.wallet.spend(stake)) {
+    if (stake > 0 && !sharedWallet.spend(stake)) {
       _bets = {};
       stake = 0;
     }
     final index = _order.indexOf(n);
-    final wallet = _app.wallet;
+    final wallet = sharedWallet;
     final placed = Map.of(_bets);
 
     _wheelStart = _wheelEnd % (2 * math.pi);
