@@ -41,4 +41,23 @@ void main() {
     await tester.pump();
     expect(find.text('Kein Spiel gefunden'), findsOneWidget);
   });
+
+  testWidgets('Hilfe aus der Lobby zeigt alle Spiele mit Suche', (tester) async {
+    tester.view.physicalSize = const Size(1280, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    await tester.pumpWidget(GluckspfennigApp(wallet: Wallet(prefs), sfx: Sfx(prefs, silent: true), settings: Settings(prefs)));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byTooltip('Hilfe').first);
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(find.text('Alle Spiele'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, 'pferde');
+    await tester.pump();
+    expect(find.text('Pferderennen'), findsOneWidget);
+  });
 }
+

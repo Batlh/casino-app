@@ -681,6 +681,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final favs = [for (final n in favNames) if (all[n] != null) _tracked(all[n]!)];
     final found = _query.isEmpty ? const <_Game>[] : [for (final g in all.values) if (lobbyMatches(g.name, g.blurb, _query)) _tracked(g)];
     final fav = favNames.toSet();
+    final helpGames = [
+      for (final (area, list) in [('Casino', games), ('Kartenspiele', cardGames), ('Brettspiele', boardGames), ('Mahjong', mahjongGames)])
+        for (final g in list) HelpGame(area, g.name, g.blurb, g.color, g.art, _tracked(g).onTap),
+    ];
     List<Widget> section(String title, List<_Game> list) =>
         _section(context, title, list, key: _sectionKeys[title], favorites: fav, onFavorite: _toggleFavorite);
 
@@ -708,7 +712,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                             IconButton(
                               tooltip: 'Hilfe',
                               icon: Icon(Icons.help_outline, color: p.ink),
-                              onPressed: () => _open(const HelpScreen()),
+                              onPressed: () => _open(HelpScreen(games: helpGames)),
                             ),
                             IconButton(
                               tooltip: 'Erfolge und Aufgaben',
@@ -755,7 +759,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               label: Text('Hilfe', style: TextStyle(color: p.ink, fontWeight: FontWeight.w700)),
                               backgroundColor: p.panel,
                               side: BorderSide(color: p.accent, width: 2),
-                              onPressed: () => _open(const HelpScreen()),
+                              onPressed: () => _open(HelpScreen(games: helpGames)),
                             ),
                           ],
                         ),

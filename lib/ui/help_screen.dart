@@ -41,7 +41,15 @@ final List<HelpTopic> helpTopics = [
     (
       'Spiele finden',
       'Die Lobby ist in Casino, Kartenspiele, Brettspiele und Mahjong geteilt. Die Knöpfe oben springen direkt zum Bereich. '
-          'Was du zuletzt gespielt hast, steht ganz oben unter „Zuletzt gespielt“.',
+          'Was du zuletzt gespielt hast, steht ganz oben unter „Zuletzt gespielt“. Mit dem Stern auf einem Automaten '
+          'kommt ein Spiel zu den Favoriten ganz oben, das Suchfeld findet Spiele nach Namen oder Beschreibung. Alle Spiele '
+          'mit Bild und kurzer Beschreibung stehen in der Hilfe unter „Alle Spiele“.',
+    ),
+    (
+      'Erfolge und Tagesaufgaben',
+      'Der Pokal oben in der Lobby öffnet drei Seiten: „Heute“ mit drei neuen Aufgaben pro Tag, die Münzen bringen (alle drei '
+          'zusammen noch ein Extra), „Erfolge“ zum Freischalten und „Statistik“ mit Einsätzen, Bilanz und größtem Gewinn je Spiel. '
+          'Ein roter Punkt am Pokal zeigt, dass eine Aufgabe zum Abholen bereit ist.',
     ),
   ]),
   const HelpTopic(Icons.wifi, 'Im Netzwerk spielen', 'Mit Freunden an mehreren Geräten im selben WLAN', [
@@ -72,7 +80,13 @@ final List<HelpTopic> helpTopics = [
       'Gemeinsame Casinotische',
       'Bei Roulette, Glücksrad, Craps, Sic Bo, Keno, Baccarat, Black Jack und Caribbean Stud setzt jeder mit seinen eigenen '
           'Münzen. Der Gastgeber dreht, würfelt oder teilt aus, alle sehen dasselbe Ergebnis. Bei Black Jack und Caribbean Stud '
-          'hat die Bank für alle dieselben Karten, aber jeder spielt seine eigene Hand. Unter dem Ergebnis steht, wer wie viel gesetzt hat.',
+          'hat die Bank für alle dieselben Karten, aber jeder spielt seine eigene Hand. Genauso bei Three Card Poker und beim '
+          'Pferderennen: alle sehen dasselbe Rennen mit denselben Quoten. Unter dem Ergebnis steht, wer wie viel gesetzt hat.',
+    ),
+    (
+      'Schnellnachrichten',
+      'Am Netztisch erscheint oben eine Sprechblase. Darüber schickst du allen am Tisch einen festen Satz, etwa „Viel Glück!“ '
+          'oder „Noch eine Runde?“. Die Nachricht steht kurz unten auf allen Geräten. Freie Texte gibt es bewusst nicht.',
     ),
     (
       'Münzen im Netz',
@@ -162,8 +176,28 @@ final List<HelpTopic> helpTopics = [
   ]),
 ];
 
+/// Ein Spiel für die Liste „Alle Spiele“ (kommt aus der Lobby).
+class HelpGame {
+  const HelpGame(this.area, this.name, this.blurb, this.color, this.art, [this.open]);
+  final String area;
+  final String name;
+  final String blurb;
+  final Color color;
+  final CustomPainter Function() art;
+  final VoidCallback? open;
+
+  bool matches(String query) {
+    final words = query.toLowerCase().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
+    final text = '$area $name $blurb'.toLowerCase();
+    return words.every(text.contains);
+  }
+}
+
 class HelpScreen extends StatefulWidget {
-  const HelpScreen({super.key});
+  const HelpScreen({super.key, this.games = const []});
+
+  /// Alle Spiele mit Bild; leer, wenn die Hilfe nicht aus der Lobby kommt.
+  final List<HelpGame> games;
 
   @override
   State<HelpScreen> createState() => _HelpScreenState();
@@ -183,6 +217,7 @@ class _HelpScreenState extends State<HelpScreen> {
   Widget build(BuildContext context) {
     final p = Palette.of(context);
     final topics = helpTopics.where((t) => t.matches(_query)).toList();
+    final games = widget.games.where((g) => g.matches(_query)).toList();
     return Scaffold(
       backgroundColor: p.bg,
       appBar: AppBar(backgroundColor: p.bg, foregroundColor: p.ink, title: const Text('Hilfe')),
@@ -213,7 +248,8 @@ class _HelpScreenState extends State<HelpScreen> {
                   onChanged: (v) => setState(() => _query = v.trim()),
                 ),
                 const SizedBox(height: 12),
-                if (topics.isEmpty)
+                if (games.isNotEmpty) _GamesCard(games: games, open: _query.isNotEmpty, key: ValueKey('spiele|${_query.isNotEmpty}')),
+                if (topics.isEmpty && games.isEmpty)
                   Padding(
                     padding: const EdgeInsets.all(24),
                     child: Text('Dazu gibt es keinen Eintrag.', textAlign: TextAlign.center, style: TextStyle(color: p.inkSoft)),
@@ -223,6 +259,68 @@ class _HelpScreenState extends State<HelpScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Kapitel „Alle Spiele“: nach Bereichen, jedes Spiel mit seinem Lobbybild. Antippen öffnet das Spiel.
+class _GamesCard extends StatelessWidget {
+  const _GamesCard({super.key, required this.games, required this.open});
+  final List<HelpGame> games;
+  final bool open;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    final areas = <String>[for (final g in games) g.area].toSet();
+    return Card(
+      color: p.panel,
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: p.panelEdge, width: 2)),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        initiallyExpanded: open,
+        iconColor: p.ink,
+        collapsedIconColor: p.ink,
+        leading: Icon(Icons.casino, color: p.accent, size: 28),
+        title: Text('Alle Spiele', style: TextStyle(color: p.ink, fontWeight: FontWeight.w800, fontSize: 18)),
+        subtitle: Text('${games.length} Spiele mit Bild und kurzer Beschreibung', style: TextStyle(color: p.inkSoft)),
+        childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final a in areas) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
+              child: Text(a, style: TextStyle(color: p.accent, fontWeight: FontWeight.w800, fontSize: 16)),
+            ),
+            for (final g in games.where((g) => g.area == a))
+              InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: g.open,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(children: [
+                    Container(
+                      width: 72,
+                      height: 54,
+                      decoration: BoxDecoration(color: g.color, borderRadius: BorderRadius.circular(8)),
+                      clipBehavior: Clip.antiAlias,
+                      child: CustomPaint(painter: g.art()),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(g.name, style: TextStyle(color: p.ink, fontWeight: FontWeight.w700, fontSize: 16)),
+                        Text(g.blurb, style: TextStyle(color: p.inkSoft, fontSize: 14)),
+                      ]),
+                    ),
+                    if (g.open != null) Icon(Icons.chevron_right, color: p.inkSoft),
+                  ]),
+                ),
+              ),
+          ],
+        ],
       ),
     );
   }

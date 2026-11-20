@@ -141,3 +141,7 @@ Ablauf:
   REG 7-7-BAR; Bonus-Fahne bleibt bis zum Treffer, Glückslampe). Walzen mit 21 Feldern: Pflaume und Replay höchstens
   alle 5 Felder, Kirsche höchstens alle 7; Pflaume und Replay dürfen auf Walze 1 nicht nur neben Kirschen erreichbar sein.
   gen.py sucht passende Bänder (Prüfung pro Druckpunkt eingebaut, Lauf noch nicht fertig).
+- Spielkarten: Runde 5 (Spielkarten_Korrektur_5_geprueft_2026-11-20.zip) am 20.11. abgenommen. Beim nächsten Merge auf main
+  mitnehmen, als ein einzelner Commit ohne URL.
+- Erledigt bis 20.11. früh zusätzlich: 13 Pachislo, 14 Münzschieber, 15 Greifautomat, 16 Pferderennen (Netz),
+  18 Schnellnachrichten, 19 Hilfe mit Spieleliste und Bildern. Offen: 17 Turniere im Netz.
