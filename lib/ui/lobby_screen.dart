@@ -49,6 +49,7 @@ import '../games/pachinko/pachinko_screen.dart';
 import '../games/pachislo/pachislo_engine.dart';
 import '../games/pachislo/pachislo_screen.dart';
 import '../games/pikdame/pd_screen.dart';
+import '../games/pusher/pusher_screen.dart';
 import '../games/pinball/pinball_screen.dart';
 import '../games/quatro/quatro_screen.dart';
 import '../games/roulette/roulette_painters.dart';
@@ -438,6 +439,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF2A1046),
         _PachisloArt.new,
         () => _open(const PachisloScreen()),
+      ),
+      _Game(
+        'Münzschieber',
+        'Münzen einwerfen, der Schieber drückt sie über die Kante',
+        const Color(0xFF0E3A4F),
+        _PusherArt.new,
+        () => _open(const PusherScreen()),
       ),
       _Game(
         'Höher oder Tiefer',
@@ -2369,6 +2377,29 @@ class _PachisloArt extends CustomPainter {
       ..color = const Color(0xAAFFC107)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
     canvas.drawCircle(lamp, w * 0.2, Paint()..color = const Color(0xFFFFE082));
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _PusherArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(const Offset(0, 10));
+    final w = size.width * 0.62;
+    final table = Rect.fromCenter(center: c, width: w, height: w * 0.62);
+    canvas.drawRRect(RRect.fromRectAndRadius(table, const Radius.circular(6)), Paint()..color = const Color(0xFFA62639));
+    canvas.drawRect(Rect.fromLTWH(table.left, table.top, table.width, table.height * 0.22), Paint()..color = const Color(0xFFB0BEC5));
+    final r = w * 0.06;
+    final rng = math.Random(4);
+    for (var i = 0; i < 22; i++) {
+      final o = Offset(table.left + r + rng.nextDouble() * (table.width - 2 * r), table.top + table.height * 0.3 + rng.nextDouble() * (table.height * 0.72));
+      canvas.drawCircle(o, r, Paint()..color = i == 5 ? const Color(0xFFFFC107) : const Color(0xFFD4A04C));
+      canvas.drawCircle(o, r, Paint()
+        ..style = PaintingStyle.stroke
+        ..color = const Color(0x66000000));
+    }
   }
 
   @override

@@ -7,6 +7,7 @@ import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/arcade/arcade_screen.dart';
 import 'package:gluckspfennig/games/hilo/hilo_screen.dart';
 import 'package:gluckspfennig/games/pachislo/pachislo_screen.dart';
+import 'package:gluckspfennig/games/pusher/pusher_screen.dart';
 import 'package:gluckspfennig/games/roulette/roulette_screen.dart';
 import 'package:gluckspfennig/games/threecard/three_card_screen.dart';
 import 'package:gluckspfennig/main.dart';
@@ -74,6 +75,23 @@ void main() {
     await open(tester, const PachisloScreen(seed: 6), prefs: {'save.pachislo': '{"held":"big","coin":2}'});
     await snap('neu_pachislo_lampe');
     await tester.pump(const Duration(seconds: 2));
+  });
+
+  testWidgets('Münzschieber', (tester) async {
+    await tester.runAsync(loadFonts);
+    await open(tester, const PusherScreen(seed: 3));
+    await snap('neu_schieber_start');
+    for (var k = 0; k < 6; k++) {
+      await tester.tap(find.textContaining('Einwerfen'));
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+    for (var i = 0; i < 40; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await snap('neu_schieber_laeuft');
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('Höher oder Tiefer', (tester) async {

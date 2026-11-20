@@ -50,6 +50,6 @@ void main() {
     final rtp = won / inserted;
     // ignore: avoid_print
     print('Münzschieber: Quote ${(rtp * 100).toStringAsFixed(1)} %, verloren an den Seiten $lost, Münzen auf dem Tisch ${t.coins.length}');
-    expect(rtp, inInclusiveRange(0.85, 1.02));
+    expect(rtp, inInclusiveRange(0.85, 1.0));
   });
 }

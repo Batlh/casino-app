@@ -51,7 +51,7 @@ class PusherTable {
   static const double pusherPeriod = 3.2;
 
   /// Chance, dass ein Einwurf eine Goldmünze (zehnfacher Wert) mit auf den Tisch bringt.
-  static const double goldChance = 1 / 120;
+  static const double goldChance = 1 / 250;
 
   final Random _rng;
   final World _world = World(Vector2.zero());
