@@ -232,7 +232,7 @@ class _HorseScreenState extends State<HorseScreen> with SingleTickerProviderStat
         ),
         for (final k in BetKind.values)
           Padding(
-            padding: const EdgeInsets.only(left: 6),
+            padding: const EdgeInsets.only(left: 4),
             child: Material(
               color: mine.any((b) => b.kind == k) ? const Color(0x33FFC95C) : const Color(0x22000000),
               borderRadius: BorderRadius.circular(8),
@@ -240,7 +240,7 @@ class _HorseScreenState extends State<HorseScreen> with SingleTickerProviderStat
                 borderRadius: BorderRadius.circular(8),
                 onTap: _racing ? null : () => _addBet(i, k),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: mine.any((b) => b.kind == k) ? const Color(0xFFFFC95C) : const Color(0x66FFFFFF), width: 1.5),
