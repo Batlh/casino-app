@@ -101,7 +101,7 @@ void main() {
     await snap('neu_greifer_start');
     await tester.tap(find.textContaining('Einsatz:'));
     await tester.pump();
-    final g = await tester.startGesture(tester.getCenter(find.text('Fahren ▶')));
+    final g = await tester.startGesture(tester.getCenter(find.text('Fahren')));
     for (var i = 0; i < 30; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
@@ -111,6 +111,8 @@ void main() {
     }
     await snap('neu_greifer_greift');
     await tester.pump(const Duration(seconds: 10));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 5));
   });
 
   testWidgets('Höher oder Tiefer', (tester) async {

@@ -227,8 +227,11 @@ class _ClawScreenState extends State<ClawScreen> with SingleTickerProviderStateM
                       ),
                       border: Border.all(color: Colors.black54, width: 2),
                     ),
-                    child: Text(_phase == _Phase.moving ? 'Loslassen = greifen' : 'Fahren ▶',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 17)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text(_phase == _Phase.moving ? 'Loslassen = greifen' : 'Fahren',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 17)),
+                      if (_phase != _Phase.moving) const Icon(Icons.arrow_right, color: Colors.white, size: 30),
+                    ]),
                   ),
                 ),
             ],
