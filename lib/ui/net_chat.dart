@@ -16,7 +16,7 @@ const quickMessages = [
 
 /// Text zur Nummer, oder null bei Unsinn aus dem Netz.
 String? quickMessageText(Object? index) {
-  final i = (index as num?)?.toInt();
+  final i = index is num ? index.toInt() : null;
   return i != null && i >= 0 && i < quickMessages.length ? quickMessages[i] : null;
 }
 
