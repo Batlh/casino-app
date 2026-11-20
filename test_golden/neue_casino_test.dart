@@ -6,6 +6,7 @@ import 'package:gluckspfennig/core/sfx.dart';
 import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/arcade/arcade_screen.dart';
 import 'package:gluckspfennig/games/hilo/hilo_screen.dart';
+import 'package:gluckspfennig/games/pachislo/pachislo_screen.dart';
 import 'package:gluckspfennig/games/roulette/roulette_screen.dart';
 import 'package:gluckspfennig/games/threecard/three_card_screen.dart';
 import 'package:gluckspfennig/main.dart';
@@ -48,6 +49,31 @@ void main() {
     }
     await snap('neu_spielhalle_gedreht');
     await tester.pump(const Duration(seconds: 5));
+  });
+
+  testWidgets('Pachislo', (tester) async {
+    await tester.runAsync(loadFonts);
+    await open(tester, const PachisloScreen(seed: 5));
+    await snap('neu_pachislo_start');
+    await tester.tap(find.textContaining('Hebel'));
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await snap('neu_pachislo_laeuft');
+    for (var r = 0; r < 3; r++) {
+      await tester.tapAt(tester.getCenter(find.text('STOPP').at(r)));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await snap('neu_pachislo_gestoppt');
+    // Mit leuchtender Glückslampe
+    await open(tester, const PachisloScreen(seed: 6), prefs: {'save.pachislo': '{"held":"big","coin":2}'});
+    await snap('neu_pachislo_lampe');
+    await tester.pump(const Duration(seconds: 2));
   });
 
   testWidgets('Höher oder Tiefer', (tester) async {

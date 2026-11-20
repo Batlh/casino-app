@@ -46,6 +46,8 @@ import '../games/hilo/hilo_screen.dart';
 import '../games/holdem/holdem_screen.dart';
 import '../games/maumau/maumau_screen.dart';
 import '../games/pachinko/pachinko_screen.dart';
+import '../games/pachislo/pachislo_engine.dart';
+import '../games/pachislo/pachislo_screen.dart';
 import '../games/pikdame/pd_screen.dart';
 import '../games/pinball/pinball_screen.dart';
 import '../games/quatro/quatro_screen.dart';
@@ -429,6 +431,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF3A0D2E),
         _ArcadeArt.new,
         () => _open(const ArcadeScreen()),
+      ),
+      _Game(
+        'Pachislo',
+        'Walzen selbst stoppen, Glückslampe, BIG und REG',
+        const Color(0xFF2A1046),
+        _PachisloArt.new,
+        () => _open(const PachisloScreen()),
       ),
       _Game(
         'Höher oder Tiefer',
@@ -2335,6 +2344,31 @@ class _ArcadeArt extends CustomPainter {
     canvas.drawLine(Offset(c.dx - w * 1.7, c.dy), Offset(c.dx + w * 1.7, c.dy), Paint()
       ..color = const Color(0xAAD32F2F)
       ..strokeWidth = 2);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _PachisloArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width * 0.22;
+    final c = size.center(const Offset(0, 14));
+    for (var i = -1; i <= 1; i++) {
+      final r = Rect.fromCenter(center: c.translate(i * (w + 6), 0), width: w, height: w * 1.2);
+      canvas.drawRRect(RRect.fromRectAndRadius(r, const Radius.circular(8)), Paint()..color = const Color(0xFFFFFBF0));
+      paintPsSymbol(canvas, r.deflate(w * 0.12), psSeven);
+    }
+    canvas.drawLine(Offset(c.dx - w * 1.7, c.dy), Offset(c.dx + w * 1.7, c.dy), Paint()
+      ..color = const Color(0xCCE53935)
+      ..strokeWidth = 2);
+    // Glückslampe
+    final lamp = Offset(c.dx, c.dy - w * 1.05);
+    canvas.drawCircle(lamp, w * 0.32, Paint()
+      ..color = const Color(0xAAFFC107)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
+    canvas.drawCircle(lamp, w * 0.2, Paint()..color = const Color(0xFFFFE082));
   }
 
   @override

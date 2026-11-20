@@ -263,6 +263,7 @@ const achievements = <Achievement>[
   Achievement('schachmatt', 'Schachmatt', 'Gewinne eine Partie Schach', AchKind.counter, 1, 'e.schach_sieg'),
   Achievement('kniffel', 'Kniffel!', 'Wirf beim Kniffel einen Kniffel', AchKind.counter, 1, 'e.kniffel'),
   Achievement('netz', 'Gesellig', 'Spiele einmal im Netzwerk', AchKind.counter, 1, 'e.netz'),
+  Achievement('pachislo_big', 'Glückslampe', 'Richte beim Pachislo einen BIG aus', AchKind.counter, 1, 'e.pachislo_big'),
 ];
 
 // ------------------------------------------------------------------ Tagesaufgaben
