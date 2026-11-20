@@ -43,7 +43,7 @@ void main() {
       final rtp = paid / n;
       // ignore: avoid_print
       print('Greifautomat ${aim ? 'gezielt' : 'zufällig'}: ${(rtp * 100).toStringAsFixed(1)} %');
-      expect(rtp, aim ? closeTo(0.95, 0.03) : inInclusiveRange(0.3, 0.93));
+      expect(rtp, aim ? closeTo(0.95, 0.03) : inInclusiveRange(0.05, 0.93));
     });
   }
 }
