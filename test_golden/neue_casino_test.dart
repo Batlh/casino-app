@@ -55,7 +55,7 @@ void main() {
     await tester.runAsync(loadFonts);
     await open(tester, const PachisloScreen(seed: 5));
     await snap('neu_pachislo_start');
-    await tester.tap(find.textContaining('Hebel'));
+    await tester.tap(find.textContaining('Hebel:'));
     for (var i = 0; i < 6; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
