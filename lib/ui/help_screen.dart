@@ -273,7 +273,7 @@ class _GamesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
-    final areas = <String>[for (final g in games) g.area].toSet();
+    final areas = {for (final g in games) g.area};
     return Card(
       color: p.panel,
       margin: const EdgeInsets.only(bottom: 10),

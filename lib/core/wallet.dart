@@ -6,11 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Münzkonto. Münzen haben keinen Geldwert und lassen sich weder kaufen
 /// noch auszahlen.
 class Wallet extends ChangeNotifier {
-  Wallet(SharedPreferences this._prefs, {DateTime Function()? clock})
-      : _clock = clock ?? DateTime.now,
+  Wallet(SharedPreferences prefs, {DateTime Function()? clock})
+      : _prefs = prefs,
+        _clock = clock ?? DateTime.now,
         tournament = false {
-    _balance = _prefs.getInt(_balanceKey) ?? startBalance;
-    _lastBonus = _prefs.getString(_bonusKey);
+    _balance = prefs.getInt(_balanceKey) ?? startBalance;
+    _lastBonus = prefs.getString(_bonusKey);
   }
 
   /// Turnierchips am Netztisch: nur im Speicher, kein Tagesbonus, kein Nachfüllen (wer pleite ist, ist raus).
