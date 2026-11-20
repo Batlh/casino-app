@@ -7,6 +7,7 @@ import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/arcade/arcade_screen.dart';
 import 'package:gluckspfennig/games/hilo/hilo_screen.dart';
 import 'package:gluckspfennig/games/claw/claw_screen.dart';
+import 'package:gluckspfennig/games/horses/horse_screen.dart';
 import 'package:gluckspfennig/games/pachislo/pachislo_screen.dart';
 import 'package:gluckspfennig/games/pusher/pusher_screen.dart';
 import 'package:gluckspfennig/games/roulette/roulette_screen.dart';
@@ -113,6 +114,24 @@ void main() {
     await tester.pump(const Duration(seconds: 10));
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 5));
+  });
+
+  testWidgets('Pferderennen', (tester) async {
+    await tester.runAsync(loadFonts);
+    await open(tester, const HorseScreen(seed: 7));
+    await tester.tap(find.textContaining('Sieg').at(2));
+    await tester.tap(find.textContaining('Platz').at(4));
+    await tester.pump();
+    await snap('neu_pferde_wetten');
+    await tester.tap(find.text('Rennen starten'));
+    for (var i = 0; i < 50; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await snap('neu_pferde_rennen');
+    await tester.pump(const Duration(seconds: 5));
+    await snap('neu_pferde_ziel');
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 2));
   });
 
   testWidgets('Höher oder Tiefer', (tester) async {

@@ -43,6 +43,7 @@ import '../games/gluecksrad/gluecksrad_screen.dart';
 import '../games/eins/eins_engine.dart';
 import '../games/eins/eins_screen.dart';
 import '../games/hearts/hearts_screen.dart';
+import '../games/horses/horse_screen.dart';
 import '../games/hilo/hilo_screen.dart';
 import '../games/holdem/holdem_screen.dart';
 import '../games/maumau/maumau_screen.dart';
@@ -454,6 +455,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF4A1458),
         _ClawArt.new,
         () => _open(const ClawScreen()),
+      ),
+      _Game(
+        'Pferderennen',
+        'Sieg oder Platz wetten, auch im Netzwerk',
+        const Color(0xFF1B5E20),
+        _HorseArt.new,
+        () => _open(const HorseScreen()),
       ),
       _Game(
         'Höher oder Tiefer',
@@ -2443,6 +2451,29 @@ class _ClawArt extends CustomPainter {
     for (var i = 0; i < 4; i++) {
       canvas.drawCircle(Offset(box.left + w * (0.2 + i * 0.2), box.bottom - 14), 11, Paint()..color = colors[i]);
     }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _HorseArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(const Offset(0, 8));
+    final w = size.width * 0.66;
+    final track = Rect.fromCenter(center: c, width: w, height: w * 0.5);
+    canvas.drawRRect(RRect.fromRectAndRadius(track, const Radius.circular(8)), Paint()..color = const Color(0xFF8D6E4A));
+    const colors = [Color(0xFFE53935), Color(0xFF1E88E5), Color(0xFFFFB300)];
+    for (var i = 0; i < 3; i++) {
+      final y = track.top + track.height * (0.2 + i * 0.3);
+      final x = track.left + track.width * (0.35 + (2 - i) * 0.17);
+      canvas.drawOval(Rect.fromCenter(center: Offset(x, y), width: 26, height: 10), Paint()..color = const Color(0xFF5D3A1A));
+      canvas.drawCircle(Offset(x - 2, y - 8), 6, Paint()..color = colors[i]);
+    }
+    canvas.drawLine(Offset(track.right - 8, track.top), Offset(track.right - 8, track.bottom), Paint()
+      ..color = Colors.white
+      ..strokeWidth = 3);
   }
 
   @override
