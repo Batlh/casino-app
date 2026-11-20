@@ -16,6 +16,7 @@ import '../games/arcade/arcade_engine.dart';
 import '../games/arcade/arcade_screen.dart';
 import '../games/baccarat/baccarat_screen.dart';
 import '../games/bingo/bingo_screen.dart';
+import '../games/claw/claw_screen.dart';
 import '../games/blackjack/blackjack_screen.dart';
 import '../games/cards/playing_card.dart';
 import '../games/caribbean/caribbean_screen.dart';
@@ -446,6 +447,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
         const Color(0xFF0E3A4F),
         _PusherArt.new,
         () => _open(const PusherScreen()),
+      ),
+      _Game(
+        'Greifautomat',
+        'Greifer fahren, loslassen, Preis in den Schacht',
+        const Color(0xFF4A1458),
+        _ClawArt.new,
+        () => _open(const ClawScreen()),
       ),
       _Game(
         'Höher oder Tiefer',
@@ -2399,6 +2407,41 @@ class _PusherArt extends CustomPainter {
       canvas.drawCircle(o, r, Paint()
         ..style = PaintingStyle.stroke
         ..color = const Color(0x66000000));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _ClawArt extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(const Offset(0, 8));
+    final w = size.width * 0.5;
+    final box = Rect.fromCenter(center: c, width: w, height: w * 0.9);
+    canvas.drawRRect(RRect.fromRectAndRadius(box, const Radius.circular(8)), Paint()..color = const Color(0x55FFFFFF));
+    canvas.drawRRect(RRect.fromRectAndRadius(box, const Radius.circular(8)), Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = const Color(0xFFFFC107));
+    final head = Offset(c.dx, box.top + box.height * 0.35);
+    canvas.drawLine(Offset(c.dx, box.top), head, Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2);
+    final arm = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke;
+    for (final s in [-1.0, 1.0]) {
+      canvas.drawPath(Path()
+        ..moveTo(head.dx, head.dy)
+        ..lineTo(head.dx + s * 12, head.dy + 10)
+        ..lineTo(head.dx + s * 6, head.dy + 20), arm);
+    }
+    const colors = [Color(0xFFFFF176), Color(0xFFBCAAA4), Color(0xFFF8BBD0), Color(0xFFFFD54F)];
+    for (var i = 0; i < 4; i++) {
+      canvas.drawCircle(Offset(box.left + w * (0.2 + i * 0.2), box.bottom - 14), 11, Paint()..color = colors[i]);
     }
   }
 

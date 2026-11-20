@@ -6,6 +6,7 @@ import 'package:gluckspfennig/core/sfx.dart';
 import 'package:gluckspfennig/core/wallet.dart';
 import 'package:gluckspfennig/games/arcade/arcade_screen.dart';
 import 'package:gluckspfennig/games/hilo/hilo_screen.dart';
+import 'package:gluckspfennig/games/claw/claw_screen.dart';
 import 'package:gluckspfennig/games/pachislo/pachislo_screen.dart';
 import 'package:gluckspfennig/games/pusher/pusher_screen.dart';
 import 'package:gluckspfennig/games/roulette/roulette_screen.dart';
@@ -92,6 +93,24 @@ void main() {
     }
     await snap('neu_schieber_laeuft');
     await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('Greifautomat', (tester) async {
+    await tester.runAsync(loadFonts);
+    await open(tester, const ClawScreen(seed: 4));
+    await snap('neu_greifer_start');
+    await tester.tap(find.textContaining('Einsatz:'));
+    await tester.pump();
+    final g = await tester.startGesture(tester.getCenter(find.textContaining('Fahren')));
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await g.up();
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await snap('neu_greifer_greift');
+    await tester.pump(const Duration(seconds: 10));
   });
 
   testWidgets('Höher oder Tiefer', (tester) async {

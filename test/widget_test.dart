@@ -26,6 +26,7 @@ import 'package:gluckspfennig/ui/widgets.dart';
 import 'package:gluckspfennig/ui/help_screen.dart';
 import 'package:gluckspfennig/games/arcade/arcade_screen.dart';
 import 'package:gluckspfennig/games/hilo/hilo_screen.dart';
+import 'package:gluckspfennig/games/claw/claw_screen.dart';
 import 'package:gluckspfennig/games/pachislo/pachislo_screen.dart';
 import 'package:gluckspfennig/games/pusher/pusher_screen.dart';
 import 'package:gluckspfennig/games/threecard/three_card_screen.dart';
@@ -113,6 +114,7 @@ void main() {
         ThreeCardScreen(seed: 1),
         PachisloScreen(seed: 1),
         PusherScreen(seed: 1),
+        ClawScreen(seed: 1),
         ProgressScreen(),
       ]) {
         await pumpApp(tester, size, screen: screen);
