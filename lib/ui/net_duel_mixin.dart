@@ -8,6 +8,7 @@ import '../core/net/lan_table.dart';
 import '../core/net/net_duel.dart';
 import '../core/scope.dart';
 import '../core/theme.dart';
+import 'net_chat.dart';
 import 'net_panels.dart';
 import 'widgets.dart';
 
@@ -64,6 +65,11 @@ mixin NetDuelScreen<T extends StatefulWidget> on State<T> {
 
   /// Knopf für die Titelleiste (nur auf breiten Bildschirmen, sonst ist die Leiste voll).
   List<Widget> duelActions(BuildContext context) => [
+        if (_link?.playing ?? false)
+          quickChatButton((i) {
+            _link?.sendChat(i);
+            showQuickMessage(context, 'Du', i);
+          }),
         if (!duelActive && !_panel && MediaQuery.sizeOf(context).width >= 420)
           IconButton(tooltip: 'Im Netzwerk spielen', icon: const Icon(Icons.wifi), onPressed: duelOpenPanel),
       ];
@@ -161,6 +167,11 @@ mixin NetDuelScreen<T extends StatefulWidget> on State<T> {
         duelStart(names, seat, options);
       }
       ..onMove = ((m) => mounted && duelApply(m))
+      ..onChat = (i) {
+        if (!mounted) return;
+        final n = link.names.length == 2 && link.seat >= 0 ? link.names[1 - link.seat] : 'Gegner';
+        showQuickMessage(context, n, i);
+      }
       ..onGone = () {
         if (mounted) setState(() => _netMsg = 'Der Gegner hat den Tisch verlassen');
       };

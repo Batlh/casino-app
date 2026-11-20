@@ -28,6 +28,9 @@ class NetDuelLink {
   /// Zug der anderen Seite; false, wenn er nicht passt.
   bool Function(Object? move)? onMove;
 
+  /// Schnellnachricht der anderen Seite (Nummer aus quickMessages).
+  void Function(Object? index)? onChat;
+
   /// Gegner ist gegangen oder Gastgeber hat geschlossen.
   void Function()? onGone;
 
@@ -83,6 +86,9 @@ class NetDuelLink {
     return true;
   }
 
+  /// Schnellnachricht an die andere Seite.
+  void sendChat(int index) => _send({'t': 'chat', 'm': index});
+
   /// Eigenen Zug verschicken (nachdem er hier ausgeführt wurde).
   void sendMove(Object? m) {
     if (!playing) return;
@@ -114,6 +120,8 @@ class NetDuelLink {
             break;
           }
         }
+      case 'chat':
+        onChat?.call(m['m']);
       case 'sync':
         if (host != null) _resync();
       case 'move':

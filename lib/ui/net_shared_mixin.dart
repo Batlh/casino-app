@@ -7,6 +7,7 @@ import '../core/net/lan.dart';
 import '../core/net/lan_table.dart';
 import '../core/scope.dart';
 import '../core/theme.dart';
+import 'net_chat.dart';
 import 'net_panels.dart';
 
 /// Casino-Tische im lokalen Netz: Alle setzen mit ihren eigenen Münzen, nur der Gastgeber dreht oder würfelt.
@@ -44,9 +45,21 @@ mixin NetSharedTable<T extends StatefulWidget> on State<T> {
   String get _displayName => _name.trim().isEmpty ? 'Spieler' : _name.trim();
 
   List<Widget> sharedActions(BuildContext context) => [
+        if (sharedPlaying) quickChatButton(sharedChat),
         if (!sharedActive && !_panel && MediaQuery.sizeOf(context).width >= 420)
           IconButton(tooltip: 'Im Netzwerk spielen', icon: const Icon(Icons.wifi), onPressed: sharedOpenPanel),
       ];
+
+  /// Schnellnachricht an alle am Tisch.
+  void sharedChat(int index) {
+    final h = _host;
+    if (h != null) {
+      h.lan.broadcast({'t': 'chat', 'from': h.hostName, 'm': index});
+      showQuickMessage(context, 'Du', index);
+    } else {
+      _guest?.send({'t': 'chat', 'm': index});
+    }
+  }
 
   void sharedOpenPanel() {
     if (_name.isEmpty) {
@@ -148,7 +161,11 @@ mixin NetSharedTable<T extends StatefulWidget> on State<T> {
   Future<void> _openTable() async {
     final h = NetTableHost(game: sharedGame, hostName: _displayName, info: sharedTitle);
     h.onMove = (s, m) {
-      if (m['t'] == 'stake') {
+      if (m['t'] == 'chat') {
+        if (quickMessageText(m['m']) == null) return;
+        h.lan.broadcast({'t': 'chat', 'from': s.name, 'm': m['m']});
+        showQuickMessage(context, s.name, m['m']);
+      } else if (m['t'] == 'stake') {
         _stakes[s.name] = (m['amount'] as num?)?.toInt() ?? 0;
         _broadcastStakes();
       } else if (m['t'] == 'hello' && _open) {
@@ -210,6 +227,9 @@ mixin NetSharedTable<T extends StatefulWidget> on State<T> {
       switch (m['t']) {
         case 'open':
           setState(() => _open = true);
+        case 'chat':
+          final from = '${m['from']}';
+          showQuickMessage(context, from == _displayName ? 'Du' : from, m['m']);
         case 'stakes':
           _stakes
             ..clear()

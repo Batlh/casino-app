@@ -7,6 +7,7 @@ import '../core/debug_log.dart';
 import '../core/net/lan.dart';
 import '../core/net/lan_table.dart';
 import '../core/scope.dart';
+import 'net_chat.dart';
 import 'net_panels.dart';
 import 'widgets.dart';
 
@@ -94,9 +95,21 @@ mixin NetReplayScreen<T extends StatefulWidget> on State<T> {
   }
 
   List<Widget> replayActions(BuildContext context) => [
+        if (replayActive && _playing) quickChatButton(replayChat),
         if (!replayActive && !_panel && MediaQuery.sizeOf(context).width >= 420)
           IconButton(tooltip: 'Im Netzwerk spielen', icon: const Icon(Icons.wifi), onPressed: replayOpenPanel),
       ];
+
+  /// Schnellnachricht an alle am Tisch.
+  void replayChat(int index) {
+    final h = _host;
+    if (h != null) {
+      h.lan.broadcast({'t': 'chat', 'from': h.hostName, 'm': index});
+      showQuickMessage(context, 'Du', index);
+    } else {
+      _guest?.send({'t': 'chat', 'm': index});
+    }
+  }
 
   void replayOpenPanel() {
     if (_name.isEmpty) {
@@ -152,6 +165,12 @@ mixin NetReplayScreen<T extends StatefulWidget> on State<T> {
   }
 
   void _remoteMove(NetSeat seat, LanMessage m) {
+    if (m['t'] == 'chat') {
+      if (quickMessageText(m['m']) == null) return;
+      _host?.lan.broadcast({'t': 'chat', 'from': seat.name, 'm': m['m']});
+      if (mounted) showQuickMessage(context, seat.name, m['m']);
+      return;
+    }
     if (!_playing) return;
     if (m['t'] == 'sync') {
       _host?.send(seat, _gameMessage(seat.index));
@@ -188,6 +207,9 @@ mixin NetReplayScreen<T extends StatefulWidget> on State<T> {
   void _guestMessage(LanMessage m) {
     if (!mounted) return;
     switch (m['t']) {
+      case 'chat':
+        final from = '${m['from']}';
+        showQuickMessage(context, from == _displayName ? 'Du' : from, m['m']);
       case 'game':
         final me = (m['me'] as num).toInt();
         if (me < 0) {
