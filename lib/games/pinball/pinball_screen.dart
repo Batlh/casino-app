@@ -118,6 +118,8 @@ class _PinballScreenState extends State<PinballScreen> with SingleTickerProvider
 
   void _start() {
     if (_table != null && !_table!.gameOver) return;
+    // Finger, deren Loslassen die ausgeblendeten Tasten nicht mehr gesehen haben
+    _pointers.clear();
     if (!_app.wallet.spend(pinballGameCost)) {
       _app.wallet.refillIfBroke(min: pinballGameCost);
       setState(() => _message = 'Münzen reichen nicht für ein Spiel');
@@ -365,17 +367,15 @@ class _PinballScreenState extends State<PinballScreen> with SingleTickerProvider
     final t = _table;
     if (t == null) return;
     final was = left ? t.leftPressed : t.rightPressed;
-    if (left) {
-      t.leftPressed = down;
-    } else {
-      t.rightPressed = down;
-    }
+    t.press(left: left, down: down);
     if (down && !was) _app.sfx.play(Sound.tick);
   }
 
   void _plunger(bool down) {
     final t = _table;
     if (t == null || t.gameOver) return;
+    // Gedrückt halten darf man schon, bevor die Kugel ganz in der Bahn liegt
+    t.plungerHeld = down;
     if (down) {
       if (t.ballInLane) t.charging = true;
     } else if (t.charging) {
@@ -613,14 +613,28 @@ class _PinballScreenState extends State<PinballScreen> with SingleTickerProvider
     );
   }
 
+  /// Finger je Taste: losgelassen wird erst, wenn der letzte Finger weg ist.
+  final _pointers = <String, Set<int>>{};
+
+  void _release(String label, int pointer, void Function(bool) onChange) {
+    final set = _pointers[label];
+    if (set == null || !set.remove(pointer)) return;
+    if (set.isEmpty) onChange(false);
+  }
+
   Widget _touchButton(String label, IconData icon, void Function(bool) onChange, {double flex = 1}) {
     final th = _spec.theme;
     return Expanded(
       flex: (flex * 10).round(),
       child: Listener(
-        onPointerDown: (_) => onChange(true),
-        onPointerUp: (_) => onChange(false),
-        onPointerCancel: (_) => onChange(false),
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (e) {
+          final set = _pointers.putIfAbsent(label, () => {});
+          set.add(e.pointer);
+          if (set.length == 1) onChange(true);
+        },
+        onPointerUp: (e) => _release(label, e.pointer, onChange),
+        onPointerCancel: (e) => _release(label, e.pointer, onChange),
         child: Container(
           margin: const EdgeInsets.all(4),
           decoration: BoxDecoration(

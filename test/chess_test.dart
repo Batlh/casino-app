@@ -49,7 +49,7 @@ void main() {
   });
 
   test('Computer findet ein Matt in eins auf jeder Stufe außer Anfänger', () {
-    for (final level in [ChessLevel.easy, ChessLevel.medium, ChessLevel.hard]) {
+    for (final level in [ChessLevel.easy, ChessLevel.medium, ChessLevel.hard, ChessLevel.expert, ChessLevel.master]) {
       final m = chessBestMove('6k1/5ppp/8/8/8/8/8/R5K1 w - - 0 1', level, seed: 1);
       expect(m?.uci, 'a1a8', reason: level.label);
     }
@@ -58,6 +58,21 @@ void main() {
   test('Computer schlägt eine hängende Dame', () {
     final m = chessBestMove('4k3/8/8/3q4/8/8/8/3RK3 w - - 0 1', ChessLevel.medium, seed: 2);
     expect(m?.uci, 'd1d5');
+  });
+
+  test('Starke Suche schlägt die hängende Dame und meidet ein Remis durch Patt', () {
+    expect(chessBestMove('4k3/8/8/3q4/8/8/8/3RK3 w - - 0 1', ChessLevel.hard, seed: 2)?.uci, 'd1d5');
+    // Mit Dame und König gegen König darf Weiß nicht patt setzen
+    final g = ChessGame.fromFen('7k/8/5K2/8/8/8/8/6Q1 w - - 0 1');
+    final m = chessBestMove(g.fen, ChessLevel.hard, seed: 3)!;
+    g.make(m);
+    expect(g.result == ChessResult.stalemate, isFalse);
+  });
+
+  test('Starke Bewertung ist symmetrisch', () {
+    const fen = 'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4';
+    const mirror = 'rnbqk2r/pppp1ppp/5n2/2b1p3/4P3/2N2N2/PPPP1PPP/R1BQKB1R b KQkq - 4 4';
+    expect(evaluateStrong(ChessGame.fromFen(fen)), evaluateStrong(ChessGame.fromFen(mirror)));
   });
 
   test('Computerpartie endet ohne Fehler', () {

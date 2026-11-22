@@ -290,6 +290,15 @@ class PinballTable {
   bool charging = false;
   bool leftPressed = false;
   bool rightPressed = false;
+
+  /// Abschusstaste wird gehalten; die Feder spannt, sobald eine Kugel in der Bahn liegt.
+  bool plungerHeld = false;
+
+  /// Mindestzeit, die ein Flipper nach einem Druck oben bleibt. So geht auch ein Tipper,
+  /// der kürzer als ein Simulationsschritt ist, nicht verloren.
+  static const minFlipSeconds = 0.09;
+  double _leftHold = 0;
+  double _rightHold = 0;
   bool _leftWas = false;
   bool _rightWas = false;
   double _saveLeft = 0;
@@ -559,17 +568,35 @@ class PinballTable {
 
   // ---------- Simulation ----------
 
+  /// Flippertaste gedrückt oder losgelassen. Jeder Druck hält den Flipper mindestens [minFlipSeconds] oben.
+  void press({required bool left, required bool down}) {
+    if (left) {
+      if (down && !leftPressed) _leftHold = minFlipSeconds;
+      leftPressed = down;
+    } else {
+      if (down && !rightPressed) _rightHold = minFlipSeconds;
+      rightPressed = down;
+    }
+  }
+
+  bool get leftActive => leftPressed || _leftHold > 0;
+  bool get rightActive => rightPressed || _rightHold > 0;
+
   void step(double dt) {
+    if (plungerHeld && ballInLane && !gameOver) charging = true;
     if (charging && ballInLane) charge = min(1, charge + dt * 1.1);
+    final left = leftActive, right = rightActive;
+    if (_leftHold > 0) _leftHold = max(0, _leftHold - dt);
+    if (_rightHold > 0) _rightHold = max(0, _rightHold - dt);
     for (final f in flippers) {
-      final pressed = f.spec.left ? leftPressed : rightPressed;
+      final pressed = f.spec.left ? left : right;
       f.joint.motorSpeed = f.spec.left ? (pressed ? -22 : 14) : (pressed ? 22 : -14);
     }
     // Gassenwechsel mit den Flippern wie am echten Automaten
-    if (leftPressed && !_leftWas) _rotateLanes(-1);
-    if (rightPressed && !_rightWas) _rotateLanes(1);
-    _leftWas = leftPressed;
-    _rightWas = rightPressed;
+    if (left && !_leftWas) _rotateLanes(-1);
+    if (right && !_rightWas) _rotateLanes(1);
+    _leftWas = left;
+    _rightWas = right;
 
     _world.stepDt(dt);
     if (_saveLeft > 0) _saveLeft = max(0, _saveLeft - dt);

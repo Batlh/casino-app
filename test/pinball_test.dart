@@ -26,6 +26,42 @@ void main() {
     expect(t.ballInLane, isFalse);
   });
 
+  test('Kurzer Tipper zwischen zwei Schritten hebt den Flipper trotzdem', () {
+    final t = PinballTable(rng: Random(2));
+    run(t, 0.3);
+    final restL = t.leftAngle;
+    final restR = t.rightAngle;
+    t.press(left: true, down: true);
+    t.press(left: true, down: false);
+    t.press(left: false, down: true);
+    t.press(left: false, down: false);
+    var minL = restL, maxR = restR;
+    run(t, 0.12, each: (_) {
+      minL = min(minL, t.leftAngle);
+      maxR = max(maxR, t.rightAngle);
+    });
+    expect(minL, lessThan(restL - 0.5), reason: 'Links schlägt aus');
+    expect(maxR, greaterThan(restR + 0.5), reason: 'Rechts schlägt aus');
+    run(t, 0.4);
+    expect((t.leftAngle - restL).abs(), lessThan(0.1));
+  });
+
+  test('Abschuss gehalten, bevor die Kugel liegt, spannt danach die Feder', () {
+    final t = PinballTable(rng: Random(1));
+    run(t, 0.5);
+    t.ballInLane = false;
+    t.plungerHeld = true;
+    run(t, 0.1);
+    expect(t.charging, isFalse);
+    t.ballInLane = true;
+    run(t, 0.3);
+    expect(t.charging, isTrue);
+    expect(t.charge, greaterThan(0.2));
+    t.plungerHeld = false;
+    t.launch();
+    expect(t.ballInLane, isFalse);
+  });
+
   test('Flipper schwingen hoch und wieder herunter', () {
     final t = PinballTable(rng: Random(2));
     run(t, 0.3);
