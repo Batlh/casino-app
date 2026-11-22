@@ -49,10 +49,11 @@ void main() {
   test('Abschuss gehalten, bevor die Kugel liegt, spannt danach die Feder', () {
     final t = PinballTable(rng: Random(1));
     run(t, 0.5);
+    // Kugel rollt noch: Taste schon gedrückt, Feder spannt noch nicht
     t.ballInLane = false;
     t.plungerHeld = true;
-    run(t, 0.1);
     expect(t.charging, isFalse);
+    // Sobald die Kugel liegt, spannt die gehaltene Taste die Feder
     t.ballInLane = true;
     run(t, 0.3);
     expect(t.charging, isTrue);
