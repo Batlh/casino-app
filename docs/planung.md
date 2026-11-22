@@ -141,7 +141,10 @@ Ablauf:
   REG 7-7-BAR; Bonus-Fahne bleibt bis zum Treffer, Glückslampe). Walzen mit 21 Feldern: Pflaume und Replay höchstens
   alle 5 Felder, Kirsche höchstens alle 7; Pflaume und Replay dürfen auf Walze 1 nicht nur neben Kirschen erreichbar sein.
   gen.py sucht passende Bänder (Prüfung pro Druckpunkt eingebaut, Lauf noch nicht fertig).
-- Spielkarten: Runde 7 NICHT abgenommen (Hand mit sechs Fingern, Schwert des Pik-Königs ohne Knauf, Könige).
+- Spielkarten: Stand Runde 9, noch NICHT abgenommen. Finger überall fünf, Karo-Dame-Fächer gut. Pik-König:
+  Parierstange seit Runde 8 zerbrochen, von Claude aus Runde 7 zurückgeholt (Downloads/Spielkarten_Claude_Reparatur,
+  mit checkpoint.md). Offen: Stola-Kanten (Pik-König, Herz-Bube, Karo-König, Joker) und Stoffversatz links.
+  Weitere GPT-Runden vermeiden, stattdessen gezielte Reparatur in festen Rechtecken.
   Erst nach vollständiger Durchsicht jeder Karte auf main, als ein einzelner Commit ohne URL.
 - Erledigt bis 20.11. früh zusätzlich: 13 Pachislo, 14 Münzschieber, 15 Greifautomat, 16 Pferderennen (Netz),
   17 Turniere im Netz (gleiche Startchips, 10/20/30 Runden, Rangliste), 18 Schnellnachrichten, 19 Hilfe mit
