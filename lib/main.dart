@@ -1,12 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'core/backup.dart';
 import 'core/debug_log.dart';
+import 'core/debug_trace.dart';
 import 'core/licenses.dart';
 import 'core/progress.dart';
 import 'core/scope.dart';
@@ -37,6 +40,15 @@ Future<void> main() async {
     // Ganz neu installiert (nichts außer dem Fehlerprotokoll gespeichert)? Dann bietet die Lobby an, eine Sicherung zu laden.
     freshInstall = prefs.getKeys().every((k) => k.startsWith('debug.'));
     debugLog.attach(prefs);
+    if (!kIsWeb) {
+      try {
+        final dir = await getApplicationSupportDirectory();
+        debugLog.attachFile(Directory('${dir.path}${Platform.pathSeparator}fehlersuche'));
+      } catch (e, st) {
+        debugLog.error('protokoll.datei', e, st);
+      }
+    }
+    DebugTrace.install();
     if (moved != null) debugLog.info('umzug', 'Alte Daten übernommen aus $moved');
     final view = PlatformDispatcher.instance.implicitView;
     final size = view == null ? '?' : '${(view.physicalSize.width / view.devicePixelRatio).round()}×${(view.physicalSize.height / view.devicePixelRatio).round()}';
@@ -138,6 +150,7 @@ class GluckspfennigApp extends StatelessWidget {
         themeMode: ThemeMode.system,
         theme: buildTheme(Brightness.light),
         darkTheme: buildTheme(Brightness.dark),
+        navigatorObservers: [DebugTrace.navigatorObserver],
         home: const LobbyScreen(),
       ),
     );

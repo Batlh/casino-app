@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../core/debug_log.dart';
 import '../core/progress.dart';
 import '../core/scope.dart';
 import '../core/sfx.dart';
@@ -216,6 +217,22 @@ class GameFrame extends StatefulWidget {
 class _GameFrameState extends State<GameFrame> {
   late final Wallet _wallet = AppScope.of(context).wallet;
   bool _listening = false;
+  late final String _prevScreen;
+  final _opened = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _prevScreen = debugLog.screen;
+    debugLog.screen = widget.title;
+    debugLog.info('spiel', 'Geöffnet: ${widget.title}');
+  }
+
+  @override
+  void didUpdateWidget(GameFrame old) {
+    super.didUpdateWidget(old);
+    if (old.title != widget.title && debugLog.screen == old.title) debugLog.screen = widget.title;
+  }
 
   @override
   void didChangeDependencies() {
@@ -262,6 +279,8 @@ class _GameFrameState extends State<GameFrame> {
     _wallet.refills.removeListener(_onRefill);
     progress.justUnlocked.removeListener(_onAchievement);
     if (progress.current == widget.title) progress.current = null;
+    debugLog.info('spiel', 'Geschlossen: ${widget.title} nach ${DateTime.now().difference(_opened).inSeconds} s');
+    if (debugLog.screen == widget.title) debugLog.screen = _prevScreen;
     super.dispose();
   }
 

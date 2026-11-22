@@ -12,7 +12,7 @@ void main() {
   });
 
   test('Protokoll: Puffer, Speichern, Export', () async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'debug.verbose': false});
     final prefs = await SharedPreferences.getInstance();
     final log = DebugLog.instance..attach(prefs);
     log.clear();
@@ -37,5 +37,23 @@ void main() {
     // Neustart: gespeicherte Einträge kommen zurück
     log.attach(prefs);
     expect(log.entries.any((e) => e.text.contains('kaputt')), isTrue);
+  });
+
+  test('Protokolldatei: wird fortgeschrieben und exportiert', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final dir = await Directory.systemTemp.createTemp('protokoll');
+    final log = DebugLog.instance..attach(prefs);
+    expect(log.verbose, isTrue, reason: 'Ausführlich ist von Haus aus an');
+    log.attachFile(dir);
+    log.detail('test', 'Tippen auf Knopf');
+    log.warn('test', 'Warnung');
+    final text = await log.exportAll();
+    expect(text, contains('Tippen auf Knopf'));
+    expect(text, contains('Warnung'));
+    expect(File('${dir.path}${Platform.pathSeparator}protokoll.txt').readAsStringSync(), contains('Warnung'));
+    log.clear();
+    expect(await log.exportAll(), isNot(contains('Warnung')));
+    await dir.delete(recursive: true);
   });
 }

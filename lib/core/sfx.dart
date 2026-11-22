@@ -2,6 +2,8 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'debug_log.dart';
+
 enum Sound { chip, card, tick, reelStop, coin, win, bigWin, lose, ball }
 
 const _files = {
@@ -37,6 +39,7 @@ class Sfx extends ChangeNotifier {
   }
 
   Future<void> play(Sound sound) async {
+    debugLog.detail('ablauf', '${debugLog.screen}: ${sound.name}');
     if (!_enabled || silent) return;
     try {
       if (_pool.isEmpty) {

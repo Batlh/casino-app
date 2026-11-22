@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -43,7 +44,10 @@ class DebugLog extends ChangeNotifier {
   static final DebugLog instance = DebugLog._();
 
   /// Einträge im Speicher.
-  static const maxEntries = 2000;
+  static const maxEntries = 5000;
+
+  /// Größe der Protokolldatei, ab der sie in die Vorgängerdatei wandert.
+  static const maxFileBytes = 3 * 1024 * 1024;
 
   /// Einträge, die einen Neustart überleben.
   static const keptEntries = 500;
@@ -58,11 +62,17 @@ class DebugLog extends ChangeNotifier {
   SharedPreferences? _prefs;
   Timer? _saveTimer;
   bool _notifyQueued = false;
-  bool _verbose = false;
+  bool _verbose = true;
+  File? _file;
+  final StringBuffer _pending = StringBuffer();
+  Future<void> _writing = Future.value();
+
+  /// Gerade offenes Spiel oder Seite; steht bei Tipp- und Tastenzeilen dabei.
+  String screen = 'Lobby';
 
   List<LogEntry> get entries => List.unmodifiable(_entries);
 
-  /// Ausführliche Einträge (Tippen, Physik). Fehler werden immer aufgezeichnet.
+  /// Ausführliche Einträge (jedes Tippen, jede Taste, Einsätze, Spielabläufe). Fehler werden immer aufgezeichnet.
   bool get verbose => _verbose;
   set verbose(bool v) {
     if (v == _verbose) return;
@@ -74,7 +84,7 @@ class DebugLog extends ChangeNotifier {
   /// Lädt die gespeicherten Einträge der letzten Sitzungen.
   void attach(SharedPreferences prefs) {
     _prefs = prefs;
-    _verbose = prefs.getBool(_verboseKey) ?? false;
+    _verbose = prefs.getBool(_verboseKey) ?? true;
     final raw = prefs.getString(_key);
     if (raw != null) {
       try {
@@ -89,6 +99,63 @@ class DebugLog extends ChangeNotifier {
       } catch (_) {
         // Kaputtes Protokoll: verwerfen
       }
+    }
+  }
+
+  /// Schreibt ab jetzt zusätzlich fortlaufend in eine Datei in [dir]; die Datei hält mehr
+  /// als der Speicher und lässt sich in den Einstellungen als Datei exportieren.
+  void attachFile(Directory dir) {
+    try {
+      dir.createSync(recursive: true);
+      _file = File('${dir.path}${Platform.pathSeparator}protokoll.txt');
+      _pending.writeln('--- Start ${DateTime.now().toIso8601String()} · $appVersion · ${defaultTargetPlatform.name} ---');
+      for (final e in _entries.where((e) => e.time.isAfter(DateTime.now().subtract(const Duration(minutes: 1))))) {
+        _pending.writeln(e.line);
+      }
+      _flush();
+    } catch (e) {
+      _file = null;
+    }
+  }
+
+  File? get _oldFile => _file == null ? null : File('${_file!.path}.1');
+
+  void _flush() {
+    final f = _file;
+    if (f == null || _pending.isEmpty) return;
+    final chunk = _pending.toString();
+    _pending.clear();
+    _writing = _writing.then((_) async {
+      try {
+        if (await f.exists() && await f.length() > maxFileBytes) {
+          final old = _oldFile!;
+          if (await old.exists()) await old.delete();
+          await f.rename(old.path);
+        }
+        await f.writeAsString(chunk, mode: FileMode.append, flush: true);
+      } catch (_) {
+        // Schreiben geht nicht (Speicher voll o. ä.): Protokoll bleibt im Speicher
+      }
+    });
+  }
+
+  /// Gesamtes Protokoll (Dateien, sonst Speicher) als Text für den Export.
+  Future<String> exportAll() async {
+    _flush();
+    await _writing;
+    final head = StringBuffer()
+      ..writeln('Glückspfennig $appVersion · ${defaultTargetPlatform.name}')
+      ..writeln('Exportiert ${DateTime.now().toIso8601String()}')
+      ..writeln();
+    final f = _file;
+    if (f == null) return export();
+    try {
+      final old = _oldFile!;
+      if (await old.exists()) head.write(await old.readAsString());
+      if (await f.exists()) head.write(await f.readAsString());
+      return head.toString();
+    } catch (_) {
+      return export();
     }
   }
 
@@ -108,7 +175,9 @@ class DebugLog extends ChangeNotifier {
 
   void _add(LogLevel level, String area, String text) {
     final t = text.length > maxText ? '${text.substring(0, maxText)} …' : text;
-    _entries.add(LogEntry(DateTime.now(), level, area, t));
+    final entry = LogEntry(DateTime.now(), level, area, t);
+    _entries.add(entry);
+    if (_file != null) _pending.writeln(entry.line);
     _trim();
     if (kDebugMode && level != LogLevel.info) debugPrint('[$area] $t');
     // Fehler sofort sichern, sonst gesammelt
@@ -136,6 +205,7 @@ class DebugLog extends ChangeNotifier {
   void _save() {
     _saveTimer?.cancel();
     _saveTimer = null;
+    _flush();
     final prefs = _prefs;
     if (prefs == null) return;
     final keep = _entries.length > keptEntries ? _entries.skip(_entries.length - keptEntries) : _entries;
@@ -144,6 +214,14 @@ class DebugLog extends ChangeNotifier {
 
   void clear() {
     _entries.clear();
+    _pending.clear();
+    final f = _file, old = _oldFile;
+    _writing = _writing.then((_) async {
+      try {
+        if (old != null && await old.exists()) await old.delete();
+        if (f != null && await f.exists()) await f.writeAsString('');
+      } catch (_) {}
+    });
     _save();
     notifyListeners();
   }

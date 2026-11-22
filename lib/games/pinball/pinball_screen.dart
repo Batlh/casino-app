@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/debug_log.dart';
 import '../../core/progress.dart';
 import '../../core/scope.dart';
 import '../../core/sfx.dart';
@@ -367,6 +368,7 @@ class _PinballScreenState extends State<PinballScreen> with SingleTickerProvider
     final t = _table;
     if (t == null) return;
     final was = left ? t.leftPressed : t.rightPressed;
+    if (down != was) debugLog.detail('flipper', '${left ? 'Links' : 'Rechts'} ${down ? 'gedrückt' : 'losgelassen'}');
     t.press(left: left, down: down);
     if (down && !was) _app.sfx.play(Sound.tick);
   }
@@ -375,6 +377,9 @@ class _PinballScreenState extends State<PinballScreen> with SingleTickerProvider
     final t = _table;
     if (t == null || t.gameOver) return;
     // Gedrückt halten darf man schon, bevor die Kugel ganz in der Bahn liegt
+    if (down != t.plungerHeld) {
+      debugLog.detail('flipper', 'Abschuss ${down ? 'gedrückt' : 'losgelassen'}, Kugel ${t.ballInLane ? 'liegt in der Bahn' : 'nicht in der Bahn'}, Feder ${(t.charge * 100).round()} %');
+    }
     t.plungerHeld = down;
     if (down) {
       if (t.ballInLane) t.charging = true;

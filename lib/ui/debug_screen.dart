@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -24,7 +28,7 @@ class DebugSection extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               title: Text('Ausführlich aufzeichnen', style: TextStyle(color: p.ink, fontSize: 16)),
               subtitle: Text(
-                'Auch Tippen und Kugeln. Fehler werden immer aufgezeichnet.',
+                'Jedes Tippen, jede Taste, Einsätze, Gewinne und Spielabläufe aller Spiele. Fehler werden immer aufgezeichnet.',
                 style: TextStyle(color: p.inkSoft, fontSize: 14),
               ),
               value: log.verbose,
@@ -47,6 +51,10 @@ class DebugSection extends StatelessWidget {
                   onPressed: () => copyLog(context),
                   child: const Text('Kopieren'),
                 ),
+                FilledButton.tonal(
+                  onPressed: () => saveLogFile(context),
+                  child: const Text('Als Datei speichern'),
+                ),
               ],
             ),
           ],
@@ -62,6 +70,32 @@ Future<void> copyLog(BuildContext context, {LogLevel minLevel = LogLevel.info}) 
   ScaffoldMessenger.maybeOf(context)?.showSnackBar(
     const SnackBar(content: Text('Protokoll kopiert. Du kannst es jetzt in eine Nachricht einfügen.')),
   );
+}
+
+/// Ganzes Protokoll (auch ältere Einträge aus der Protokolldatei) als Textdatei speichern.
+Future<void> saveLogFile(BuildContext context) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  try {
+    final text = await DebugLog.instance.exportAll();
+    final bytes = Uint8List.fromList(utf8.encode(text));
+    final now = DateTime.now();
+    String two(int v) => v.toString().padLeft(2, '0');
+    final name = 'glueckspfennig-protokoll-${now.year}${two(now.month)}${two(now.day)}-${two(now.hour)}${two(now.minute)}.txt';
+    final uri = await FilePicker.saveFile(
+      dialogTitle: 'Protokoll speichern',
+      fileName: name,
+      mimeType: 'text/plain',
+      bytes: bytes,
+    );
+    if (uri == null) return;
+    debugLog.info('debug', 'Protokoll gespeichert: $uri (${bytes.length} Bytes)');
+    messenger?.showSnackBar(const SnackBar(content: Text('Protokoll als Datei gespeichert')));
+  } catch (e, st) {
+    debugLog.error('debug.export', e, st);
+    messenger?.showSnackBar(
+      const SnackBar(content: Text('Speichern als Datei ging nicht. Nimm „Kopieren“ und füge den Text selbst ein.')),
+    );
+  }
 }
 
 class DebugLogScreen extends StatefulWidget {
@@ -84,6 +118,7 @@ class _DebugLogScreenState extends State<DebugLogScreen> {
         title: const Text('Protokoll'),
         actions: [
           IconButton(tooltip: 'Kopieren', icon: const Icon(Icons.copy), onPressed: () => copyLog(context, minLevel: _min)),
+          IconButton(tooltip: 'Als Datei speichern', icon: const Icon(Icons.save_alt), onPressed: () => saveLogFile(context)),
           IconButton(
             tooltip: 'Leeren',
             icon: const Icon(Icons.delete_outline),

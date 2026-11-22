@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'debug_log.dart';
+
 /// Münzkonto. Münzen haben keinen Geldwert und lassen sich weder kaufen
 /// noch auszahlen.
 class Wallet extends ChangeNotifier {
@@ -63,8 +65,12 @@ class Wallet extends ChangeNotifier {
   void Function()? onBonus;
 
   bool spend(int amount) {
-    if (amount <= 0 || amount > _balance) return false;
+    if (amount <= 0 || amount > _balance) {
+      _log('Einsatz $amount abgelehnt');
+      return false;
+    }
     _set(_balance - amount);
+    _log('Einsatz −$amount');
     onSpend?.call(amount);
     return true;
   }
@@ -72,6 +78,7 @@ class Wallet extends ChangeNotifier {
   void credit(int amount) {
     if (amount <= 0) return;
     _set(_balance + amount);
+    _log('Gewinn +$amount');
     onCredit?.call(amount);
   }
 
@@ -79,6 +86,7 @@ class Wallet extends ChangeNotifier {
   void addReward(int amount) {
     if (amount <= 0) return;
     _set(_balance + amount);
+    _log('Belohnung +$amount');
   }
 
   /// Schreibt den Tagesbonus gut. Liefert den Betrag, oder 0 wenn er schon abgeholt ist.
@@ -87,6 +95,7 @@ class Wallet extends ChangeNotifier {
     _lastBonus = _today;
     _prefs?.setString(_bonusKey, _lastBonus!);
     _set(_balance + dailyBonus);
+    _log('Tagesbonus +$dailyBonus');
     onBonus?.call();
     return dailyBonus;
   }
@@ -98,9 +107,13 @@ class Wallet extends ChangeNotifier {
     if (tournament || _balance >= need) return false;
     lastRefill = math.max(refillAmount, need - _balance);
     _set(_balance + lastRefill);
+    _log('Nachgefüllt +$lastRefill');
     refills.value++;
     return true;
   }
+
+  void _log(String what) =>
+      debugLog.detail(tournament ? 'turnier.chips' : 'münzen', '${debugLog.screen}: $what, Stand $_balance');
 
   void _set(int value) {
     _balance = value;
