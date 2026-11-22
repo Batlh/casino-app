@@ -180,8 +180,10 @@ class DebugLog extends ChangeNotifier {
     if (_file != null) _pending.writeln(entry.line);
     _trim();
     if (kDebugMode && level != LogLevel.info) debugPrint('[$area] $t');
-    // Fehler sofort sichern, sonst gesammelt
-    if (level == LogLevel.error) {
+    // Fehler sofort sichern, sonst gesammelt. Ohne Ablage (z. B. in Tests) gibt es nichts zu sichern.
+    if (_prefs == null && _file == null) {
+      // nichts
+    } else if (level == LogLevel.error) {
       _save();
     } else {
       _saveTimer ??= Timer(const Duration(seconds: 3), _save);
