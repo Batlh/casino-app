@@ -131,17 +131,24 @@ void main() {
     for (final t in progress.daily.tasks) {
       progress.daily.values[t.key] = t.goal;
     }
+    // Wochenaufgaben bleiben offen, ihr Knopf ist gesperrt
+    for (final t in progress.weekly.tasks) {
+      progress.weekly.values.remove(t.key);
+    }
     final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
     nav.push(MaterialPageRoute<void>(builder: (_) => const ProgressScreen()));
     await tester.pumpAndSettle();
-    expect(find.text('Abholen'), findsNWidgets(3));
+    final ready = find.byWidgetPredicate(
+        (w) => w is FilledButton && w.onPressed != null && w.child is Text && (w.child! as Text).data == 'Abholen');
+    expect(ready, findsNWidgets(3));
     for (var i = 2; i >= 0; i--) {
-      await tester.tap(find.text('Abholen').first);
+      await tester.tap(ready.first);
       await tester.pump();
-      expect(find.text('Abholen'), findsNWidgets(i), reason: 'Knopf muss sofort weg sein');
+      expect(ready, findsNWidgets(i), reason: 'Knopf muss sofort weg sein');
       expect(find.text('Abgeholt'), findsNWidgets(3 - i));
     }
     expect(find.text('Alle Aufgaben erledigt, Extra abgeholt.'), findsOneWidget);
+    expect(find.textContaining('für alle Tagesaufgaben'), findsOneWidget, reason: 'Extra getrennt angezeigt');
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 5));
   });

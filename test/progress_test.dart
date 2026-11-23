@@ -90,6 +90,22 @@ void main() {
     // Doppelt abholen geht nicht, und Belohnungen zählen nicht als Spielgewinn
     expect(pr.claimDaily(pr.daily.tasks.first), 0);
     expect(pr.counters['aufgaben'], 3);
+    expect(pr.lastClaimBonus, 0);
+    // Wochenaufgaben zählen mit: drei Tagesaufgaben abgeholt, ein Tag komplett
+    expect(pr.weekly.values['tagesaufgaben'], 3);
+    expect(pr.weekly.values['tage'], 1);
+    expect(pr.weekly.tasks.length, 3);
+    // Woche abschließen: Extra kommt mit der letzten Aufgabe und steht getrennt drin
+    for (final t in pr.weekly.tasks) {
+      pr.weekly.values[t.key] = t.goal;
+    }
+    var week = 0;
+    for (final t in pr.weekly.tasks) {
+      week += pr.claimDaily(t);
+    }
+    expect(pr.lastClaimBonus, weeklyAllBonus);
+    expect(week, pr.weekly.tasks.fold(0, (s, t) => s + t.reward) + weeklyAllBonus);
+    expect(pr.counters['wochenaufgaben'], 3);
     // Nächster Tag: neue Aufgaben, nichts erledigt
     now = now.add(const Duration(days: 1));
     expect(pr.daily.date, '2026-11-21');

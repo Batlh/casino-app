@@ -46,9 +46,9 @@ final List<HelpTopic> helpTopics = [
           'mit Bild und kurzer Beschreibung stehen in der Hilfe unter „Alle Spiele“.',
     ),
     (
-      'Erfolge und Tagesaufgaben',
-      'Der Pokal oben in der Lobby öffnet drei Seiten: „Heute“ mit drei neuen Aufgaben pro Tag, die Münzen bringen (alle drei '
-          'zusammen noch ein Extra), „Erfolge“ zum Freischalten und „Statistik“ mit Einsätzen, Bilanz und größtem Gewinn je Spiel. '
+      'Erfolge und Aufgaben',
+      'Der Pokal oben in der Lobby öffnet drei Seiten: „Aufgaben“ mit drei neuen Aufgaben pro Tag und drei größeren pro Woche, '
+          'die Münzen bringen (alle drei zusammen jeweils noch ein Extra), „Erfolge“ zum Freischalten und „Statistik“ mit Einsätzen, Bilanz und größtem Gewinn je Spiel. '
           'Ein roter Punkt am Pokal zeigt, dass eine Aufgabe zum Abholen bereit ist.',
     ),
   ]),

@@ -26,6 +26,10 @@ class Progress extends ChangeNotifier {
   final Map<String, String> unlocked = {}; // Erfolg → Datum
   final Map<String, int> counters = {}; // Ereignisse und Zähler
   DailyState? _daily;
+  DailyState? _weekly;
+
+  /// Extra, das beim letzten Abholen mit ausgezahlt wurde (für die Meldung).
+  int lastClaimBonus = 0;
 
   /// Zuletzt freigeschalteter Erfolg, für die Meldung im Spiel.
   final ValueNotifier<Achievement?> justUnlocked = ValueNotifier(null);
@@ -58,6 +62,8 @@ class Progress extends ChangeNotifier {
         ..addAll({for (final e in ((j['counters'] as Map?) ?? {}).entries) '${e.key}': (e.value as num).toInt()});
       final d = j['daily'];
       _daily = d is Map ? DailyState.fromJson(d) : null;
+      final w = j['weekly'];
+      _weekly = w is Map ? DailyState.fromJson(w, weeklyTasksFor) : null;
     } catch (_) {
       // Kaputter Stand: neu anfangen
     }
@@ -71,6 +77,7 @@ class Progress extends ChangeNotifier {
         'unlocked': unlocked,
         'counters': counters,
         if (_daily != null) 'daily': _daily!.toJson(),
+        if (_weekly != null) 'weekly': _weekly!.toJson(),
       }),
     );
     notifyListeners();
@@ -161,41 +168,70 @@ class Progress extends ChangeNotifier {
     return _daily!;
   }
 
+  /// Montag der laufenden Woche; Wochenaufgaben gelten von Montag bis Sonntag.
+  String get _thisWeek {
+    final now = _clock();
+    final d = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  }
+
+  /// Die drei Aufgaben dieser Woche (ab Montag neu, für jeden gleich).
+  DailyState get weekly {
+    final week = _thisWeek;
+    if (_weekly?.date != week) _weekly = DailyState(week, weeklyTasksFor(week), {}, {}, false);
+    return _weekly!;
+  }
+
   void _dailyAdd(String key, int n) {
-    final d = daily;
-    d.values[key] = (d.values[key] ?? 0) + n;
+    for (final d in [daily, weekly]) {
+      d.values[key] = (d.values[key] ?? 0) + n;
+    }
   }
 
   void _dailyMax(String key, int n) {
-    final d = daily;
-    if (n > (d.values[key] ?? 0)) d.values[key] = n;
+    for (final d in [daily, weekly]) {
+      if (n > (d.values[key] ?? 0)) d.values[key] = n;
+    }
   }
 
   void _dailyGame(String game) {
-    final d = daily;
-    final list = d.games;
-    if (!list.contains(game)) list.add(game);
-    d.values['spiel:$game'] = 1;
-    d.values['verschieden'] = list.length;
+    for (final d in [daily, weekly]) {
+      final list = d.games;
+      if (!list.contains(game)) list.add(game);
+      d.values['spiel:$game'] = 1;
+      d.values['verschieden'] = list.length;
+    }
   }
 
-  int dailyProgress(DailyTask t) => min(daily.values[t.key] ?? 0, t.goal);
+  bool _isWeekly(DailyTask t) => weekly.tasks.contains(t) && !daily.tasks.contains(t);
+  DailyState _stateOf(DailyTask t) => _isWeekly(t) ? weekly : daily;
 
-  /// Aufgaben, deren Belohnung bereitliegt.
-  int get dailyReady => daily.tasks.where((t) => dailyDone(t) && !daily.claimed.contains(t.key)).length;
+  int dailyProgress(DailyTask t) => min(_stateOf(t).values[t.key] ?? 0, t.goal);
+
+  /// Aufgaben (Tag und Woche), deren Belohnung bereitliegt.
+  int get dailyReady => [
+        for (final d in [daily, weekly]) ...d.tasks.where((t) => dailyProgress(t) >= t.goal && !d.claimed.contains(t.key)),
+      ].length;
   bool dailyDone(DailyTask t) => dailyProgress(t) >= t.goal;
+  bool claimed(DailyTask t) => _stateOf(t).claimed.contains(t.key);
 
-  /// Belohnung für eine erledigte Aufgabe abholen. Gibt die Münzen zurück (0, wenn nicht möglich).
+  /// Belohnung für eine erledigte Tages- oder Wochenaufgabe abholen. Gibt alle Münzen zurück
+  /// (0, wenn nicht möglich); ein Extra für alle drei steht zusätzlich in [lastClaimBonus].
   int claimDaily(DailyTask t) {
-    final d = daily;
+    final isWeek = _isWeekly(t);
+    final d = isWeek ? weekly : daily;
+    lastClaimBonus = 0;
     if (!dailyDone(t) || d.claimed.contains(t.key)) return 0;
     d.claimed.add(t.key);
     var coins = t.reward;
-    _count('aufgaben', 1);
+    _count(isWeek ? 'wochenaufgaben' : 'aufgaben', 1);
+    if (!isWeek) weekly.values['tagesaufgaben'] = (weekly.values['tagesaufgaben'] ?? 0) + 1;
     // Alle drei geschafft: Extra
     if (!d.allBonus && d.tasks.every((x) => d.claimed.contains(x.key))) {
       d.allBonus = true;
-      coins += dailyAllBonus;
+      lastClaimBonus = isWeek ? weeklyAllBonus : dailyAllBonus;
+      coins += lastClaimBonus;
+      if (!isWeek) weekly.values['tage'] = (weekly.values['tage'] ?? 0) + 1;
     }
     _wallet?.addReward(coins);
     _check();
@@ -277,6 +313,28 @@ class DailyTask {
 }
 
 const dailyAllBonus = 500;
+const weeklyAllBonus = 3000;
+
+/// Drei Aufgaben für eine Woche (Schlüssel = Montag), für jeden gleich.
+List<DailyTask> weeklyTasksFor(String monday) {
+  var seed = 0x3eec;
+  for (final c in monday.codeUnits) {
+    seed = (seed * 31 + c) & 0x7fffffff;
+  }
+  final rng = Random(seed);
+  final pool = <DailyTask>[
+    const DailyTask('runden', 'Setze 200 Mal Münzen, egal wo', 200, 1500),
+    const DailyTask('verschieden', 'Spiele 10 verschiedene Spiele', 10, 1500),
+    const DailyTask('gewinn', 'Gewinne auf einmal mindestens 5.000 Münzen', 5000, 2500),
+    const DailyTask('einsatz', 'Setze insgesamt 30.000 Münzen', 30000, 2000),
+    const DailyTask('tagesaufgaben', 'Hole 12 Tagesaufgaben ab', 12, 2000),
+    const DailyTask('tage', 'Schließe an 4 Tagen alle Tagesaufgaben ab', 4, 2500),
+    const DailyTask('e.solitaire_sieg', 'Gewinne 5 Partien Solitaire oder Spider', 5, 2000),
+    const DailyTask('e.mahjong_sieg', 'Gewinne 5 Hände Mahjong', 5, 2000),
+  ];
+  pool.shuffle(rng);
+  return pool.sublist(0, 3);
+}
 
 /// Spiele für die Aufgabe „Spiele eine Runde …“ (Titel wie im Spiel).
 const dailyGames = [
@@ -307,11 +365,11 @@ List<DailyTask> dailyTasksFor(String date) {
 
 class DailyState {
   DailyState(this.date, this.tasks, this.values, this.claimed, this.allBonus);
-  factory DailyState.fromJson(Map j) {
+  factory DailyState.fromJson(Map j, [List<DailyTask> Function(String) tasksFor = dailyTasksFor]) {
     final date = '${j['date']}';
     return DailyState(
       date,
-      dailyTasksFor(date),
+      tasksFor(date),
       {for (final e in ((j['v'] as Map?) ?? {}).entries) '${e.key}': (e.value as num).toInt()},
       {for (final c in (j['c'] as List?) ?? const []) '$c'},
       j['all'] == true,

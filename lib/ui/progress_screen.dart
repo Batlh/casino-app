@@ -47,7 +47,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
             labelColor: p.ink,
             unselectedLabelColor: p.inkSoft,
             indicatorColor: p.accent,
-            tabs: const [Tab(text: 'Heute'), Tab(text: 'Erfolge'), Tab(text: 'Statistik')],
+            tabs: const [Tab(text: 'Aufgaben'), Tab(text: 'Erfolge'), Tab(text: 'Statistik')],
           ),
         ),
         body: SafeArea(
@@ -75,6 +75,8 @@ class _Daily extends StatelessWidget {
     final p = Palette.of(context);
     final d = progress.daily;
     final done = d.tasks.where((t) => d.claimed.contains(t.key)).length;
+    final w = progress.weekly;
+    final weekDone = w.tasks.where((t) => w.claimed.contains(t.key)).length;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -85,6 +87,19 @@ class _Daily extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           d.allBonus ? 'Alle Aufgaben erledigt, Extra abgeholt.' : '$done von ${d.tasks.length} abgeholt',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: p.ink, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 28),
+        Text('Diese Woche', style: TextStyle(color: p.ink, fontSize: 20, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 6),
+        Text('Drei Aufgaben bis Sonntag. Alle drei zusammen bringen noch ${formatCoins(weeklyAllBonus)} extra. '
+            'Ab Montag gibt es neue.', style: TextStyle(color: p.inkSoft, fontSize: 15)),
+        const SizedBox(height: 12),
+        for (final t in w.tasks) _TaskCard(task: t),
+        const SizedBox(height: 8),
+        Text(
+          w.allBonus ? 'Alle Wochenaufgaben erledigt, Extra abgeholt.' : '$weekDone von ${w.tasks.length} abgeholt',
           textAlign: TextAlign.center,
           style: TextStyle(color: p.ink, fontWeight: FontWeight.w700),
         ),
@@ -102,7 +117,7 @@ class _TaskCard extends StatelessWidget {
     final p = Palette.of(context);
     final have = progress.dailyProgress(task);
     final done = progress.dailyDone(task);
-    final claimed = progress.daily.claimed.contains(task.key);
+    final claimed = progress.claimed(task);
     return Card(
       color: p.panel,
       margin: const EdgeInsets.only(bottom: 10),
@@ -134,10 +149,15 @@ class _TaskCard extends StatelessWidget {
                 FilledButton(
                   onPressed: done
                       ? () {
+                          final weekly = progress.weekly.tasks.contains(task);
                           final coins = progress.claimDaily(task);
                           if (coins > 0) {
+                            final bonus = progress.lastClaimBonus;
                             AppScope.of(context).sfx.play(Sound.coin);
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('+${formatCoins(coins)} Münzen')));
+                            final text = bonus > 0
+                                ? '+${formatCoins(coins - bonus)} Münzen · +${formatCoins(bonus)} für alle ${weekly ? 'Wochenaufgaben' : 'Tagesaufgaben'}'
+                                : '+${formatCoins(coins)} Münzen';
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
                           }
                         }
                       : null,
