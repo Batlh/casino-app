@@ -67,7 +67,11 @@ class _Daily extends StatelessWidget {
   const _Daily();
 
   @override
-  Widget build(BuildContext context) {
+  // Eigene Aktualisierung: Die Tabs stehen als const in der TabBarView und würden
+  // beim Neuzeichnen des Bildschirms sonst übersprungen (Abholen-Knopf blieb stehen).
+  Widget build(BuildContext context) => ListenableBuilder(listenable: progress, builder: (context, _) => _build(context));
+
+  Widget _build(BuildContext context) {
     final p = Palette.of(context);
     final d = progress.daily;
     final done = d.tasks.where((t) => d.claimed.contains(t.key)).length;
@@ -151,7 +155,11 @@ class _Achievements extends StatelessWidget {
   const _Achievements();
 
   @override
-  Widget build(BuildContext context) {
+  // Eigene Aktualisierung: Die Tabs stehen als const in der TabBarView und würden
+  // beim Neuzeichnen des Bildschirms sonst übersprungen (Abholen-Knopf blieb stehen).
+  Widget build(BuildContext context) => ListenableBuilder(listenable: progress, builder: (context, _) => _build(context));
+
+  Widget _build(BuildContext context) {
     final p = Palette.of(context);
     final got = achievements.where((a) => progress.unlocked.containsKey(a.id)).length;
     return ListView(
@@ -200,7 +208,11 @@ class _Stats extends StatelessWidget {
   const _Stats();
 
   @override
-  Widget build(BuildContext context) {
+  // Eigene Aktualisierung: Die Tabs stehen als const in der TabBarView und würden
+  // beim Neuzeichnen des Bildschirms sonst übersprungen (Abholen-Knopf blieb stehen).
+  Widget build(BuildContext context) => ListenableBuilder(listenable: progress, builder: (context, _) => _build(context));
+
+  Widget _build(BuildContext context) {
     final p = Palette.of(context);
     final list = progress.stats.entries.toList()..sort((a, b) => b.value.rounds.compareTo(a.value.rounds));
     if (list.isEmpty) {

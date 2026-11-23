@@ -31,6 +31,7 @@ import 'package:gluckspfennig/games/horses/horse_screen.dart';
 import 'package:gluckspfennig/games/pachislo/pachislo_screen.dart';
 import 'package:gluckspfennig/games/pusher/pusher_screen.dart';
 import 'package:gluckspfennig/games/threecard/three_card_screen.dart';
+import 'package:gluckspfennig/core/progress.dart';
 import 'package:gluckspfennig/ui/progress_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -123,6 +124,26 @@ void main() {
         expect(tester.takeException(), isNull, reason: '$screen bei $name');
       }
     });
+  });
+
+  testWidgets('Tagesaufgaben: Abholen-Knopf verschwindet nach jedem Abholen', (tester) async {
+    await pumpApp(tester, const Size(393, 1000));
+    for (final t in progress.daily.tasks) {
+      progress.daily.values[t.key] = t.goal;
+    }
+    final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
+    nav.push(MaterialPageRoute<void>(builder: (_) => const ProgressScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('Abholen'), findsNWidgets(3));
+    for (var i = 2; i >= 0; i--) {
+      await tester.tap(find.text('Abholen').first);
+      await tester.pump();
+      expect(find.text('Abholen'), findsNWidgets(i), reason: 'Knopf muss sofort weg sein');
+      expect(find.text('Abgeholt'), findsNWidgets(3 - i));
+    }
+    expect(find.text('Alle Aufgaben erledigt, Extra abgeholt.'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 5));
   });
 
   sizes.forEach((name, size) {
