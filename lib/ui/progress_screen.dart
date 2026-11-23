@@ -157,7 +157,10 @@ class _TaskCard extends StatelessWidget {
                             final text = bonus > 0
                                 ? '+${formatCoins(coins - bonus)} Münzen · +${formatCoins(bonus)} für alle ${weekly ? 'Wochenaufgaben' : 'Tagesaufgaben'}'
                                 : '+${formatCoins(coins)} Münzen';
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+                            // Schnell hintereinander abgeholt: alte Meldung weg statt Warteschlange
+                            ScaffoldMessenger.of(context)
+                              ..removeCurrentSnackBar()
+                              ..showSnackBar(SnackBar(content: Text(text)));
                           }
                         }
                       : null,

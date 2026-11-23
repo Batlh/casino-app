@@ -148,6 +148,7 @@ void main() {
       expect(find.text('Abgeholt'), findsNWidgets(3 - i));
     }
     expect(find.text('Alle Aufgaben erledigt, Extra abgeholt.'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.textContaining('für alle Tagesaufgaben'), findsOneWidget, reason: 'Extra getrennt angezeigt');
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 5));
