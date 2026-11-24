@@ -19,8 +19,8 @@ Jeder Push auf `main` testet den Code und baut die APK. Sie liegt danach unter R
 
 Lokal: `bash ci/prepare.sh`, danach `flutter run`.
 
-`ci/debug.keystore` signiert alle APKs gleich, damit Updates sich über die alte Version installieren lassen. `ci/set_signing.py` trägt den Schlüssel ein, der Build prüft die Signatur.
+Release-APKs von `main` werden mit dem Schlüssel aus `ci/release.keystore.enc` signiert. Der Build entschlüsselt ihn nur mit dem Secret `ANDROID_KEY_PASSWORD`. Dieser Schlüssel ist für `io.github.batlh.glueckspfennig` bei der Android-Entwicklerbestätigung registriert, deshalb lassen sich Updates über die alte Version installieren. Lokale Builds ohne das Secret nehmen `ci/debug.keystore`. `ci/set_signing.py` trägt den Schlüssel ein, der Build prüft die Signatur.
 
 ## Schriften
 
-Shrikhand und Barlow Semi Condensed stehen unter der SIL Open Font License 1.1.
+Shrikhand, Barlow Semi Condensed und Noto Serif JP (als Teilmenge für die japanischen Zeichen) stehen unter der SIL Open Font License 1.1. Die Lizenztexte liegen in `assets/fonts/`.
